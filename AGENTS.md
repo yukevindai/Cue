@@ -54,3 +54,25 @@ See "Status log" below. Update it when a milestone lands or a decision changes.
   `claude/cue-hardware`, `claude/cue-backend`, `claude/cue-frontend`,
   `claude/cue-ai-integration`, merged into the lead branch
   `claude/friendly-tesla-p1oduu`.
+
+### Orchestration (lead notes)
+
+Role sessions (children of lead session `session_01NFc7bJEVY8d6Rnk95kGiot`),
+each pushing its own branch; the lead merges them into
+`claude/friendly-tesla-p1oduu` and runs final integration:
+
+| Role | Session | Branch |
+|---|---|---|
+| Backend | `session_01NFc7bKcVth3YNcgJKFiGQf` | `claude/cue-backend` |
+| Frontend | `session_01NFc7bMeLaBuKBm85whk7vx` | `claude/cue-frontend` |
+| AI / integration | `session_01NFc7bLR7ZJAaywNpreftjf` | `claude/cue-ai-integration` |
+| Hardware | `session_01NFc7bKpRFPweCZeZ5FnG9M` | `claude/cue-hardware` |
+
+Lead procedure: wait for role reports; merge backend first, then AI, frontend,
+hardware; run `pnpm typecheck && pnpm lint && pnpm test`, web build, stack-backed
+tests and `pnpm test:e2e` on the merged branch; send integration bugs back to
+the owning session; update this log.
+
+Open items needing a human: `ANTHROPIC_API_KEY` for a live wingman call; a
+hosted Supabase project for the on-site demo (local stack is used for
+development); the real backward-swipe checkpoint on the loaner glasses.
