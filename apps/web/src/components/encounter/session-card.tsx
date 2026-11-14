@@ -59,8 +59,8 @@ export function SessionCard({ session }: { session: DemoSession }) {
 
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p>{occupancyText(session)}</p>
-        <div className="flex items-center gap-3">
-          <p role="status" className="text-sm text-ink-soft">
+        <div className="flex items-center gap-3 max-sm:flex-col-reverse max-sm:items-stretch">
+          <p role="status" className="text-sm text-ink-soft empty:hidden">
             {copyNote}
           </p>
           <Button variant="secondary" onClick={copy} className="shrink-0 max-sm:w-full">

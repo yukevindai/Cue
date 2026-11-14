@@ -339,7 +339,13 @@ function ProfileForm({ initial }: { initial: OwnProfile | null }) {
         </Card>
       </div>
 
-      <div className="sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] z-10 mt-6 space-y-3 rounded-card border border-line-strong bg-surface/95 p-3 shadow-card backdrop-blur sm:bottom-4 sm:p-4">
+      <div
+        className={cx(
+          "z-10 mt-6 space-y-3 rounded-card border border-line-strong bg-surface/95 p-3 shadow-card backdrop-blur sm:p-4",
+          // Float over the form only while there is something to save.
+          (setup || dirty || saving) && "sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] sm:bottom-4",
+        )}
+      >
         {serverError ? <Notice tone="error">{serverError}</Notice> : null}
         {errorCount > 0 && !serverError ? (
           <Notice tone="error">
