@@ -49,6 +49,19 @@ See "Status log" below. Update it when a milestone lands or a decision changes.
 
 ### Status log
 
+- 2026-11-14 15:10 UTC: Final merged tree verified by the lead: typecheck,
+  lint, unit tests (matching 33, mentra 119, web 112 + stack/live-gated),
+  `pnpm test:e2e` 55/55. Vercel project `cue` (team "Kevin's projects",
+  `prj_ybnr8S5OdLb5S55CLZ40T466i1E7`, root `apps/web`, Node 22, functions in
+  pdx1) is linked to the repo; Vercel promoted the first build of the lead
+  branch to production at https://cue-gamma-five.vercel.app. Later pushes to
+  non-`main` branches are login-protected previews; production updates only
+  from `main`. Follow-up migration `20261114010000_pin_interest_result_search_path.sql`
+  merged and applied to Cue DB.
+  STILL MISSING ON VERCEL (owner must add): `SUPABASE_SERVICE_ROLE_KEY` (all
+  API routes fail without it) and `ANTHROPIC_API_KEY` (wingman), then redeploy.
+  STILL UNVERIFIED: real glasses swipe (docs/hardware-check.md step 6), live
+  Claude call, live sign-in on the hosted site.
 - 2026-11-14 15:05 UTC: Schema (`20261114000000_cue_schema.sql`) and seed
   applied to hosted **Cue DB** (`ubnwwhpkjazejttdmstf`) through the Supabase
   connector. Verified identical to the local stack by fingerprint (columns,
