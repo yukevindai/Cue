@@ -31,13 +31,14 @@ function toEpochMs(value: unknown): number | null {
 
 /**
  * Accepts the payload shapes Mentra runtimes use for a touch event
- * (`gestureName` in the Bluetooth SDK and miniapp runtime, `gesture_name` in
- * the cloud SDK wire format) and returns null for anything else.
+ * (`gestureName` from the Bluetooth SDK, which the miniapp host forwards and
+ * also copies to `kind`, the only field @mentra/miniapp types; `gesture_name`
+ * in the retired cloud SDK) and returns null for anything else.
  */
 export function normalizeTouchEvent(input: unknown): RawTouchEvent | null {
   if (typeof input !== "object" || input === null) return null;
   const record = input as Record<string, unknown>;
-  const name = record.gestureName ?? record.gesture_name;
+  const name = record.gestureName ?? record.gesture_name ?? record.kind;
   if (typeof name !== "string" || name.trim().length === 0) return null;
   return {
     gestureName: name.trim(),

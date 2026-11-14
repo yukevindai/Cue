@@ -8,17 +8,17 @@
  * backward swipe reaches the server") can only be met on the hardware; see
  * docs/hardware-check.md.
  *
- *   node src/dev/inject.ts --server http://localhost:3000 --code ABC123 --gesture backward_swipe
- *   node src/dev/inject.ts --server http://localhost:3000 --gesture forward_swipe --gesture single_tap
+ *   pnpm inject -- --server http://localhost:3000 --code ABC123 --gesture backward_swipe
+ *   pnpm inject -- --server http://localhost:3000 --gesture forward_swipe --gesture single_tap
  *
  * The device token is kept in ./.cue-inject-token (git-ignored, mode 0600).
  */
 import { parseArgs } from "node:util";
-import { CueBridge } from "../bridge.ts";
-import { STORAGE_KEYS } from "../config.ts";
-import { recordingFeedback } from "../feedback.ts";
-import { createLogger, type LogSink } from "../logger.ts";
-import { fileTokenStore } from "../token-store-node.ts";
+import { CueBridge } from "../bridge";
+import { STORAGE_KEYS } from "../config";
+import { recordingFeedback } from "../feedback";
+import { createLogger, type LogSink } from "../logger";
+import { fileTokenStore } from "../token-store-node";
 
 const { values } = parseArgs({
   options: {
@@ -35,7 +35,7 @@ const out: LogSink = (_level, line) => process.stdout.write(`${line}\n`);
 const logger = createLogger(out);
 
 if (!values.server) {
-  logger.error("usage: node src/dev/inject.ts --server <origin> [--code <pairing code>] [--gesture <raw name>]...");
+  logger.error("usage: pnpm inject -- --server <origin> [--code <pairing code>] [--gesture <raw name>]...");
   process.exit(2);
 }
 

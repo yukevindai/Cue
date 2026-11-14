@@ -11,7 +11,7 @@
     "miniapp:build": "node build.ts",
     "miniapp:dev": "mentra-miniapp dev",
     "miniapp:release": "mentra-miniapp release",
-    "inject": "node src/dev/inject.ts"
+    "inject": "esbuild src/dev/inject.ts --bundle --platform=node --format=esm --log-level=warning --outfile=build/inject.mjs && node build/inject.mjs"
   },
   "dependencies": {
     "@cue/contracts": "workspace:*",

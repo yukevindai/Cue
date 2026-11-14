@@ -6,6 +6,7 @@
   "description": "Signal interest with a backward swipe on the temple touch strip.",
   "icon": "icon.png",
   "type": "standard",
+  "port": 3100,
   "sdkVersion": "0.3.0",
   "minHostVersion": "1.42.0",
   "entry": {

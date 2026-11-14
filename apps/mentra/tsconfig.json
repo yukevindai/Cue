@@ -9,7 +9,7 @@
     "skipLibCheck": true,
     "noEmit": true,
     "verbatimModuleSyntax": true,
-    "allowImportingTsExtensions": true,
+    
     "types": ["node"]
   },
   "include": ["src", "build.ts"],
