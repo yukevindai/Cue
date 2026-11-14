@@ -199,6 +199,9 @@ test.describe("one-sided interest is invisible", () => {
       await watchTable(pair.b, "demo_session_members"),
     ];
     try {
+      // Let late change events from the pair's own setup (session join, mode on) drain, then start counting.
+      await sleep(1500);
+      for (const w of watchers) w.events.length = 0;
       const ack = must(await signal(pair, pair.a), "A signal");
       expect(ack.matched).toBe(false);
 

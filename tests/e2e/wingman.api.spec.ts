@@ -69,8 +69,9 @@ test.describe("wingman (Claude) suggestions", () => {
     const calls = await fake.requests();
     expect(calls).toHaveLength(1);
     expect(calls[0].path).toMatch(/^\/v1\/messages/);
-    expect(calls[0].headers["x-api-key"]).toBe(DUMMY_API_KEY);
-    expect(calls[0].headers["authorization"] ?? `Bearer ${DUMMY_API_KEY}`).toBe(`Bearer ${DUMMY_API_KEY}`);
+    // The SDK sends the key as `Authorization: Bearer` (or x-api-key); either way it must be the dummy.
+    const cred = calls[0].headers["x-api-key"] ?? calls[0].headers["authorization"];
+    expect([DUMMY_API_KEY, `Bearer ${DUMMY_API_KEY}`]).toContain(cred);
     const sent = userTurn(calls[0].body);
     for (const text of [...A_INTERESTS, ...B_INTERESTS, "latte art"]) expect(sent).toContain(text);
     expect(sent).toContain("E2E Test Cafe");
