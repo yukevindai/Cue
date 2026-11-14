@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "types": ["node"],
+    "typeRoots": ["../../apps/web/node_modules/@types"],
+    "baseUrl": ".",
+    "paths": {
+      "@cue/contracts": ["../../packages/contracts/src/index.ts"],
+      "@supabase/supabase-js": ["../../apps/web/node_modules/@supabase/supabase-js"],
+      "@supabase/ssr": ["../../apps/web/node_modules/@supabase/ssr"],
+      "zod": ["../../apps/web/node_modules/zod"]
+    }
+  },
+  "include": ["./**/*.ts", "../../playwright.config.ts"]
+}
