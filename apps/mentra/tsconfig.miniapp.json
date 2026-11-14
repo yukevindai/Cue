@@ -1,0 +1,9 @@
+{
+  // The three folders that import @mentra/miniapp. Its dependency
+  // @mentra/cloud-protocol ships raw .ts that does not pass
+  // noUncheckedIndexedAccess, so that one flag is off here and only here.
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "noUncheckedIndexedAccess": false, "types": [] },
+  "include": ["src/background", "src/ui", "src/shared"],
+  "exclude": []
+}
