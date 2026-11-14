@@ -96,26 +96,29 @@ function writeSeen(userId: string, seen: Set<string>) {
  * Wraps an async loader so that concurrent calls share one request and a call
  * made while one is in flight triggers exactly one trailing run afterwards.
  */
-function coalesce(run: () => Promise<void>): () => Promise<void> {
-  let inFlight: Promise<void> | null = null;
-  let again = false;
-  const start = (): Promise<void> => {
-    inFlight = run().finally(() => {
-      inFlight = null;
-      if (again) {
-        again = false;
-        void start();
-      }
-    });
-    return inFlight;
-  };
-  return () => {
-    if (inFlight) {
-      again = true;
-      return inFlight;
+function useCoalesced(run: () => Promise<void>): () => Promise<void> {
+  const state = useRef<{ inFlight: Promise<void> | null; again: boolean }>({
+    inFlight: null,
+    again: false,
+  });
+  return useCallback(() => {
+    const st = state.current;
+    const start = (): Promise<void> => {
+      st.inFlight = run().finally(() => {
+        st.inFlight = null;
+        if (st.again) {
+          st.again = false;
+          void start();
+        }
+      });
+      return st.inFlight;
+    };
+    if (st.inFlight) {
+      st.again = true;
+      return st.inFlight;
     }
     return start();
-  };
+  }, [run]);
 }
 
 export function LiveProvider({
@@ -141,6 +144,8 @@ export function LiveProvider({
   const seen = useRef<Set<string> | null>(null);
 
   const onUnauthenticated = useCallback(() => {
+    // Full navigation on purpose: server state must reset after sign-out.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     window.location.assign("/sign-in");
   }, []);
 
@@ -177,30 +182,28 @@ export function LiveProvider({
     [userId],
   );
 
-  const loaders = useMemo(() => {
-    const refreshEncounter = coalesce(async () => {
-      const seq = encounterSeq.current;
-      try {
-        const status = await api.getEncounter();
-        if (seq !== encounterSeq.current) return; // a mutation landed meanwhile
-        applyEncounter(status);
-      } catch (err) {
-        if (isApiError(err, "unauthenticated")) return onUnauthenticated();
-        if (err instanceof ApiRequestError) setEncounterError(err);
-      }
-    });
-    const refreshMatches = coalesce(async () => {
-      try {
-        const { matches: list } = await api.getMatches();
-        ingestMatches(list);
-      } catch (err) {
-        if (isApiError(err, "unauthenticated")) return onUnauthenticated();
-        if (err instanceof ApiRequestError) setMatchesError(err);
-      }
-    });
-    return { refreshEncounter, refreshMatches };
-  }, [applyEncounter, ingestMatches, onUnauthenticated]);
-  const { refreshEncounter, refreshMatches } = loaders;
+  const loadEncounter = useCallback(async () => {
+    const seq = encounterSeq.current;
+    try {
+      const status = await api.getEncounter();
+      if (seq !== encounterSeq.current) return; // a mutation landed meanwhile
+      applyEncounter(status);
+    } catch (err) {
+      if (isApiError(err, "unauthenticated")) return onUnauthenticated();
+      if (err instanceof ApiRequestError) setEncounterError(err);
+    }
+  }, [applyEncounter, onUnauthenticated]);
+  const loadMatches = useCallback(async () => {
+    try {
+      const { matches: list } = await api.getMatches();
+      ingestMatches(list);
+    } catch (err) {
+      if (isApiError(err, "unauthenticated")) return onUnauthenticated();
+      if (err instanceof ApiRequestError) setMatchesError(err);
+    }
+  }, [ingestMatches, onUnauthenticated]);
+  const refreshEncounter = useCoalesced(loadEncounter);
+  const refreshMatches = useCoalesced(loadMatches);
 
   const refreshAll = useCallback(() => {
     void refreshMatches();
