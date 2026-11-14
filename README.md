@@ -28,12 +28,13 @@ for product behavior and `docs/architecture.md` for the technical contract.
 
 ### Hardware status
 
-The glasses swipe path is not verified in this repository. The hardware status
-is documented by the hardware team in `docs/hardware-check.md`, which may not
-exist yet. A button or a test event that sends an interest event does not show
-that the real swipe works. Until `docs/hardware-check.md` records a verified
-swipe reaching the server under the correct account, treat the glasses input as
-unproven.
+The real-swipe checkpoint is **not met**. `docs/hardware-check.md` (hardware
+role) records that, as of 2026-11-14, nobody has run this code against a real
+touch strip: the glasses bridge in `apps/mentra` is built and unit-tested, and
+the server path has been exercised only with injected events. An injected
+event, a test, or a button does not show that the real swipe works. The
+checkpoint is met when the on-device steps in `docs/hardware-check.md` pass on
+the loaner glasses and its results table is filled in.
 
 ## Run it locally
 
@@ -102,16 +103,19 @@ available for it.
 
 ## Repository layout
 
-| Path | Contents | Status in this tree |
-|---|---|---|
-| `apps/web` | Next.js 16 app (pages, API routes, server code, Claude card) | Present |
-| `apps/mentra` | Glasses bridge that forwards the backward swipe as an interest event | Planned; not yet in this tree |
-| `packages/contracts` | Shared request and response schemas and the API route list | Present |
-| `packages/matching` | Pure matching rules with unit tests (server-only use) | Present |
-| `supabase` | Config, migrations, and seed data (synthetic only) | Config present; migrations and seed not yet in this tree |
-| `tests/e2e` | Playwright end-to-end tests | Planned; not yet in this tree |
-| `docs` | `spec.md`, `architecture.md`, `demo.md`, and `hardware-check.md` | `hardware-check.md` not yet written |
-| `scripts` | `dev-stack.sh` (local stack start, stop, reset, env) | Present |
+| Path | Contents |
+|---|---|
+| `apps/web` | Next.js 16 app: pages, API routes, server code, Claude card (`src/server/ai`) |
+| `apps/mentra` | Glasses bridge (MentraOS miniapp) that forwards a backward swipe as an interest event |
+| `packages/contracts` | Shared request and response schemas and the API route list |
+| `packages/matching` | Pure matching rules with unit tests |
+| `supabase` | Config, migrations, and synthetic seed data |
+| `tests/e2e` | Playwright end-to-end tests, helpers, and the fake Anthropic server |
+| `docs` | `spec.md`, `architecture.md`, `demo.md`, `hardware-check.md` |
+| `scripts` | `dev-stack.sh` (local stack start, stop, reset, env) |
+
+Role branches are merged by the lead; a path may be missing on a branch that
+has not merged the role that owns it.
 
 ## Limitations
 
@@ -125,7 +129,9 @@ available for it.
 - The rate limit for the Claude card is in memory and works only on a single
   server instance.
 - The live Claude call is not verified until an API key is supplied.
-- The glasses swipe is not verified in this repository (see Hardware status).
+- The glasses swipe has not been verified on real hardware (see Hardware status).
+- The end-to-end tests cover the server path for device-token events. They do
+  not test the physical swipe.
 - Hackathon MVP. Not production software.
 
 ## Documentation
