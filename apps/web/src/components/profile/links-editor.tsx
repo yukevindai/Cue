@@ -27,7 +27,7 @@ export function LinksEditor({
   return (
     <div>
       {links.length === 0 ? (
-        <p className="text-ink-soft">No links yet. Add one if you'd like a match to find you elsewhere.</p>
+        <p className="text-ink-soft">No links yet. Add one if you&rsquo;d like a match to find you elsewhere.</p>
       ) : (
         <ul className="space-y-5">
           {links.map((l, i) => (
@@ -82,7 +82,7 @@ export function LinksEditor({
         </Button>
         {full ? (
           <p className="mt-2 text-sm text-ink-soft">
-            That's {LIMITS.links}, the most a profile holds. Remove one to add another.
+            That&rsquo;s {LIMITS.links}, the most a profile holds. Remove one to add another.
           </p>
         ) : null}
       </div>
