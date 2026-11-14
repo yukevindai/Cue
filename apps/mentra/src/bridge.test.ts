@@ -21,7 +21,7 @@ interface Recorded {
 
 function setup(initial: Record<string, string> = {}) {
   const storage = new Map<string, string>(Object.entries(initial));
-  const world = { encounterMode: true, down: false, now: T0 };
+  const world = { encounterMode: true, down: false, revoked: false, now: T0 };
   const requests: Recorded[] = [];
   const logs: string[] = [];
   const statuses: BridgeStatus[] = [];
@@ -36,7 +36,7 @@ function setup(initial: Record<string, string> = {}) {
     const reply = (b: unknown, status = 200) =>
       new Response(JSON.stringify(b), { status, headers: { "Content-Type": "application/json" } });
     if (url.pathname === routes.deviceClaim) return reply({ deviceId: DEVICE_ID, deviceToken: TOKEN });
-    if (headers.Authorization !== `Bearer ${TOKEN}`) return reply({ error: "unauthorized" }, 401);
+    if (world.revoked || headers.Authorization !== `Bearer ${TOKEN}`) return reply({ error: "unauthorized" }, 401);
     if (url.pathname === routes.deviceMe) {
       return reply({
         deviceId: DEVICE_ID,
@@ -251,6 +251,31 @@ describe("CueBridge", () => {
     const out = await h.bridge.handleTouch(touch("backward_swipe", T0 + 5000));
     expect(out.kind).toBe("ignored");
     expect(h.interestPosts()).toHaveLength(0);
+  });
+
+  it("(k) a token revoked on the server (401) drops to unlinked and forgets the token", async () => {
+    const h = setup();
+    await ready(h);
+    h.world.revoked = true;
+    await h.bridge.refresh();
+    expect(h.storage.has(STORAGE_KEYS.deviceToken)).toBe(false);
+    expect(h.bridge.status()).toMatchObject({ linked: false, context: "unlinked" });
+    const out = await h.bridge.handleTouch(touch("backward_swipe", T0 + 5000));
+    expect(out.kind).toBe("ignored");
+    expect(h.interestPosts()).toHaveLength(0);
+  });
+
+  it("(l) a 401 on the interest POST itself also unlinks; the swipe is not kept", async () => {
+    const h = setup();
+    await ready(h);
+    h.world.revoked = true;
+    const out = await h.bridge.handleTouch(touch("backward_swipe", T0 + 5000));
+    expect(out).toMatchObject({ kind: "failed", error: "unauthorized" });
+    expect(h.feedback.cues).toEqual(["not_sent"]);
+    expect(h.bridge.status().linked).toBe(false);
+    h.world.revoked = false;
+    await h.bridge.refresh();
+    expect(h.interestPosts()).toHaveLength(1);
   });
 
   it("(j) setServerUrl rejects non-http(s) URLs and URLs with paths", async () => {

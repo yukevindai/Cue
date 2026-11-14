@@ -74,8 +74,15 @@ export class CueBridge {
       mapping: { backwardSwipeGestureName: DEFAULT_BACKWARD_SWIPE_GESTURE_NAME },
       calibration: false,
       context: () => this.tracker.snapshot(),
-      submit: (event) =>
-        this.api ? this.api.submitInterest(event) : Promise.resolve({ ok: false as const, error: "network" as const }),
+      submit: async (event) => {
+        if (this.api === null) return { ok: false as const, error: "network" as const };
+        const result = await this.api.submitInterest(event);
+        if (!result.ok && result.error === "unauthorized") {
+          await this.dropRevokedToken();
+          this.tracker.reset();
+        }
+        return result;
+      },
       feedback: host.feedback,
       now: this.now,
       logger: host.logger,
@@ -223,9 +230,20 @@ export class CueBridge {
     this.tracker.reset();
   }
 
-  private fetchContext(): Promise<ContextFetchResult> {
-    if (!this.link.isLinked()) return Promise.resolve({ ok: false, reason: "unlinked" });
-    if (this.api === null) return Promise.resolve({ ok: false, reason: "offline" });
-    return this.api.getDeviceContext();
+  private async fetchContext(): Promise<ContextFetchResult> {
+    if (!this.link.isLinked()) return { ok: false, reason: "unlinked" };
+    if (this.api === null) return { ok: false, reason: "offline" };
+    const result = await this.api.getDeviceContext();
+    // The server no longer accepts the token (unlinked from the web app, or
+    // replaced by another device): forget it so the UI asks to pair again.
+    if (!result.ok && result.reason === "unlinked") await this.dropRevokedToken();
+    return result;
+  }
+
+  private async dropRevokedToken(): Promise<void> {
+    if (!this.link.isLinked()) return;
+    this.host.logger.warn("device token rejected by the server; pair again");
+    await this.link.unlink();
+    this.publish();
   }
 }
