@@ -158,9 +158,20 @@ export class CueApiClient {
     token: string | null,
     body: string | null,
   ): Promise<HttpResponse> {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
-    try {
+    // The miniapp background runtime offers only "the SDK-supported
+    // AbortController subset", so the timeout does not depend on fetch honoring
+    // the signal: the attempt also loses a race against a timer.
+    const controller = typeof AbortController === "function" ? new AbortController() : null;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => {
+        controller?.abort();
+        const error = new Error("request timed out");
+        error.name = "TimeoutError";
+        reject(error);
+      }, this.timeoutMs);
+    });
+    const attempt = async (): Promise<HttpResponse> => {
       const headers: Record<string, string> = { Accept: "application/json" };
       if (body !== null) headers["Content-Type"] = "application/json";
       if (token !== null) headers.Authorization = `Bearer ${token}`;
@@ -168,7 +179,7 @@ export class CueApiClient {
         method,
         headers,
         ...(body !== null ? { body } : {}),
-        signal: controller.signal,
+        ...(controller !== null ? { signal: controller.signal } : {}),
       });
       const text = await res.text();
       let parsed: unknown;
@@ -178,6 +189,11 @@ export class CueApiClient {
         parsed = undefined;
       }
       return { status: res.status, body: parsed };
+    };
+    try {
+      const pending = attempt();
+      pending.catch(() => {}); // a late failure after the timeout must not be unhandled
+      return await Promise.race([pending, timeout]);
     } finally {
       clearTimeout(timer);
     }
