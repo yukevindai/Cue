@@ -22,6 +22,8 @@ export function SignOutButton({
     try {
       const { error } = await getBrowserSupabase().auth.signOut();
       if (error) throw error;
+      // Full navigation on purpose: server-rendered state must reset.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.assign("/sign-in");
     } catch {
       setFailed(true);

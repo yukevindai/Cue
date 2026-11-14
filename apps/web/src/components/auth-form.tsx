@@ -60,6 +60,8 @@ export function AuthForm({ mode }: { mode: Mode }) {
           setBusy(false);
           return;
         }
+        // Full navigation on purpose: server-rendered state must reset.
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination
         window.location.assign("/encounter");
         return;
       }
@@ -77,6 +79,8 @@ export function AuthForm({ mode }: { mode: Mode }) {
         return;
       }
       if (data.session) {
+        // Full navigation on purpose: server-rendered state must reset.
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination
         window.location.assign("/profile");
         return;
       }
