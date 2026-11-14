@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Cue glasses bridge</title>
+    <style>
+      :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+      body { margin: 0; padding: calc(env(safe-area-inset-top) + 56px) 16px 32px; line-height: 1.4; }
+      h1 { font-size: 20px; margin: 0 0 4px; }
+      h2 { font-size: 15px; margin: 24px 0 8px; }
+      p, li, label, td { font-size: 14px; }
+      .muted { opacity: 0.7; }
+      .row { display: flex; gap: 8px; margin: 8px 0; }
+      input { flex: 1; min-width: 0; font-size: 16px; padding: 10px; border: 1px solid #8886; border-radius: 8px; background: transparent; color: inherit; }
+      button { font-size: 15px; padding: 10px 14px; border-radius: 8px; border: 1px solid #8886; background: #7c3aed; color: #fff; }
+      button.plain { background: transparent; color: inherit; }
+      .pill { display: inline-block; padding: 2px 10px; border-radius: 999px; border: 1px solid #8886; font-size: 13px; }
+      .ok { background: #16a34a33; } .warn { background: #f59e0b33; } .bad { background: #dc262633; }
+      table { width: 100%; border-collapse: collapse; }
+      td { padding: 6px 4px; border-top: 1px solid #8883; vertical-align: middle; }
+      code { font-size: 13px; }
+      #message { min-height: 20px; }
+    </style>
+  </head>
+  <body>
+    <h1>Cue glasses bridge</h1>
+    <p class="muted">One backward swipe on the temple strip sends "interested" while encounter mode is on.</p>
+
+    <p>
+      <span id="link-pill" class="pill">…</span>
+      <span id="context-pill" class="pill">…</span>
+      <span id="calibration-pill" class="pill warn" hidden>CALIBRATION: nothing is sent</span>
+    </p>
+    <p id="last-outcome" class="muted"></p>
+    <p id="message"></p>
+
+    <h2>1. Server</h2>
+    <div class="row">
+      <input id="server-url" inputmode="url" autocapitalize="off" autocorrect="off" placeholder="https://your-cue-web-app" />
+      <button id="save-server" class="plain">Save</button>
+    </div>
+
+    <h2>2. Pair with your account</h2>
+    <p class="muted">Web app → Encounter → "Pair glasses" shows a 6-character code.</p>
+    <div class="row">
+      <input id="pair-code" maxlength="6" autocapitalize="characters" autocorrect="off" placeholder="ABC123" />
+      <button id="pair">Pair</button>
+    </div>
+    <button id="unlink" class="plain" hidden>Unlink this device</button>
+
+    <h2>3. Gesture mapping</h2>
+    <p>Backward swipe = <code id="mapping">…</code></p>
+    <div class="row">
+      <button id="toggle-calibration" class="plain">Start calibration</button>
+      <button id="refresh" class="plain">Refresh</button>
+    </div>
+    <p class="muted">Touch the strip: every raw gesture appears below, newest first.</p>
+    <table><tbody id="gestures"></tbody></table>
+
+    <h2>4. Sound check</h2>
+    <div class="row">
+      <button class="plain" data-cue="signal_sent">Sent</button>
+      <button class="plain" data-cue="match">Match</button>
+      <button class="plain" data-cue="not_sent">Not sent</button>
+    </div>
+    <p class="muted" id="identity"></p>
+
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

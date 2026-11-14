@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+/*
+ * Cue design system — "two rings".
+ * Warm paper, dark ink, one ember accent. Quiet by default; the only loud
+ * moment in the product is a mutual match.
+ */
+@theme inline {
+  --color-paper: #f4efe8;
+  --color-surface: #fcf9f4;
+  --color-sunk: #ece5da;
+  --color-ink: #26201d;
+  --color-ink-soft: #62564f;
+  --color-line: #e0d6c8;
+  --color-line-strong: #c9bcab;
+  --color-ember: #b3442c;
+  --color-ember-deep: #93361f;
+  --color-ember-soft: #f4e0d6;
+  --color-moss: #48654c;
+  --color-moss-soft: #dfe9dc;
+  --color-dusk: #2a1e2c;
+  --color-dusk-soft: #3a2b3d;
+  --color-cream: #fbeee0;
+
+  --font-display: var(--font-fraunces), "Iowan Old Style", Georgia, serif;
+  --font-sans: var(--font-instrument), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, "SF Mono", monospace;
+
+  --radius-card: 1.25rem;
+  --shadow-card: 0 1px 0 rgb(38 32 29 / 0.04), 0 8px 24px -12px rgb(38 32 29 / 0.12);
+
+  --animate-breathe: breathe 4.5s ease-in-out infinite;
+  --animate-rise: rise 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  --animate-fade: fade 0.35s ease-out both;
+  --animate-ring-left: ring-left 1.1s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  --animate-ring-right: ring-right 1.1s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  --animate-spin-slow: spin 1.1s linear infinite;
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); opacity: 0.55; }
+  50% { transform: scale(1.12); opacity: 0.9; }
+}
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes ring-left {
+  from { transform: translateX(-70%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes ring-right {
+  from { transform: translateX(70%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+html {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.5;
+  background: var(--color-paper);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* One visible focus style everywhere. */
+:focus-visible {
+  outline: 2.5px solid var(--color-ember);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+::selection {
+  background: var(--color-ember-soft);
+}
+
+dialog::backdrop {
+  background: rgb(38 32 29 / 0.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "cue",
+  "private": true,
+  "packageManager": "pnpm@10.28.0",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev": "pnpm --filter @cue/web dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "test:e2e": "playwright test --trace off",
+    "stack:start": "bash scripts/dev-stack.sh start",
+    "stack:stop": "bash scripts/dev-stack.sh stop",
+    "stack:reset": "bash scripts/dev-stack.sh reset"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "supabase": "^3.1.0",
+    "typescript": "^5.9.0"
+  }
+}

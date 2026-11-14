@@ -1,0 +1,31 @@
+{
+  "name": "@cue/mentra",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.miniapp.json",
+    "lint": "eslint src build.ts",
+    "test": "vitest run",
+    "build": "node build.ts",
+    "miniapp:build": "node build.ts",
+    "miniapp:dev": "mentra-miniapp dev",
+    "miniapp:release": "mentra-miniapp release",
+    "inject": "esbuild src/dev/inject.ts --bundle --platform=node --format=esm --log-level=warning --outfile=build/inject.mjs && node build/inject.mjs"
+  },
+  "dependencies": {
+    "@cue/contracts": "workspace:*",
+    "@mentra/miniapp": "3.4.0",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9",
+    "@mentra/miniapp-cli": "0.1.0-dev.0",
+    "@types/node": "^22",
+    "esbuild": "^0.28.2",
+    "eslint": "^9",
+    "typescript": "^5.9.0",
+    "typescript-eslint": "^8",
+    "vitest": "^3.2.0"
+  }
+}
