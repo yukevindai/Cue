@@ -1,0 +1,135 @@
+# Cue — architecture and team contract
+
+`docs/spec.md` is the product spec (v0.4) and wins on product behavior. This file
+fixes the technical decisions every role builds against. Change it (and
+`packages/contracts`) only by agreement, because four roles work in parallel.
+
+Working product name: **Cue** (the spec leaves the name undecided).
+
+## Stack
+
+- pnpm workspace monorepo, TypeScript everywhere, Node 22.
+- `apps/web`: Next.js 16 App Router. **Read `apps/web/AGENTS.md`: this Next
+  version differs from older ones** (e.g. `src/proxy.ts`, not middleware; docs
+  are in `apps/web/node_modules/next/dist/docs/`). Tailwind 4. Vitest.
+- Supabase: Auth (email + password, no email confirmation locally), Postgres,
+  Realtime, Storage (`avatars` bucket).
+- Claude wingman through `@anthropic-ai/sdk`, server only.
+- `apps/mentra`: glasses bridge that forwards a verified backward touch-strip
+  swipe as an `InterestEvent`.
+
+## Local development
+
+```bash
+pnpm install
+pnpm stack:start      # local Supabase in Docker; writes apps/web/.env.local
+pnpm dev              # http://localhost:3000
+pnpm stack:reset      # re-apply migrations + seed
+pnpm typecheck && pnpm lint && pnpm test
+pnpm test:e2e         # Playwright, needs the stack
+```
+
+`scripts/dev-stack.sh` starts `dockerd` if needed and pulls Supabase images from
+Docker Hub (`SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io`). DB is at
+`postgresql://postgres:postgres@127.0.0.1:54322/postgres`.
+
+## Trust model
+
+- Browsers hold only the anon key and the user's cookie session. They use
+  Supabase directly for **auth, realtime, and avatar upload only**. All other
+  reads and writes go through `apps/web` API routes.
+- API routes authenticate the caller (`requireSessionUser()` in
+  `apps/web/src/server/auth.ts`, or a device token), authorize, then use the
+  service-role client (`getAdminSupabase()`). The service-role key never
+  reaches a browser or the glasses.
+- RLS is enabled on every table as defense in depth. Policies allow only what
+  realtime needs (below); everything else is denied to `anon`/`authenticated`.
+- The API never trusts a client-supplied user id.
+- Route handlers use `handle()`, `parseBody()`, `HttpError` from
+  `apps/web/src/server/http.ts`; all errors are `ApiError` from contracts.
+
+## API
+
+The full route list with auth and schemas is `packages/contracts/src/routes.ts`.
+Every request and response body is a zod schema in `packages/contracts`.
+Routes validate input with those schemas and must return bodies that parse
+with them.
+
+## Database (schema `public`)
+
+Backend owns the migration; these names and meanings are fixed so other roles
+can rely on them. Add columns freely; do not rename.
+
+| Table | Key columns |
+|---|---|
+| `profiles` | `user_id` pk → `auth.users`, `display_name`, `photo_url`, `bio`, `interests text[]`, `social_links jsonb`, `sharing jsonb` (`SharingSettings`), `version int`, `updated_at` |
+| `device_associations` | `id`, `user_id`, `device_label`, `mentra_user_id`, `token_hash`, `pairing_code_hash`, `pairing_expires_at`, `linked_at`, `last_seen_at`, `revoked_at`. One active device per user. Tokens and codes stored hashed (SHA-256). |
+| `demo_sessions` | `id`, `join_code` unique, `venue_label`, `venue_label_source` (`manual`), `status` (`active`/`ended`), `created_by`, `created_at` |
+| `demo_session_members` | `session_id`, `user_id`, `encounter_mode bool`, `joined_at`. At most 2 members per session and one active session per user, enforced in the database. |
+| `interest_events` | `id`, `event_id`, `user_id`, `session_id`, `source`, `gesture`, `occurred_at`, `received_at`, `expires_at`, `status` (`pending`/`consumed`/`expired`/`cancelled`). Unique (`user_id`, `event_id`). At most one `pending` row per user and session. |
+| `matches` | `id`, `session_id`, `user_a`, `user_b` (`user_a < user_b`), `first_signal_at`, `venue_label`, `venue_label_source`, `status` (`active`/`ended`), `ended_by`, `ended_at`, `created_at`. One active match per pair. |
+| `blocks` | `blocker_id`, `blocked_id`, `created_at` |
+| `wingman_suggestions` | `match_id`, `requester_id`, `cache_key` (both profile versions + sharing), `payload jsonb`, `created_at`. Deleted when the match ends. |
+
+### Matching
+
+One Postgres function does the whole decision in a single transaction, so two
+simultaneous signals cannot create two matches or zero matches:
+
+```
+submit_interest(p_user_id uuid, p_session_id uuid, p_event_id uuid,
+                p_source text, p_gesture text, p_occurred_at timestamptz)
+  returns jsonb  -- { status, received_at, expires_at, matched, match_id, reason }
+```
+
+Rules (spec section 3): caller must be a member of the active session with
+encounter mode on; neither side has blocked the other; `received_at` is the
+database clock; the window is `MATCH_WINDOW_SECONDS` (15 s); a repeated
+`event_id` or a second signal while one is pending is `duplicate` and creates
+nothing; when the other member has an unexpired pending signal, create one
+match, consume both signals, `first_signal_at` = the earlier `received_at`.
+Pausing encounter mode, leaving, or a device disconnect cancels the pending
+signal; expired signals are never replayed. Only service role may execute it.
+
+`packages/matching` holds the same rules as pure TypeScript (eligibility,
+expiry, duplicate handling) with unit tests; it is the readable reference and
+is used by the server for pre-checks and by tests. The SQL function is the
+authority for atomicity.
+
+### Realtime
+
+Clients subscribe to Postgres changes and then refetch through the API:
+
+- `matches`: RLS `select` for `auth.uid() in (user_a, user_b)`. Any event → refetch `GET /api/matches`.
+- `interest_events`: RLS `select` for `user_id = auth.uid()` only (own pending signal; never the other person's).
+- `demo_session_members`: RLS `select` for own row.
+
+All three tables are in the `supabase_realtime` publication. No profile data
+travels over realtime.
+
+## Privacy rules that are easy to break
+
+- A one-sided signal is invisible to the other person: no API response, realtime
+  row, count, or timing difference may reveal it. `InterestAck` is identical
+  whether or not the other person has a pending signal, except `matched`.
+- `SharedProfile` is built on the server from the owner's `sharing` settings;
+  unapproved fields are never sent. Profiles are visible only to an active match.
+- Unmatch or block ends the match, deletes cached suggestions, and removes
+  access immediately.
+- Wingman input is limited to fields that are shared **and** `aiAssist` is on
+  for that owner, plus the coarse venue label. Profile text is data, never
+  instructions.
+
+## Ownership
+
+| Role | Owns (only this role edits) |
+|---|---|
+| Hardware | `apps/mentra/**`, `docs/hardware-check.md` |
+| Backend | `supabase/**`, `packages/matching/**`, `apps/web/src/server/**` except `server/ai/**`, `apps/web/src/app/api/**` except `api/matches/[id]/suggestions/**` |
+| Frontend | `apps/web/src/app/**` except `api/**`, `apps/web/src/components/**`, `apps/web/src/lib/**` except `lib/supabase/**` and `lib/env.ts`, `apps/web/public/**` |
+| AI / integration | `apps/web/src/server/ai/**`, `apps/web/src/app/api/matches/[id]/suggestions/**`, `tests/e2e/**`, `playwright.config.ts`, `docs/demo.md`, `README.md` |
+| Lead (orchestrator) | root config, `packages/contracts/**`, `docs/architecture.md`, `AGENTS.md`, CI, `apps/web` config files and `package.json` |
+
+Need a change outside your area (a new dependency in `apps/web/package.json`, a
+contract tweak)? Make the smallest possible edit, and list it under
+"Cross-boundary changes" in your final report so the lead can merge it cleanly.
