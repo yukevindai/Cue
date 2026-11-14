@@ -39,12 +39,17 @@ export function supabaseSuggestionCache(db: SupabaseClient): SuggestionCache {
     },
 
     async put(matchId, requesterId, cacheKey, payload) {
-      const stale = await db.from(TABLE).delete().eq("match_id", matchId).eq("requester_id", requesterId);
-      const { error } = stale.error
-        ? stale
-        : await db
-            .from(TABLE)
-            .insert({ match_id: matchId, requester_id: requesterId, cache_key: cacheKey, payload });
+      // Primary key is (match_id, requester_id): the new entry replaces any older one.
+      const { error } = await db.from(TABLE).upsert(
+        {
+          match_id: matchId,
+          requester_id: requesterId,
+          cache_key: cacheKey,
+          payload,
+          created_at: payload.generatedAt,
+        },
+        { onConflict: "match_id,requester_id" },
+      );
       if (error) console.warn("wingman cache write failed:", error.code);
     },
   };

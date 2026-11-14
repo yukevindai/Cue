@@ -102,8 +102,8 @@ export async function callWingmanModel(
       throw new WingmanUpstreamError("timeout", `no response within ${config.timeoutMs} ms`);
     }
     if (err instanceof Anthropic.APIError) {
-      // Status and class only: an error body can echo the request.
-      throw new WingmanUpstreamError("error", `${err.constructor.name} status=${err.status ?? "none"}`);
+      // Status only: an error body can echo the request.
+      throw new WingmanUpstreamError("error", `api error status=${err.status ?? "none"}`);
     }
     throw new WingmanUpstreamError("error", err instanceof Error ? err.name : "unknown failure");
   } finally {
