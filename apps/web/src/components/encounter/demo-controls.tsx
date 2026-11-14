@@ -8,7 +8,13 @@ import { api, describeError } from "@/lib/api";
 type Action = "reset" | "end";
 
 /** Organiser tools, deliberately quiet: reset for another run, or end the session. */
-export function DemoControls({ onEnded }: { onEnded: (text: string) => void }) {
+export function DemoControls({
+  onEnded,
+  onReset,
+}: {
+  onEnded: (text: string) => void;
+  onReset: () => void;
+}) {
   const { applyEncounter, refreshMatches } = useLive();
   const [confirm, setConfirm] = useState<Action | null>(null);
   const [busy, setBusy] = useState(false);
@@ -29,7 +35,10 @@ export function DemoControls({ onEnded }: { onEnded: (text: string) => void }) {
       const status = await api.resetDemo({ leave: action === "end" });
       setConfirm(null);
       if (action === "end") onEnded("Session ended. Start a new one, or join with a code.");
-      else setDone("Demo reset. Ready for another run.");
+      else {
+        setDone("Demo reset. Ready for another run.");
+        onReset();
+      }
       applyEncounter(status);
       void refreshMatches();
     } catch (err) {
@@ -54,7 +63,7 @@ export function DemoControls({ onEnded }: { onEnded: (text: string) => void }) {
             End session
           </Button>
         </div>
-        <p role="status" className="text-sm font-medium text-ink empty:hidden">
+        <p role="status" className="text-sm font-medium text-ink">
           {done}
         </p>
       </div>

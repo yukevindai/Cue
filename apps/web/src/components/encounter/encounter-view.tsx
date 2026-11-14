@@ -21,6 +21,8 @@ export function EncounterView() {
   const [retrying, setRetrying] = useState(false);
   /** Why the person is back on the setup screen, when we know. */
   const [setupNotice, setSetupNotice] = useState<string | null>(null);
+  /** Bumped on a demo reset so the signal panel starts from a clean slate. */
+  const [runKey, setRunKey] = useState(0);
 
   async function retry() {
     setRetrying(true);
@@ -59,7 +61,7 @@ export function EncounterView() {
       tone="warn"
       className="mb-6"
       action={
-        <Button variant="quiet" onClick={retry} busy={retrying} className="min-h-0 px-0">
+        <Button variant="quiet" onClick={retry} busy={retrying}>
           Try again
         </Button>
       }
@@ -88,9 +90,9 @@ export function EncounterView() {
       <div className="space-y-6">
         <SessionCard session={encounter.session} />
         <ModeCard enabled={encounter.encounterMode} />
-        <SignalPanel encounter={encounter} onLeftSession={setSetupNotice} />
+        <SignalPanel key={runKey} encounter={encounter} onLeftSession={setSetupNotice} />
         <GlassesCard device={encounter.device} />
-        <DemoControls onEnded={setSetupNotice} />
+        <DemoControls onEnded={setSetupNotice} onReset={() => setRunKey((k) => k + 1)} />
       </div>
     </>
   );

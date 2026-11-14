@@ -313,6 +313,18 @@ export function LiveProvider({
     return () => window.clearInterval(id);
   }, [realtime, refreshAll]);
 
+  // The other person joining is not pushed to us (realtime only carries our own
+  // membership row), so while we are alone in a session, check often.
+  const waitingForSecond =
+    encounter?.session != null && encounter.session.memberCount < encounter.session.capacity;
+  useEffect(() => {
+    if (!waitingForSecond) return;
+    const id = window.setInterval(() => {
+      if (document.visibilityState === "visible") void refreshEncounter();
+    }, 2_500);
+    return () => window.clearInterval(id);
+  }, [waitingForSecond, refreshEncounter]);
+
   // Browsers need one user gesture before they will play the match sound.
   useEffect(() => {
     const arm = () => armChime();

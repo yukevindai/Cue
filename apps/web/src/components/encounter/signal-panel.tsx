@@ -16,6 +16,7 @@ import {
 import { useServerNow } from "./use-server-now";
 
 const FADED_LINE_MS = 6000;
+const MESSAGE_MS = 12_000;
 const FADED_TEXT =
   "That signal has faded. Nothing was shared. You can signal again whenever you like.";
 
@@ -85,6 +86,13 @@ export function SignalPanel({
       window.clearTimeout(clear);
     };
   }, [faded, refreshEncounter]);
+
+  // Panel messages are passing remarks, not state: let them go after a while.
+  useEffect(() => {
+    if (!message) return;
+    const id = window.setTimeout(() => setMessage(null), MESSAGE_MS);
+    return () => window.clearTimeout(id);
+  }, [message]);
 
   // If the signal actually became a match right at the wire, stay silent.
   const fadedReceivedMs = faded ? new Date(faded.receivedAt).getTime() : 0;

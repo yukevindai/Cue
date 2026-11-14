@@ -94,7 +94,7 @@ export function GlassesCard({ device }: { device: DeviceStatus }) {
           </p>
           <Button
             variant="quiet"
-            className="mt-2 px-0"
+            className="mt-2 -ml-5"
             onClick={() => {
               setUnlinkError(null);
               setConfirmUnlink(true);
@@ -136,7 +136,7 @@ export function GlassesCard({ device }: { device: DeviceStatus }) {
                 </span>
                 . This card updates by itself once the glasses are linked.
               </p>
-              <Button variant="quiet" className="mt-2 px-0" onClick={() => setPairing(null)}>
+              <Button variant="quiet" className="mt-2 -ml-5" onClick={() => setPairing(null)}>
                 Cancel
               </Button>
             </>
