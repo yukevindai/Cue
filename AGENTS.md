@@ -73,6 +73,11 @@ hardware; run `pnpm typecheck && pnpm lint && pnpm test`, web build, stack-backe
 tests and `pnpm test:e2e` on the merged branch; send integration bugs back to
 the owning session; update this log.
 
-Open items needing a human: `ANTHROPIC_API_KEY` for a live wingman call; a
-hosted Supabase project for the on-site demo (local stack is used for
-development); the real backward-swipe checkpoint on the loaner glasses.
+Open items needing a human: `ANTHROPIC_API_KEY` for a live wingman call; deploying to the hosted Supabase project; the real backward-swipe checkpoint on the loaner glasses.
+
+Hosted Supabase project for the demo: **Cue**, ref `dwimciiijiebiskocfjx`,
+region us-west-1, org "Feidy AI" (created 2026-11-14 with the owner's
+approval). Empty until the lead applies the merged migrations and seed after
+integration passes locally. Development and tests stay on the local stack.
+Never touch the org's other projects (`open-capabilities`, `Gojee`). Keys are
+not stored in the repo.
