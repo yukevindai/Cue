@@ -49,6 +49,17 @@ See "Status log" below. Update it when a milestone lands or a decision changes.
 
 ### Status log
 
+- 2026-11-14 15:05 UTC: Schema (`20261114000000_cue_schema.sql`) and seed
+  applied to hosted **Cue DB** (`ubnwwhpkjazejttdmstf`) through the Supabase
+  connector. Verified identical to the local stack by fingerprint (columns,
+  constraints, indexes, RLS flags, 17 functions and their grants, policies,
+  triggers, realtime publication, `avatars` bucket); the three demo accounts
+  exist with the seeded password. Not verified: a live sign-in against the
+  hosted project (its host is blocked from the build environment). If the
+  migration changes, apply the delta as a new migration; do not re-run this one.
+- 2026-11-14 14:56 UTC: All four role branches merged into the lead branch
+  (`f226b4b`); CI green; lead drove the two-phone flow in a browser. Browser-level
+  e2e specs still in progress in the AI/integration session.
 - 2026-11-14: Foundation landed (workspace, contracts, web scaffold, local
   Supabase stack, architecture doc). Role work in progress on
   `claude/cue-hardware`, `claude/cue-backend`, `claude/cue-frontend`,
@@ -73,12 +84,10 @@ hardware; run `pnpm typecheck && pnpm lint && pnpm test`, web build, stack-backe
 tests and `pnpm test:e2e` on the merged branch; send integration bugs back to
 the owning session; update this log.
 
-Open items needing a human: `ANTHROPIC_API_KEY` for a live wingman call; deploying to the hosted Supabase project; the real backward-swipe checkpoint on the loaner glasses.
+Open items needing a human: `ANTHROPIC_API_KEY` for a live wingman call; hosting the web app (Vercel or laptop + tunnel) with the Cue DB URL, anon key and service-role key, and turning off "Confirm email" in Cue DB Auth settings if new sign-ups are wanted; the real backward-swipe checkpoint on the loaner glasses.
 
 Hosted Supabase project for the demo: **Cue DB**, ref `ubnwwhpkjazejttdmstf`,
 region us-west-2, organization "Cue" (created by the owner 2026-11-14; the
-Supabase connector is authorized for that organization only). Empty until the
-lead applies the merged migrations and seed after integration passes locally.
-Development and tests stay on the local stack. An earlier empty project named
+Supabase connector is authorized for that organization only). Schema and seed applied 2026-11-14 (see status log). Development and tests stay on the local stack. An earlier empty project named
 "Cue" in the "Feidy AI" organization (`dwimciiijiebiskocfjx`) is superseded and
 must not be used. Keys are not stored in the repo.
