@@ -3,11 +3,12 @@
 Target length: 90 seconds, plus questions. Source of truth for behavior:
 `docs/spec.md` section 7. This runbook must not promise more than the build does.
 
-**Hardware caveat.** The glasses swipe is not verified in this repository. Check
-`docs/hardware-check.md` before the demo. If it does not record a verified
-backward swipe reaching the server under the correct account, say so openly and
-use the fallback in this file. A button, a test event, or a web input is not the
-glasses path and must not be presented as one.
+**Hardware caveat.** As of 2026-11-14, `docs/hardware-check.md` records that the
+real-swipe checkpoint is not met: the swipe has not been run on real glasses.
+Run the on-device steps in that file before the demo and fill in its table. If
+they do not pass, say so openly and use the fallback in this file. A button, an
+injected event, or a web input is not the glasses path and must not be
+presented as one.
 
 ## Before the demo
 
@@ -22,10 +23,12 @@ Setup checklist:
 - [ ] `pnpm stack:reset` has been run, so the seed data is fresh.
 - [ ] Two browsers or devices are signed in: one as `alex@cue.demo` and one as
       `sam@cue.demo` (password `cue-demo-123`).
-- [ ] The glasses are paired to Alex. Generate a pairing code in the web app as
-      Alex and complete the pairing on the glasses side with that code.
-- [ ] Alex creates a demo session in the web app. Sam joins with the join code
-      shown for that session.
+- [ ] The glasses are paired to Alex. On the Encounter page as Alex, open the
+      glasses card, generate a pairing code, and enter it in the Cue app on the
+      glasses. The card should then read "Glasses linked".
+- [ ] Alex starts a session on the Encounter page ("Start a session") and
+      enters the venue label. Sam joins with the join code shown there ("Join
+      with a code").
 - [ ] Encounter mode is on for both Alex and Sam.
 - [ ] Riley (`riley@cue.demo`) is available on a third browser for the rejection
       question, but is not part of the demo.
@@ -57,8 +60,8 @@ two people are standing does not prove who either of them meant."
 
 Use either option:
 
-- Demo reset in the web app, if it is available for the signed-in account.
-  Then start the flow again from the session step.
+- "Demo controls" on the Encounter page: reset the session, then start the
+  flow again from the session step.
 - `pnpm stack:reset` from the repository root. This re-applies migrations and
   seed data and clears demo state for all accounts. Restart `pnpm dev` if it
   was stopped.
