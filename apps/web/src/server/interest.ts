@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { InterestAck, InterestEvent, InterestRejectReason } from "@cue/contracts";
+import { sourceAllowedForAuth } from "@cue/matching";
 import { iso, isoOrNull, rpc } from "@/server/db";
 import { bearerToken, requireDevice } from "@/server/devices";
 import { requireSessionUser } from "@/server/auth";
@@ -43,8 +44,7 @@ export async function submitInterest(
 ): Promise<InterestAck> {
   // The glasses touch source needs the device credential; the web button needs
   // the web session. Neither credential can speak for the other input.
-  const expected = caller.via === "device" ? "mentra_touch" : "web_demo";
-  if (event.source !== expected) {
+  if (!sourceAllowedForAuth(caller.via, event.source)) {
     throw new HttpError("forbidden", `source ${event.source} is not allowed with this credential`);
   }
   rateLimit(`interest:${caller.userId}`, 30, 10_000);
