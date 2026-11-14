@@ -75,9 +75,10 @@ the owning session; update this log.
 
 Open items needing a human: `ANTHROPIC_API_KEY` for a live wingman call; deploying to the hosted Supabase project; the real backward-swipe checkpoint on the loaner glasses.
 
-Hosted Supabase project for the demo: **Cue**, ref `dwimciiijiebiskocfjx`,
-region us-west-1, org "Feidy AI" (created 2026-11-14 with the owner's
-approval). Empty until the lead applies the merged migrations and seed after
-integration passes locally. Development and tests stay on the local stack.
-Never touch the org's other projects (`open-capabilities`, `Gojee`). Keys are
-not stored in the repo.
+Hosted Supabase project for the demo: **Cue DB**, ref `ubnwwhpkjazejttdmstf`,
+region us-west-2, organization "Cue" (created by the owner 2026-11-14; the
+Supabase connector is authorized for that organization only). Empty until the
+lead applies the merged migrations and seed after integration passes locally.
+Development and tests stay on the local stack. An earlier empty project named
+"Cue" in the "Feidy AI" organization (`dwimciiijiebiskocfjx`) is superseded and
+must not be used. Keys are not stored in the repo.
