@@ -54,3 +54,30 @@ See "Status log" below. Update it when a milestone lands or a decision changes.
   `claude/cue-hardware`, `claude/cue-backend`, `claude/cue-frontend`,
   `claude/cue-ai-integration`, merged into the lead branch
   `claude/friendly-tesla-p1oduu`.
+
+### Orchestration (lead notes)
+
+Role sessions (children of lead session `session_01NFc7bJEVY8d6Rnk95kGiot`),
+each pushing its own branch; the lead merges them into
+`claude/friendly-tesla-p1oduu` and runs final integration:
+
+| Role | Session | Branch |
+|---|---|---|
+| Backend | `session_01NFc7bKcVth3YNcgJKFiGQf` | `claude/cue-backend` |
+| Frontend | `session_01NFc7bMeLaBuKBm85whk7vx` | `claude/cue-frontend` |
+| AI / integration | `session_01NFc7bLR7ZJAaywNpreftjf` | `claude/cue-ai-integration` |
+| Hardware | `session_01NFc7bKpRFPweCZeZ5FnG9M` | `claude/cue-hardware` |
+
+Lead procedure: wait for role reports; merge backend first, then AI, frontend,
+hardware; run `pnpm typecheck && pnpm lint && pnpm test`, web build, stack-backed
+tests and `pnpm test:e2e` on the merged branch; send integration bugs back to
+the owning session; update this log.
+
+Open items needing a human: `ANTHROPIC_API_KEY` for a live wingman call; deploying to the hosted Supabase project; the real backward-swipe checkpoint on the loaner glasses.
+
+Hosted Supabase project for the demo: **Cue**, ref `dwimciiijiebiskocfjx`,
+region us-west-1, org "Feidy AI" (created 2026-11-14 with the owner's
+approval). Empty until the lead applies the merged migrations and seed after
+integration passes locally. Development and tests stay on the local stack.
+Never touch the org's other projects (`open-capabilities`, `Gojee`). Keys are
+not stored in the repo.
