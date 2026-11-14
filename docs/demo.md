@@ -41,8 +41,8 @@ Setup checklist:
 | 0:00 - 0:10 | Show Alex's and Sam's profiles and the active demo session in the web app. | "These are two synthetic demo accounts in one isolated two-person session. Cue only matches people inside that session." |
 | 0:10 - 0:25 | Point at encounter mode on both accounts. | "Both people have turned encounter mode on. Each signal can only target the other person in this session." |
 | 0:25 - 0:40 | Alex makes a backward swipe along the glasses' temple strip, as if brushing back a stray hair. Show that no match appears. | "Alex signals interest. Sam gets no notification about it, and no match appears yet." If the glasses path is not verified, say so here instead of implying it works. |
-| 0:40 - 0:55 | Sam taps "Interested" in the web app. | "Sam is the second person. The web app is the second input because there is only one pair of glasses." |
-| 0:55 - 1:10 | Show the match on both screens: approved profile details, encounter time, and venue label. | "Both signals arrived within 15 seconds, so the server created one match. Each person sees only the fields they approved for sharing." |
+| 0:40 - 0:55 | Sam taps "Interested" in the web app. Alex's page reads "Your signal is out" until then. | "Sam is the second person. The web app is the second input because there is only one pair of glasses." |
+| 0:55 - 1:10 | Both screens show "It's mutual." Tap "See Sam's card" / "See Alex's card": approved profile details, encounter time, and venue label. | "Both signals arrived within 15 seconds, so the server created one match. Each person sees only the fields they approved for sharing." |
 | 1:10 - 1:25 | Tap "Find common ground" on one screen. Show the shared interests and the optional opening question. | "Claude only sees the profile fields each person approved for sharing and for AI assistance, plus the venue label. It suggests a starting point and does not join the conversation." |
 | 1:25 - 1:30 | Stop the demo. Let the participants talk. | "From here the conversation is theirs. Cue does not listen or reply." |
 
@@ -58,16 +58,20 @@ two people are standing does not prove who either of them meant."
 
 ## Reset between runs
 
-Use either option:
+A match belongs to the pair: while Alex and Sam have an active match, a new
+swipe does not create a second one. Between runs, end the match first.
 
-- "Demo controls" on the Encounter page: reset the session, then start the
-  flow again from the session step.
+- "Demo controls" on the Encounter page, then reset. This ends the pair's
+  matches and clears pending signals, so the same pair can match again. Use
+  this between demo runs.
 - `pnpm stack:reset` from the repository root. This re-applies migrations and
-  seed data and clears demo state for all accounts. Restart `pnpm dev` if it
-  was stopped.
+  seed data and clears everything for all accounts, including glasses pairing.
+  Use it only when the app state is beyond a demo reset. Restart `pnpm dev` if
+  it was stopped.
 
-After a reset, sign in again and create or join a new session. Re-check that
-encounter mode is on for both accounts.
+After a demo reset, check that both accounts are in the session and that
+encounter mode is on for both. After `pnpm stack:reset`, sign in again, pair
+the glasses again, and create and join a new session.
 
 Keep an expiry example ready for questions:
 
