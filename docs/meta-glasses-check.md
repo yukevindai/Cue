@@ -84,9 +84,9 @@ then **three times**, pausing a couple of seconds between patterns. Look at
 
 | You do | Expected in the list |
 |---|---|
-| One tap | `play/pause` |
-| Two taps | `next track` |
-| Three taps | `previous track` |
+| One tap | "Play (single tap)" or "Pause (single tap)" |
+| Two taps | "Next track (double tap)" |
+| Three taps | "Previous track (triple tap)" |
 
 Record exactly what appears, including anything unexpected.
 

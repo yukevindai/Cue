@@ -49,6 +49,27 @@ See "Status log" below. Update it when a milestone lands or a decision changes.
 
 ### Status log
 
+- 2026-11-15: Second glasses route added (PR #3): a Meta glasses wearer
+  (Meta Adventurer on an iPhone) signals with a headset media command. No
+  native app: the signed-in web page ("Meta glasses" card on Encounter,
+  "Listen for my glasses") holds the phone's audio session and receives
+  play/pause/next/previous through the Media Session API; the chosen command
+  (default double tap = next track) is sent as `source: headset_remote` with
+  the web session. Allowed source/gesture pairs live in `GESTURES_BY_SOURCE`
+  (contracts) and SQL `public.interest_pair_ok`; migration
+  `20261115000000_headset_remote_source.sql`. NOT verified on a real iPhone or
+  real Meta glasses: see `docs/meta-glasses-check.md`. It shows a headset sent
+  the command, not which headset. The native Meta toolkit route (experimental
+  Inputs module) is documented there and not built.
+- 2026-11-14 19:13 UTC: Real Mentra Live swipe verified on the live site: seven
+  swipes reached the server under the wearer's account in ~0.2–0.3 s and two
+  completed matches. The mini app's default gesture name did not match on that
+  unit; "Use as backward swipe" in calibration was needed (name not recorded).
+  PR #2 (reload a tab when the browser login changes) merged.
+  A Codex review finding (pending signal survives a partner swap inside the
+  window) was reproduced and fixed on a branch, then parked at the owner's
+  request; the fix is in PR #2's commit history, not in `main`.
+
 - 2026-11-14 15:10 UTC: Final merged tree verified by the lead: typecheck,
   lint, unit tests (matching 33, mentra 119, web 112 + stack/live-gated),
   `pnpm test:e2e` 55/55. Vercel project `cue` (team "Kevin's projects",
@@ -60,8 +81,8 @@ See "Status log" below. Update it when a milestone lands or a decision changes.
   merged and applied to Cue DB.
   STILL MISSING ON VERCEL (owner must add): `SUPABASE_SERVICE_ROLE_KEY` (all
   API routes fail without it) and `ANTHROPIC_API_KEY` (wingman), then redeploy.
-  STILL UNVERIFIED: real glasses swipe (docs/hardware-check.md step 6), live
-  Claude call, live sign-in on the hosted site.
+  (Superseded: the swipe, live sign-in and keys were all verified later on
+  2026-11-14; see above.)
 - 2026-11-14 15:05 UTC: Schema (`20261114000000_cue_schema.sql`) and seed
   applied to hosted **Cue DB** (`ubnwwhpkjazejttdmstf`) through the Supabase
   connector. Verified identical to the local stack by fingerprint (columns,
