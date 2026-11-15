@@ -192,6 +192,12 @@ export class CueBridge {
     this.pipelineDeps.mapping.backwardSwipeGestureName = value;
     await this.host.storage.set(STORAGE_KEYS.backwardGesture, value ?? BACKWARD_GESTURE_DISABLED);
     this.host.logger.info("backward swipe mapping changed", { backwardGestureName: value });
+    // Choosing the gesture is the end of calibrating: leave calibration mode so
+    // the next swipe is sent instead of only being listed.
+    if (value !== null && this.pipelineDeps.calibration) {
+      await this.setCalibration(false);
+      return;
+    }
     this.publish();
   }
 

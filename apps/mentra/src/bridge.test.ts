@@ -147,6 +147,25 @@ describe("CueBridge", () => {
     expect(h.storage.get(STORAGE_KEYS.calibration)).toBe("0");
   });
 
+  it("(e2) choosing the backward gesture ends calibration, so the next swipe is sent", async () => {
+    const h = setup();
+    await ready(h);
+    await h.bridge.setCalibration(true);
+    await h.bridge.handleTouch(touch("forward_swipe", T0));
+    expect(h.interestPosts()).toHaveLength(0);
+    await h.bridge.setBackwardGesture("forward_swipe");
+    expect(h.bridge.status().calibration).toBe(false);
+    expect(h.storage.get(STORAGE_KEYS.calibration)).toBe("0");
+    await h.bridge.handleTouch(touch("forward_swipe", T0 + 5000));
+    expect(h.interestPosts()).toHaveLength(1);
+  });
+
+  it("(e3) the setup screen hides elements marked hidden even though pills set a display", async () => {
+    const { readFileSync } = await import("node:fs");
+    const html = readFileSync(new URL("./ui/index.html", import.meta.url), "utf8");
+    expect(html).toMatch(/\[hidden\]\s*\{\s*display:\s*none\s*!important;?\s*\}/);
+  });
+
   describe("(f) backward gesture override", () => {
     it("remaps to forward_swipe: only it submits", async () => {
       const h = setup();
