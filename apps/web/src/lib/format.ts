@@ -35,3 +35,38 @@ export function initials(name: string): string {
   if (parts.length === 0) return "?";
   return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
 }
+
+/**
+ * Where a match happened, in words. A phone-location match names no place
+ * (its label is only "Nearby"); a check-in match names the venue; an older,
+ * hand-entered label keeps its note.
+ */
+export function matchPlace(match: { venueLabel: string; venueLabelSource: "manual" | "venue_checkin" | "phone_location" }): {
+  /** "Met at Main hall" / "You were near each other". */
+  line: string;
+  /** For "You met <time> <phrase>": "at Main hall" / "near each other". */
+  phrase: string;
+  /** A short plain note on where the label came from, or null. */
+  note: string | null;
+} {
+  switch (match.venueLabelSource) {
+    case "phone_location":
+      return {
+        line: "You were near each other",
+        phrase: "near each other",
+        note: "Your phones were close together. Cue doesn't keep where.",
+      };
+    case "venue_checkin":
+      return {
+        line: `Met at ${match.venueLabel}`,
+        phrase: `at ${match.venueLabel}`,
+        note: "You were both checked in here.",
+      };
+    case "manual":
+      return {
+        line: `Met at ${match.venueLabel}`,
+        phrase: `at ${match.venueLabel}`,
+        note: "Venue entered by hand, not GPS.",
+      };
+  }
+}

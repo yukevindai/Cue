@@ -141,6 +141,7 @@ export interface TestUser {
 
 const createdUsers: string[] = [];
 const uploadedObjects: string[] = [];
+const createdVenues: string[] = [];
 
 export interface CreateUserOptions {
   /** Insert a `profiles` row (default true). */
@@ -168,6 +169,11 @@ export async function createUsers(n: number, opts: CreateUserOptions = {}): Prom
   return Promise.all(Array.from({ length: n }, () => createUser(opts)));
 }
 
+/** Track a venue created through the API for removal in cleanup (after its users are gone). */
+export function trackVenue(venueId: string): void {
+  createdVenues.push(venueId);
+}
+
 /** Track a storage object (bucket `avatars`) for removal in cleanup. */
 export function trackAvatar(objectPath: string): void {
   uploadedObjects.push(objectPath);
@@ -180,7 +186,7 @@ export async function cleanupUsers(): Promise<void> {
     await admin.storage.from("avatars").remove(uploadedObjects.splice(0));
   }
   const ids = createdUsers.splice(0);
-  // Sequential with retries: parallel deletes of users who share a session can deadlock on the cascades.
+  // Sequential with retries: parallel deletes of users who share matches can deadlock on the cascades.
   for (const id of ids) {
     let lastError = "";
     for (let attempt = 0; attempt < 4; attempt++) {
@@ -194,6 +200,8 @@ export async function cleanupUsers(): Promise<void> {
     }
     if (lastError) console.warn(`[stack-tests] could not delete throwaway user ${id}: ${lastError}`);
   }
+  const venues = createdVenues.splice(0);
+  if (venues.length) await admin.from("venues").delete().in("id", venues);
 }
 
 // ---------------------------------------------------------------------------
@@ -223,11 +231,11 @@ export interface SignalOptions {
   gesture?: string;
 }
 
-export async function signal(user: TestUser | string, sessionId: string, opts: SignalOptions = {}): Promise<Ack> {
+/** SQL `submit_signal`: the place comes from the user's presence, never from the call. */
+export async function signal(user: TestUser | string, opts: SignalOptions = {}): Promise<Ack> {
   const source = opts.source ?? "web_demo";
-  const res = await admin.rpc("submit_interest", {
+  const res = await admin.rpc("submit_signal", {
     p_user_id: typeof user === "string" ? user : user.id,
-    p_session_id: sessionId,
     p_event_id: opts.eventId ?? randomUUID(),
     p_source: source,
     p_gesture: opts.gesture ?? GESTURE[source],
@@ -236,48 +244,120 @@ export async function signal(user: TestUser | string, sessionId: string, opts: S
   return must(res) as Ack;
 }
 
-export interface Pair {
-  sessionId: string;
-  venue: string;
-  joinCode: string;
-  a: TestUser;
-  b: TestUser;
+// ---------------------------------------------------------------------------
+// Presence: encounter mode, venues, phone locations (service role)
+// ---------------------------------------------------------------------------
+
+export interface Venue {
+  id: string;
+  name: string;
+  code: string;
 }
 
-function joinCode(): string {
+function venueCode(): string {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let c = "";
   for (let i = 0; i < 6; i++) c += alphabet[randomBytes(1)[0] % alphabet.length];
   return c;
 }
 
-/**
- * A fresh active session for `a` and `b` (each leaves any session they were in),
- * encounter mode on for both unless `mode` is false.
- */
-export async function openSession(a: TestUser, b: TestUser, mode = true): Promise<Pair> {
-  const venue = `Test Venue ${randomBytes(4).toString("hex")}`;
-  const code = joinCode();
-  const sessionId = must(
-    await admin.rpc("create_demo_session", { p_user_id: a.id, p_venue_label: venue, p_join_code: code }),
-  ) as string;
-  const joined = must(await admin.rpc("join_demo_session", { p_user_id: b.id, p_join_code: code })) as {
-    status: string;
-    session_id: string | null;
-  };
-  if (joined.status !== "joined" || joined.session_id !== sessionId) {
-    throw new Error(`could not join test session: ${JSON.stringify(joined)}`);
+/** A fresh venue created by (and checking in) `owner`. */
+export async function createVenue(owner: TestUser, name?: string): Promise<Venue> {
+  const venueName = name ?? `Test Venue ${randomBytes(4).toString("hex")}`;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const code = venueCode();
+    const res = await admin.rpc("create_venue", { p_user_id: owner.id, p_name: venueName, p_code: code });
+    if (res.error?.code === "23505") continue;
+    const id = must(res) as string;
+    createdVenues.push(id);
+    return { id, name: venueName, code };
   }
-  if (mode) {
-    for (const u of [a, b]) must(await admin.rpc("set_encounter_mode", { p_user_id: u.id, p_enabled: true }));
-  }
-  return { sessionId, venue, joinCode: code, a, b };
+  throw new Error("could not allocate a test venue code");
 }
 
-/** Two new users and a fresh session for them. */
+export async function checkIn(user: TestUser, venue: Venue): Promise<void> {
+  const res = must(await admin.rpc("check_in_venue", { p_user_id: user.id, p_code: venue.code }));
+  if (res !== "checked_in") throw new Error(`check-in failed: ${JSON.stringify(res)}`);
+}
+
+export async function setMode(user: TestUser, enabled: boolean): Promise<void> {
+  must(await admin.rpc("set_presence_mode", { p_user_id: user.id, p_enabled: enabled }));
+}
+
+export interface Spot {
+  lat: number;
+  lng: number;
+}
+
+/**
+ * A synthetic spot: a random small offset around latitude 0, longitude 0
+ * (open sea; never a real place). Random so concurrent test files and leftover
+ * rows never share a neighbourhood.
+ */
+export function freshSpot(): Spot {
+  const r = () => (Math.random() - 0.5) * 0.9;
+  return { lat: r(), lng: r() };
+}
+
+/** Metres per degree of latitude for the radius SQL `distance_m` uses. */
+export const M_PER_DEG_LAT = (2 * Math.PI * 6371008.8) / 360;
+
+/** `spot` moved `northM` metres north (exact along a meridian). */
+export function north(spot: Spot, northM: number): Spot {
+  return { lat: spot.lat + northM / M_PER_DEG_LAT, lng: spot.lng };
+}
+
+/** SQL `report_location`: false (and nothing stored) when encounter mode is off. */
+export async function locate(user: TestUser, spot: Spot, accuracyM = 5): Promise<boolean> {
+  return must(
+    await admin.rpc("report_location", { p_user_id: user.id, p_lat: spot.lat, p_lng: spot.lng, p_accuracy_m: accuracyM }),
+  ) as boolean;
+}
+
+export interface PresenceRow {
+  user_id: string;
+  encounter_mode: boolean;
+  venue_id: string | null;
+  checked_in_at: string | null;
+  lat: number | null;
+  lng: number | null;
+  accuracy_m: number | null;
+  located_at: string | null;
+}
+
+export async function presenceOf(user: TestUser): Promise<PresenceRow | null> {
+  return must(await admin.from("user_presence").select("*").eq("user_id", user.id).maybeSingle()) as PresenceRow | null;
+}
+
+/** Shift a user's stored location / check-in into the past. */
+export async function backdatePresence(user: TestUser, fields: { locatedAgoS?: number; checkedInAgoS?: number }): Promise<void> {
+  const patch: Record<string, string> = {};
+  if (fields.locatedAgoS !== undefined) patch.located_at = new Date(Date.now() - fields.locatedAgoS * 1000).toISOString();
+  if (fields.checkedInAgoS !== undefined) patch.checked_in_at = new Date(Date.now() - fields.checkedInAgoS * 1000).toISOString();
+  must(await admin.from("user_presence").update(patch).eq("user_id", user.id));
+}
+
+export interface Pair {
+  venue: Venue;
+  a: TestUser;
+  b: TestUser;
+}
+
+/**
+ * `a` and `b` checked into one fresh venue (leaving any other), encounter mode
+ * on for both unless `mode` is false. Neither has a phone location.
+ */
+export async function openVenue(a: TestUser, b: TestUser, mode = true): Promise<Pair> {
+  const venue = await createVenue(a);
+  await checkIn(b, venue);
+  for (const u of [a, b]) await setMode(u, mode);
+  return { venue, a, b };
+}
+
+/** Two new users checked into a fresh venue. */
 export async function newPair(mode = true): Promise<Pair> {
   const [a, b] = await createUsers(2);
-  return openSession(a, b, mode);
+  return openVenue(a, b, mode);
 }
 
 // ---------------------------------------------------------------------------
@@ -286,11 +366,13 @@ export async function newPair(mode = true): Promise<Pair> {
 
 export interface MatchRow {
   id: string;
-  session_id: string;
+  session_id: string | null;
+  venue_id: string | null;
   user_a: string;
   user_b: string;
   first_signal_at: string;
   venue_label: string;
+  venue_label_source: "manual" | "venue_checkin" | "phone_location";
   status: "active" | "ended";
   ended_by: string | null;
   ended_reason: string | null;
@@ -300,7 +382,7 @@ export interface EventRow {
   id: string;
   event_id: string;
   user_id: string;
-  session_id: string;
+  session_id: string | null;
   source: string;
   gesture: string;
   received_at: string;
@@ -310,16 +392,24 @@ export interface EventRow {
   match_id: string | null;
 }
 
-export async function matchesOf(sessionId: string): Promise<MatchRow[]> {
+/** Every match (any status) involving `user`, oldest first. */
+export async function matchesOf(user: TestUser | string): Promise<MatchRow[]> {
+  const id = typeof user === "string" ? user : user.id;
   return must(
-    await admin.from("matches").select("*").eq("session_id", sessionId).order("created_at"),
+    await admin.from("matches").select("*").or(`user_a.eq.${id},user_b.eq.${id}`).order("created_at"),
   ) as MatchRow[];
 }
 
-export async function eventsOf(userId: string, sessionId?: string): Promise<EventRow[]> {
-  let q = admin.from("interest_events").select("*").eq("user_id", userId);
-  if (sessionId) q = q.eq("session_id", sessionId);
-  return must(await q.order("received_at")) as EventRow[];
+/** Every match (any status) between exactly these two people, oldest first. */
+export async function matchesBetween(a: TestUser, b: TestUser): Promise<MatchRow[]> {
+  const [lo, hi] = [a.id, b.id].sort();
+  return must(
+    await admin.from("matches").select("*").eq("user_a", lo).eq("user_b", hi).order("created_at"),
+  ) as MatchRow[];
+}
+
+export async function eventsOf(userId: string): Promise<EventRow[]> {
+  return must(await admin.from("interest_events").select("*").eq("user_id", userId).order("received_at")) as EventRow[];
 }
 
 export async function eventById(eventId: string, userId: string): Promise<EventRow | null> {
@@ -327,13 +417,6 @@ export async function eventById(eventId: string, userId: string): Promise<EventR
     await admin.from("interest_events").select("*").eq("user_id", userId).eq("event_id", eventId),
   ) as EventRow[];
   return rows[0] ?? null;
-}
-
-export async function activeMembers(sessionId: string): Promise<string[]> {
-  const rows = must(
-    await admin.from("demo_session_members").select("user_id").eq("session_id", sessionId).is("left_at", null),
-  ) as { user_id: string }[];
-  return rows.map((r) => r.user_id);
 }
 
 /** Make a pending signal look like it was received `ageSeconds` ago (so it is past its 15 s window). */
@@ -415,10 +498,9 @@ export async function api(method: string, route: string, creds: Creds = {}, body
   return { status: res.status, json, text };
 }
 
-export function interestBody(sessionId: string, source: Source = "web_demo", extra: Record<string, unknown> = {}) {
+export function interestBody(source: Source = "web_demo", extra: Record<string, unknown> = {}) {
   return {
     eventId: randomUUID(),
-    encounterSessionId: sessionId,
     source,
     gesture: GESTURE[source],
     occurredAt: new Date().toISOString(),

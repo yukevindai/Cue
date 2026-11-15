@@ -20,7 +20,6 @@ import {
 } from "./headset-remote";
 
 const T0 = Date.parse("2026-11-15T18:00:00.000Z");
-const SESSION_ID = "7b0f5c0e-5c59-4c0f-9d5e-0d7a0e6f3a11";
 const EVENT_ID = "2f1d8f3a-91c4-4f0b-8a55-6f1f0c7a9e22";
 const newId = () => EVENT_ID;
 
@@ -28,8 +27,8 @@ function state(over: Partial<HeadsetState> = {}): HeadsetState {
   return {
     listening: true,
     choice: "nexttrack",
-    session: { id: SESSION_ID, memberCount: 2, capacity: 2 },
     encounterMode: true,
+    ready: true,
     pending: false,
     lastSentAtMs: null,
     ...over,
@@ -79,7 +78,6 @@ describe("decideCommand", () => {
     if (d.kind !== "send") return;
     expect(d.event).toEqual({
       eventId: EVENT_ID,
-      encounterSessionId: SESSION_ID,
       source: "headset_remote",
       gesture: "media_next_track",
       occurredAt: "2026-11-15T18:00:00.000Z",
@@ -127,24 +125,17 @@ describe("decideCommand", () => {
     });
   });
 
-  it("ignores without a session, or before the second person joins", () => {
-    expect(decideCommand("nexttrack", state({ session: null }), T0, newId)).toMatchObject({
-      reason: "no_session",
+  it("ignores while Cue doesn't know where the wearer is", () => {
+    expect(decideCommand("nexttrack", state({ ready: false }), T0, newId)).toEqual({
+      kind: "ignored",
+      reason: "no_place",
     });
-    expect(
-      decideCommand(
-        "nexttrack",
-        state({ session: { id: SESSION_ID, memberCount: 1, capacity: 2 } }),
-        T0,
-        newId,
-      ),
-    ).toMatchObject({ reason: "session_not_full" });
   });
 
-  it("ignores while encounter mode is off", () => {
-    expect(decideCommand("nexttrack", state({ encounterMode: false }), T0, newId)).toMatchObject({
-      reason: "encounter_mode_off",
-    });
+  it("ignores while encounter mode is off, and says so before the place", () => {
+    expect(
+      decideCommand("nexttrack", state({ encounterMode: false, ready: false }), T0, newId),
+    ).toMatchObject({ reason: "encounter_mode_off" });
   });
 
   it("ignores while a signal is already pending", () => {
@@ -193,9 +184,8 @@ describe("copy and feedback", () => {
     const reasons: IgnoreReason[] = [
       "not_listening",
       "not_chosen",
-      "no_session",
-      "session_not_full",
       "encounter_mode_off",
+      "no_place",
       "already_pending",
       "debounced",
     ];
@@ -218,7 +208,10 @@ describe("copy and feedback", () => {
         { kind: "sent", ack: ack({ status: "rejected", reason: "encounter_mode_off" }) },
         "nexttrack",
       ),
-    ).toBe("Not sent. Encounter mode is paused. Resume to signal.");
+    ).toBe("Not sent. Encounter mode is off. Turn it on to signal.");
+    expect(
+      outcomeText({ kind: "sent", ack: ack({ status: "rejected", reason: "no_place" }) }, "nexttrack"),
+    ).toMatch(/^Not sent\. Cue doesn't know where you are yet/);
     expect(outcomeText({ kind: "failed", detail: "No connection." }, "nexttrack")).toBe(
       "Not sent. No connection.",
     );
@@ -227,7 +220,7 @@ describe("copy and feedback", () => {
   it("plays sent / not-sent tones, and stays quiet for stray taps and matches", () => {
     expect(toneForOutcome({ kind: "sent", ack: ack() })).toBe("sent");
     expect(toneForOutcome({ kind: "sent", ack: ack({ matched: true }) })).toBeNull();
-    expect(toneForOutcome({ kind: "sent", ack: ack({ status: "rejected", reason: "blocked" }) })).toBe(
+    expect(toneForOutcome({ kind: "sent", ack: ack({ status: "rejected", reason: "no_place" }) })).toBe(
       "not_sent",
     );
     expect(toneForOutcome({ kind: "failed", detail: "x" })).toBe("not_sent");
@@ -235,6 +228,7 @@ describe("copy and feedback", () => {
     expect(outcomeText({ kind: "unconfirmed" }, "nexttrack")).toMatch(/^Not confirmed\./);
     expect(toneForOutcome({ kind: "ignored", reason: "encounter_mode_off" })).toBe("not_sent");
     expect(toneForOutcome({ kind: "ignored", reason: "already_pending" })).toBe("not_sent");
+    expect(toneForOutcome({ kind: "ignored", reason: "no_place" })).toBe("not_sent");
     expect(toneForOutcome({ kind: "ignored", reason: "not_chosen" })).toBeNull();
     expect(toneForOutcome({ kind: "ignored", reason: "debounced" })).toBeNull();
   });

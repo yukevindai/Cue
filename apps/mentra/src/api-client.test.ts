@@ -1,12 +1,11 @@
 import { InterestEvent, routes } from "@cue/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CueApiClient } from "./api-client";
-import { DEVICE_ID, EVENT_ID, SESSION_ID, ack, fakeFetch, json } from "./testing";
+import { DEVICE_ID, EVENT_ID, ack, fakeFetch, json } from "./testing";
 
 const TOKEN = "t".repeat(40);
 const event = InterestEvent.parse({
   eventId: EVENT_ID,
-  encounterSessionId: SESSION_ID,
   source: "mentra_touch",
   gesture: "backward_swipe",
   occurredAt: "2026-11-14T10:00:00.000Z",
@@ -140,7 +139,7 @@ describe("submitInterest", () => {
   });
 
   it("returns rejected and duplicate acks as ok with their status", async () => {
-    const rejected = ack({ status: "rejected", reason: "blocked", expiresAt: null });
+    const rejected = ack({ status: "rejected", reason: "no_place", expiresAt: null });
     const dup = ack({ status: "duplicate" });
     expect(await make([json(rejected)]).client.submitInterest(event)).toEqual({ ok: true, ack: rejected });
     expect(await make([json(dup)]).client.submitInterest(event)).toEqual({ ok: true, ack: dup });
@@ -179,7 +178,7 @@ describe("getDeviceContext", () => {
   const context = {
     deviceId: DEVICE_ID,
     encounterMode: true,
-    encounterSessionId: SESSION_ID,
+    ready: true,
     serverTime: "2026-11-14T10:00:00.000Z",
   };
 

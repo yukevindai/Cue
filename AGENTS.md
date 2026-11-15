@@ -6,11 +6,15 @@ points here.
 ## What this is
 
 Cue is a hackathon MVP (Immerse the Bay, 2026-11-14): signal interest with a
-backward swipe on Mentra Live smart glasses; mutual interest inside a
-two-person demo session creates a match in the web app, with an optional
-Claude "Find common ground" card.
+backward swipe on Mentra Live smart glasses (or a double tap on Meta glasses,
+or a button). Two people who signal within 15 seconds in the same place become
+a match in the web app, with profiles, in-app chat and an optional Claude
+"Find common ground" card. "Same place" is a shared venue check-in or two
+phone locations close together; there is no pre-joined session any more.
 
-- Product spec: `docs/spec.md` (wins on behavior).
+- Product spec: `docs/spec.md` (the original; kept unchanged). Where the owner
+  has since decided otherwise, `docs/architecture.md` ("Departures from the
+  spec"), `docs/place-matching.md` and `docs/profiles-and-chat.md` win.
 - Technical contract, schema, trust model, ownership: `docs/architecture.md`.
 - Shared types and the API route list: `packages/contracts/src`.
 
@@ -37,8 +41,11 @@ pnpm test:e2e      # Playwright; pass --trace off
 - One-sided interest must stay invisible to the other person.
 - A button or simulated event does not satisfy the glasses swipe requirement;
   say so plainly if hardware is unavailable rather than faking it.
-- No secrets, real personal data, or fabricated coordinates in the repo. Seed
-  data is synthetic.
+- No secrets or real personal data in the repo. Seed data is synthetic. No
+  coordinates of real places anywhere: tests use small offsets around
+  latitude 0, longitude 0 only.
+- Coordinates never leave the server: not in API responses, signals, matches,
+  logs or anything sent to Claude. They live only in `user_presence`.
 - Stay inside your role's paths (`docs/architecture.md`, Ownership).
 - Before saying work is done: typecheck, lint, tests, and a web build must pass,
   and you must have exercised the behavior for real against the local stack.
@@ -49,6 +56,37 @@ See "Status log" below. Update it when a milestone lands or a decision changes.
 
 ### Status log
 
+- 2026-11-15 12:30 UTC: Place-based matching (PR #5) replaces the two-person
+  demo session, on the owner's instruction (reverses the spec's "never choose
+  the nearest account"). A signal carries no session; `submit_signal` pairs it
+  on arrival with the closest other pending signal (15 s) in the same place: a
+  shared venue check-in (`venues`, QR code opens `/v/<code>`, anyone can host)
+  or two phone locations within 40 m after both accuracies (`user_presence`,
+  reported by the open page while Encounter mode is on; usable when under 60 s
+  old and 100 m or better). Blocked and already-matched people are silently
+  not candidates. Rejections are `encounter_mode_off`, `no_place`,
+  `invalid_event`. Match labels: venue name or "Nearby". Sign-out turns
+  Encounter mode off. Glasses app forwards a swipe only when the server says
+  `ready`. Design and limits: `docs/place-matching.md`. Known cost: in a crowd
+  it can match the wrong person ("Not who you meant? Unmatch" on the match
+  screen). Verified by the lead from a clean local DB: typecheck, lint, unit +
+  stack tests (contracts 13, matching 54, mentra 129, web 345), web build,
+  `pnpm test:e2e` 194/194, and a three-browser crowd walkthrough. Migration
+  `20261115020000_place_based_matching.sql` is applied to hosted Cue DB
+  (fingerprint identical to local apart from SQL comments); it only adds, and
+  the old session tables and `submit_interest` stay until a follow-up
+  migration drops them (`block_user` still reads them). NOT verified: real
+  phone GPS, iPhone background behaviour, real Mentra swipe or Meta double tap
+  under the new model. The live site runs the old session code until PR #5 is
+  merged (owner's go-ahead needed).
+- 2026-11-15 07:10 UTC: PR #4 (rich profiles, characters, chat) merged to
+  `main` by the owner (`59d743d`); Vercel's production deployment of that
+  commit is READY, so https://cue-gamma-five.vercel.app runs it. A Codex
+  review on PR #4 found two chat bugs (an idle refetch loop from an unstable
+  `markGone`; messages skipped when over a page arrived after "Load earlier");
+  both were reproduced, fixed and covered by e2e tests before the merge.
+  Not yet checked on the live site: profiles and chat on real phones, and a
+  live Claude call with the fuller input.
 - 2026-11-15: Rich profiles, character names and in-app chat (PR #4). Profiles
   gain age (18+), gender, city, looking-for, work/school, education, MBTI,
   ethnicity, drinking/smoking/drugs and personality cards; a character ("the
@@ -65,8 +103,6 @@ See "Status log" below. Update it when a milestone lands or a decision changes.
   walkthrough. Migration `20261115010000_rich_profiles_and_chat.sql` and the
   new demo profiles are applied to hosted Cue DB (fingerprint identical to
   local). NOT verified: real phones, a live Claude call with the fuller input.
-  The live site still runs the old code until PR #4 is merged to `main`
-  (owner's go-ahead needed); the old code works against the new schema.
 - 2026-11-15: Second glasses route added (PR #3): a Meta glasses wearer
   (Meta Adventurer on an iPhone) signals with a headset media command. No
   native app: the signed-in web page ("Meta glasses" card on Encounter,
@@ -136,7 +172,16 @@ hardware; run `pnpm typecheck && pnpm lint && pnpm test`, web build, stack-backe
 tests and `pnpm test:e2e` on the merged branch; send integration bugs back to
 the owning session; update this log.
 
-Open items needing a human: `ANTHROPIC_API_KEY` for a live wingman call; hosting the web app (Vercel or laptop + tunnel) with the Cue DB URL, anon key and service-role key, and turning off "Confirm email" in Cue DB Auth settings if new sign-ups are wanted; the real backward-swipe checkpoint on the loaner glasses.
+Open items needing a human, on the live site after PR #5 is merged: two real
+phones matching by location (outdoors and indoors) and by venue QR; whether an
+iPhone keeps reporting location with Cue in the background (expected not);
+a real Mentra swipe and a real Meta double tap matching by place; one "Find
+common ground" with the real key; profiles and chat on real phones; the Mentra
+negative checks (media conflict, hair, pocket, audio); the gesture name used
+for "Use as backward swipe" (to set `DEFAULT_BACKWARD_SWIPE_GESTURE_NAME` in
+`apps/mentra/src/config.ts`). "Confirm email" in Cue DB Auth settings must be
+off if new sign-ups are wanted. Follow-up work: a migration dropping the old
+session tables once the merged code is live.
 
 Hosted Supabase project for the demo: **Cue DB**, ref `ubnwwhpkjazejttdmstf`,
 region us-west-2, organization "Cue" (created by the owner 2026-11-14; the

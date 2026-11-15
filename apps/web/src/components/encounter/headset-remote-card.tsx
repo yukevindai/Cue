@@ -95,9 +95,9 @@ const HANDLED_ACTIONS: MediaSessionAction[] = ["play", "pause", "nexttrack", "pr
  * Meta glasses (or any Bluetooth headset): the page holds the phone's audio
  * session with a quiet loop, and one chosen media command becomes a signal.
  *
- * PRIVACY: driven only by the wearer's own commands, own session membership,
- * own mode and own pending signal. Nothing here depends on, or reveals, the
- * other person's interest; a match is announced by the provider as usual.
+ * PRIVACY: driven only by the wearer's own commands, own mode, own place
+ * (`ready`) and own pending signal. Nothing here depends on, or reveals,
+ * anyone else's interest; a match is announced by the provider as usual.
  */
 export function HeadsetRemoteCard() {
   const { encounter, clockOffsetMs, refreshEncounter, refreshMatches } = useLive();
@@ -170,8 +170,8 @@ export function HeadsetRemoteCard() {
         {
           listening: listeningRef.current,
           choice: L.choice,
-          session: enc?.session ?? null,
           encounterMode: enc?.encounterMode ?? false,
+          ready: enc?.ready ?? false,
           pending: inFlight.current || view?.kind === "pending",
           lastSentAtMs: lastSentAt.current,
         },
@@ -204,17 +204,12 @@ export function HeadsetRemoteCard() {
           if (ack.matched) void L.refreshMatches();
           void L.refreshEncounter();
         } else {
-          const copy = rejectionCopy(ack.reason);
-          if (copy.matchesLink) void L.refreshMatches();
-          if (copy.refresh) void L.refreshEncounter();
+          if (rejectionCopy(ack.reason).refresh) void L.refreshEncounter();
         }
         report(entry, { kind: "sent", ack });
       } catch (err) {
         if (isApiError(err, "encounter_mode_off")) {
-          report(entry, { kind: "failed", detail: "Encounter mode is paused. Resume to signal." });
-          void L.refreshEncounter();
-        } else if (isApiError(err, "not_in_session")) {
-          report(entry, { kind: "failed", detail: "You're not in this session any more." });
+          report(entry, { kind: "failed", detail: rejectionCopy("encounter_mode_off").text });
           void L.refreshEncounter();
         } else if (isApiError(err, "timeout") || isApiError(err, "bad_response")) {
           report(entry, { kind: "unconfirmed" });

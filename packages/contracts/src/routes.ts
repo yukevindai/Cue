@@ -10,10 +10,14 @@ export const routes = {
   encounter: "/api/encounter",
   /** POST EncounterModeInput -> EncounterStatus. session */
   encounterMode: "/api/encounter/mode",
-  /** POST CreateSessionInput -> EncounterStatus. session */
-  demoSession: "/api/demo/session",
-  /** POST JoinSessionInput -> EncounterStatus (409 session_full for a third account). session */
-  demoSessionJoin: "/api/demo/session/join",
+  /** POST LocationInput -> EncounterStatus; DELETE -> EncounterStatus (forgets the location). session */
+  encounterLocation: "/api/encounter/location",
+  /** POST CreateVenueInput -> EncounterStatus (creates the venue and checks the caller in). session */
+  venues: "/api/venues",
+  /** POST CheckInInput -> EncounterStatus (404 for an unknown code). session */
+  venueCheckIn: "/api/venues/check-in",
+  /** POST -> EncounterStatus. session */
+  venueCheckOut: "/api/venues/check-out",
   /** POST DemoResetInput -> EncounterStatus. session */
   demoReset: "/api/demo/reset",
   /** POST InterestEvent -> InterestAck. session OR device */

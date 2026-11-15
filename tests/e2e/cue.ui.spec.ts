@@ -27,7 +27,7 @@ async function openEncounter(browser: Browser, person: Person): Promise<Browsing
   return { person, context, page };
 }
 
-/** Encounter page of someone in a two-person session with encounter mode on: the signal control is ready. */
+/** Encounter page of someone with encounter mode on and a place (venue check-in): the signal control is ready. */
 async function openReadyEncounter(browser: Browser, person: Person): Promise<Browsing> {
   const b = await openEncounter(browser, person);
   await expect(interestedButton(b.page)).toBeEnabled();
@@ -182,7 +182,7 @@ test.describe("UI: two browsers, two signed-in people", () => {
     });
   }
 
-  test("full UI happy path: sign-in form, start/join with a code, encounter mode, signal, match overlay, match detail", async ({
+  test("full UI happy path: sign-in form, host a place, check in with its code, encounter mode, signal, match overlay, match detail", async ({
     world,
     browser,
   }) => {
@@ -201,26 +201,32 @@ test.describe("UI: two browsers, two signed-in people", () => {
       await aPage.getByRole("button", { name: "Sign in", exact: true }).click();
       await expect(aPage).toHaveURL(/\/encounter$/);
 
-      // A starts a session in the UI.
-      await aPage.getByLabel("Where are you?").fill(venue);
-      await aPage.getByRole("button", { name: "Start a session" }).click();
-      await expect(aPage.getByText(venue, { exact: true })).toBeVisible();
-      const joinCode = must(await a.api.getEncounter(), "A encounter").session?.joinCode;
-      expect(joinCode, "A's session has a join code").toBeTruthy();
+      // A hosts a place in the UI (which checks A in).
+      await aPage.getByLabel("Name of the place").fill(venue);
+      await aPage.getByRole("button", { name: "Host this place" }).click();
+      await expect(aPage.getByText(`Checked in at ${venue}`, { exact: true })).toBeVisible();
+      const hosted = must(await a.api.getEncounter(), "A encounter").checkIn;
+      expect(hosted, "A is checked in at the hosted place").not.toBeNull();
+      world.trackVenue(hosted!.venueId);
+      const code = hosted!.code;
+      await expect(aPage.getByRole("region", { name: `Check in at ${venue}` })).toBeVisible();
 
-      // B (signed in by cookie) joins through the join form.
+      // B (signed in by cookie) checks in by typing the venue code.
       const bContext = await b.browserContext(browser);
       const bPage = await bContext.newPage();
       await bPage.goto("/encounter");
-      await bPage.getByLabel("Session code").fill(joinCode!);
-      await bPage.getByRole("button", { name: "Join session" }).click();
-      await expect(bPage.getByText(venue, { exact: true })).toBeVisible();
+      await bPage.getByLabel("Venue code", { exact: true }).fill(code);
+      await bPage.getByRole("button", { name: "Check in", exact: true }).click();
+      await expect(bPage.getByText(`You're checked in at ${venue}.`)).toBeVisible();
+      await expect(bPage.getByText(`Checked in at ${venue}`, { exact: true })).toBeVisible();
 
-      // Encounter mode on for both, in the UI, if the UI does not default to it.
+      // Encounter mode on for both, in the UI.
       for (const page of [aPage, bPage]) {
-        const resume = page.getByRole("button", { name: "Resume" });
-        if (await resume.isVisible().catch(() => false)) await resume.click();
-        await expect(page.getByRole("button", { name: "Pause" })).toBeVisible();
+        const toggle = page.getByRole("switch", { name: "Encounter mode" });
+        await expect(toggle).toHaveAttribute("aria-checked", "false");
+        await toggle.click();
+        await expect(toggle).toHaveAttribute("aria-checked", "true");
+        await expect(page.getByRole("status", { name: "Place status" })).toContainText("Ready to signal");
         await expect(interestedButton(page)).toBeEnabled();
       }
 
@@ -233,10 +239,10 @@ test.describe("UI: two browsers, two signed-in people", () => {
       await expect(matchMoment(bPage)).toHaveCount(0);
       await clickInterested(bb);
       const latencies = await momentsWithin([ba, bb], NOTIFY_BUDGET_MS);
-      reportLatency("happy path (UI session, UI signals)", latencies);
+      reportLatency("happy path (UI venue, UI signals)", latencies);
       expect(Math.max(...latencies)).toBeLessThanOrEqual(NOTIFY_BUDGET_MS);
       await expect(matchMoment(aPage)).toContainText(b.displayName);
-      await expect(matchMoment(aPage)).toContainText(venue);
+      await expect(matchMoment(aPage)).toContainText(`Met at ${venue}`);
 
       // Overlay -> match detail for A; "Not now" -> Matches list for B.
       await aPage.getByRole("button", { name: new RegExp(`See ${b.displayName}`) }).click();
@@ -268,7 +274,7 @@ test.describe("UI: two browsers, two signed-in people", () => {
       const a = await openReadyEncounter(browser, pair.a);
       const b = await openReadyEncounter(browser, pair.b);
 
-      const ack = must(await device.api.interest(interestEvent(pair.session.id, { source: "mentra_touch" })), "device swipe");
+      const ack = must(await device.api.interest(interestEvent({ source: "mentra_touch" })), "device swipe");
       expect(ack).toMatchObject({ status: "accepted", matched: false });
 
       // A's own browser learns of its own glasses signal; B's browser learns nothing.
@@ -291,7 +297,7 @@ test.describe("UI: two browsers, two signed-in people", () => {
     }
   });
 
-  test("a third signed-in account cannot join and sees nothing about the pair, before or after they match", async ({
+  test("a third signed-in account elsewhere sees nothing about the pair, before or after they match", async ({
     world,
     browser,
   }) => {
@@ -301,15 +307,12 @@ test.describe("UI: two browsers, two signed-in people", () => {
     const b = await openReadyEncounter(browser, pair.b);
     const c = await openEncounter(browser, third);
 
-    // Join flow in the UI: the session is full.
-    await c.page.getByLabel("Session code").fill(pair.session.joinCode);
-    await c.page.getByRole("button", { name: "Join session" }).click();
-    await expect(c.page.getByText("That session is full")).toBeVisible();
-    await expect(c.page.getByRole("button", { name: "Join session" })).toBeVisible();
-    await expect(interestedButton(c.page)).toHaveCount(0);
+    // Not checked in anywhere: no place, no signal control, no trace of the pair or their venue.
+    await expect(c.page.getByText("Not checked in at a venue.")).toBeVisible();
+    await expect(interestedButton(c.page)).toHaveCount(0); // Encounter mode is off, so there is no signal control
     for (const p of [pair.a, pair.b]) await expectPageHasNothingOf(c.page, p);
     await expect(c.page.getByText(VENUE)).toHaveCount(0);
-    expect(must(await third.api.getEncounter()).session).toBeNull();
+    expect(must(await third.api.getEncounter()).checkIn).toBeNull();
 
     // The pair matches through the UI while the third browser is open.
     await clickInterested(a);
@@ -323,7 +326,7 @@ test.describe("UI: two browsers, two signed-in people", () => {
 
     // Fresh loads of every page, and the pair's match URL itself.
     await c.page.goto("/encounter");
-    await expect(c.page.getByRole("button", { name: "Start a session" })).toBeVisible();
+    await expect(c.page.getByText("Not checked in at a venue.")).toBeVisible();
     for (const p of [pair.a, pair.b]) await expectPageHasNothingOf(c.page, p);
     await expect(c.page.getByText(VENUE)).toHaveCount(0);
     await c.page.goto("/matches");
@@ -335,15 +338,16 @@ test.describe("UI: two browsers, two signed-in people", () => {
     await expectNoMatches(third.api);
   });
 
-  test("paused encounter mode: no signal control, and no match results", async ({ world, browser }) => {
+  test("Encounter mode off: no signal control, and no match results", async ({ world, browser }) => {
     const pair = await world.pair({ venue: VENUE });
     const a = await openReadyEncounter(browser, pair.a);
     const b = await openReadyEncounter(browser, pair.b);
 
-    // A pauses in the UI. The real UI removes the "Interested" control entirely.
-    await a.page.getByRole("button", { name: "Pause" }).click();
-    await expect(a.page.getByRole("status").filter({ hasText: "Paused" })).toBeVisible();
-    await expect(a.page.getByRole("button", { name: "Resume" })).toBeVisible();
+    // A turns Encounter mode off in the UI. The real UI removes the "Interested" control entirely.
+    const toggleA = a.page.getByRole("switch", { name: "Encounter mode" });
+    await toggleA.click();
+    await expect(toggleA).toHaveAttribute("aria-checked", "false");
+    await expect(a.page.getByRole("status").filter({ hasText: "Off. Signals from your glasses and this page are ignored." })).toBeVisible();
     await expect(interestedButton(a.page)).toHaveCount(0);
     expect(must(await pair.a.api.getEncounter()).encounterMode).toBe(false);
 
@@ -357,8 +361,9 @@ test.describe("UI: two browsers, two signed-in people", () => {
     await expectPageHasNothingOf(a.page, pair.b);
     await expectNoMatches(pair.a.api, pair.b.api);
 
-    // Resuming does not retroactively signal for A.
-    await a.page.getByRole("button", { name: "Resume" }).click();
+    // Turning it back on does not retroactively signal for A.
+    await toggleA.click();
+    await expect(toggleA).toHaveAttribute("aria-checked", "true");
     await expect(interestedButton(a.page)).toBeEnabled();
     await expect(a.page.getByText("Your signal is out", { exact: true })).toHaveCount(0);
     await sleep(PROPAGATION_GRACE_MS);

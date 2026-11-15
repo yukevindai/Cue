@@ -114,9 +114,17 @@ export async function signInActor(user: TestUser): Promise<Actor> {
   };
 }
 
-/** Request context with no credentials at all. */
+/**
+ * Request context with no credentials at all. Each one claims a random client
+ * address (x-forwarded-for) so the per-address rate limit on device claims is
+ * not shared across the many pairings of a full run.
+ */
 export function anonymousApi(): Promise<APIRequestContext> {
-  return playwrightRequest.newContext({ baseURL: BASE_URL });
+  const n = () => 1 + Math.floor(Math.random() * 253);
+  return playwrightRequest.newContext({
+    baseURL: BASE_URL,
+    extraHTTPHeaders: { "x-forwarded-for": `198.51.${n()}.${n()}` },
+  });
 }
 
 /** Request context authenticated only with a device bearer token (no cookies). */

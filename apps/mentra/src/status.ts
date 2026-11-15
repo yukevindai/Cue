@@ -2,7 +2,7 @@
 export interface BridgeStatus {
   serverUrl: string | null;
   linked: boolean;
-  /** ready | encounter_mode_off | unlinked | offline | stale */
+  /** ready | encounter_mode_off | no_place | unlinked | offline | stale */
   context: string;
   calibration: boolean;
   backwardGestureName: string | null;

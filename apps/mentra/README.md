@@ -7,7 +7,8 @@ unverified on hardware: `docs/hardware-check.md`.
 
 ```
 raw touch event -> touch-events.ts (normalize, classify, debounce)
-                -> encounter-context.ts (encounter mode gate, no replay)
+                -> encounter-context.ts (forwards only when the server says the
+                   wearer is `ready`: mode on and a place; no replay)
                 -> pipeline.ts (InterestEvent, one eventId per gesture)
                 -> api-client.ts (device token, bounded retry with the same eventId)
                 -> feedback.ts / tones.ts (audio cue)
@@ -16,6 +17,7 @@ raw touch event -> touch-events.ts (normalize, classify, debounce)
 | File | Role |
 |---|---|
 | `src/background/index.ts` | Runtime entry point; the only file that calls the Mentra SDK |
+| `src/encounter-context.ts` | Polls `GET /api/devices/me` (about every 2 s). A swipe is forwarded only on `ready`. Otherwise it is dropped and a cue plays: "mode off", or "no place: open Cue on your phone" |
 | `src/config.ts` | **The gesture mapping** (`DEFAULT_BACKWARD_SWIPE_GESTURE_NAME`) and storage keys |
 | `src/bridge.ts` | Wires the modules against a host interface (miniapp, tests, harness) |
 | `src/account-link.ts` | Pairing-code claim and device token storage |
@@ -31,3 +33,15 @@ pnpm inject --server http://localhost:3000 --code ABC123 --gesture backward_swip
 
 `MENTRA_PUBLIC_CUE_SERVER_URL` sets the default Cue web origin at build time.
 The device token lives only in the miniapp's storage and is never logged.
+
+**Where the wearer is.** The glasses do not report a location. The wearer's place
+comes from their phone, on the same Cue account: a venue check-in, or the
+location reported by the open Cue page while Encounter mode is on. For a swipe to
+count, Encounter mode must be on and the server must report the wearer as
+`ready`. Matching is by place, not by a pre-joined session: see
+`docs/place-matching.md`.
+
+**Verification.** A real swipe was verified on one Mentra Live unit on
+2026-11-14, under the old session model. It has not been re-verified under place
+matching, and the new audio cues (mode off, no place) have not been heard on a
+device.

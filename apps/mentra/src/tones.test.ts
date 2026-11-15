@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { FeedbackCue } from "./feedback";
 import { CUE_NOTES, cueDataUrl, synthesizeWav } from "./tones";
 
-const CUES: FeedbackCue[] = ["signal_sent", "match", "not_sent"];
+const CUES: FeedbackCue[] = ["signal_sent", "match", "not_sent", "encounter_off", "no_place"];
 const ascii = (b: Uint8Array, at: number, n: number) => String.fromCharCode(...b.subarray(at, at + n));
 
 describe("tones", () => {
@@ -37,10 +37,10 @@ describe("tones", () => {
     expect(cueDataUrl(cue)).toBe(url);
   });
 
-  it("the three cues are pairwise different", () => {
+  it("all cues are pairwise different", () => {
     const urls = CUES.map(cueDataUrl);
-    expect(new Set(urls).size).toBe(3);
+    expect(new Set(urls).size).toBe(CUES.length);
     const wavs = CUES.map((c) => Buffer.from(synthesizeWav(CUE_NOTES[c])).toString("hex"));
-    expect(new Set(wavs).size).toBe(3);
+    expect(new Set(wavs).size).toBe(CUES.length);
   });
 });

@@ -8,8 +8,6 @@ const STATUS: Record<ApiErrorCode, number> = {
   forbidden: 403,
   not_found: 404,
   invalid_request: 400,
-  session_full: 409,
-  not_in_session: 409,
   encounter_mode_off: 409,
   blocked: 403,
   rate_limited: 429,
