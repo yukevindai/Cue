@@ -6,7 +6,7 @@ import { getOwnProfile, saveOwnProfile } from "@/server/profiles";
 export async function GET(): Promise<Response> {
   return handle(async () => {
     const user = await requireSessionUser();
-    return Response.json(await getOwnProfile(user.id));
+    return Response.json(await getOwnProfile(user.id, user.email));
   });
 }
 
@@ -14,6 +14,6 @@ export async function PUT(req: Request): Promise<Response> {
   return handle(async () => {
     const user = await requireSessionUser();
     const input = await parseBody(req, ProfileInput);
-    return Response.json(await saveOwnProfile(user.id, input));
+    return Response.json(await saveOwnProfile(user.id, input, user.email));
   });
 }

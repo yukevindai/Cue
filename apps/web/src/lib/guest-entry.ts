@@ -1,6 +1,6 @@
 import { parseIntroName } from "@cue/contracts";
-import { isApiError } from "@/lib/api";
-import type { ListenOutcome, RecognitionProblem } from "@/lib/speech";
+import { isApiError } from "./api";
+import type { ListenOutcome, RecognitionProblem } from "./speech";
 
 /**
  * The "Say hi" guest entry, as plain data: what to do with a transcript or a

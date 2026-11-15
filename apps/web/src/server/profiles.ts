@@ -3,6 +3,7 @@ import "server-only";
 import {
   ArchetypeId,
   computeArchetype,
+  isGuestEmail,
   SharingSettings,
   type Education,
   type Gender,
@@ -108,7 +109,8 @@ function archetypeOf(row: ProfileRow): ArchetypeId | null {
 
 const cardsOf = (row: ProfileRow): string[] => row.cards ?? [];
 
-export function toOwnProfile(row: ProfileRow): OwnProfile {
+/** `isGuest` comes from the account's email (`isGuestEmail`); the email itself is never returned. */
+export function toOwnProfile(row: ProfileRow, isGuest = false): OwnProfile {
   return {
     userId: row.user_id,
     displayName: row.display_name,
@@ -132,6 +134,7 @@ export function toOwnProfile(row: ProfileRow): OwnProfile {
     sharing: sharingOf(row),
     version: row.version,
     updatedAt: iso(row.updated_at),
+    isGuest,
   };
 }
 
@@ -173,10 +176,10 @@ export async function getProfileRows(userIds: string[]): Promise<Map<string, Pro
   return new Map(rows.map((r) => [r.user_id, r]));
 }
 
-export async function getOwnProfile(userId: string): Promise<OwnProfile> {
+export async function getOwnProfile(userId: string, email?: string | null): Promise<OwnProfile> {
   const row = (await getProfileRows([userId])).get(userId);
   if (!row) throw new HttpError("not_found", "Profile not created yet");
-  return toOwnProfile(row);
+  return toOwnProfile(row, isGuestEmail(email));
 }
 
 /**
@@ -185,7 +188,11 @@ export async function getOwnProfile(userId: string): Promise<OwnProfile> {
  * (`ProfileInput` has no such key, and zod strips unknown keys). A DB trigger
  * bumps `version` on any real change.
  */
-export async function saveOwnProfile(userId: string, input: ProfileInput): Promise<OwnProfile> {
+export async function saveOwnProfile(
+  userId: string,
+  input: ProfileInput,
+  email?: string | null,
+): Promise<OwnProfile> {
   const row = unwrap(
     await getAdminSupabase()
       .from("profiles")
@@ -217,5 +224,5 @@ export async function saveOwnProfile(userId: string, input: ProfileInput): Promi
       .select(PROFILE_COLUMNS)
       .single(),
   ) as unknown as ProfileRow;
-  return toOwnProfile(row);
+  return toOwnProfile(row, isGuestEmail(email));
 }

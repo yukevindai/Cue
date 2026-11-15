@@ -196,7 +196,7 @@ const CRUDE =
 /** Model text the listener may hear: one short paragraph, nothing outside the given facts' digits. */
 export function validateHypeLine(raw: unknown, input: HypeModelInput): string | null {
   if (typeof raw !== "string") return null;
-  if (/[\r\n  ]/.test(raw.trim())) return null;
+  if (/[\r\n\u2028\u2029]/.test(raw.trim())) return null;
   const line = raw.trim().replace(/^["“”']+|["“”']+$/g, "").replace(/\s+/g, " ").trim();
   if (line.length === 0 || line.length > HYPE_MAX_LENGTH) return null;
   if (line.split(" ").length > MAX_WORDS) return null;
@@ -220,9 +220,17 @@ async function callHypeModel(
 ): Promise<string | null> {
   const timeoutMs = config.hypeTimeoutMs ?? DEFAULT_HYPE_TIMEOUT_MS;
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  // The line is only worth anything while the person is still there: give up at the deadline either way.
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      controller.abort();
+      reject(new Anthropic.APIUserAbortError());
+    }, timeoutMs);
+  });
   try {
-    const message = await client.beta.messages.parse(
+    const request = Promise.resolve(
+      client.beta.messages.parse(
       {
         model: config.model,
         max_tokens: 2048,
@@ -232,7 +240,10 @@ async function callHypeModel(
         ...(config.fallbacks ? { betas: [FALLBACK_BETA], fallbacks: "default" as const } : {}),
       },
       { timeout: timeoutMs, maxRetries: 0, signal: controller.signal },
+      ),
     );
+    request.catch(() => {}); // settles after the deadline when aborted; already handled
+    const message = await Promise.race([request, deadline]);
     if (message.stop_reason !== "end_turn") {
       console.warn(`hype model stop_reason=${message.stop_reason ?? "none"}`);
       return null;

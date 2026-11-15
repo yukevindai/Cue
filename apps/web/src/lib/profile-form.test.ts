@@ -180,6 +180,7 @@ describe("round trip", () => {
       userId: USER,
       archetype: computeArchetype(f.cards, f.mbti),
       version: 1,
+      isGuest: false,
       updatedAt: new Date().toISOString(),
     };
     expect(draftKey(formFromProfile(own))).toBe(draftKey(f));

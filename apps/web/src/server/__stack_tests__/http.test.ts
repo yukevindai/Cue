@@ -570,7 +570,7 @@ describe.skipIf(!stackUp || !webUp)("HTTP API (real web server + real stack)", (
     it("GET /api/devices/me with the bearer returns the DeviceContext", async () => {
       const ctx = ok(await api("GET", routes.deviceMe, { bearer: token }), DeviceContext);
       expect(ctx).toMatchObject({ deviceId, encounterMode: true, ready: true });
-      expect(Object.keys(ctx).sort()).toEqual(["deviceId", "encounterMode", "ready", "serverTime"]);
+      expect(Object.keys(ctx).sort()).toEqual(["deviceId", "encounterMode", "latestMatchId", "ready", "serverTime"]);
       // Cookies alone are not device auth.
       err(await api("GET", routes.deviceMe, { cookie: ca }), 401, "unauthenticated");
     });
@@ -595,7 +595,7 @@ describe.skipIf(!stackUp || !webUp)("HTTP API (real web server + real stack)", (
       ok(await api("POST", routes.encounterLocation, { cookie: cw }, { lat: spot.lat, lng: spot.lng, accuracyM: 10 }), EncounterStatus);
       const ready = ok(await api("GET", routes.deviceMe, { bearer: deviceToken }), DeviceContext);
       expect(ready).toMatchObject({ encounterMode: true, ready: true });
-      expect(JSON.stringify(ready)).not.toMatch(/lat|lng/);
+      expect(JSON.stringify(ready)).not.toMatch(/"(lat|lng|latitude|longitude|accuracyM?)"/);
       const accepted = ok(await api("POST", routes.interest, { bearer: deviceToken }, interestBody("mentra_touch")), InterestAck);
       expect(accepted).toMatchObject({ status: "accepted", matched: false, reason: null });
       expect((await eventsOf(w.id))[0]).toMatchObject({ source: "mentra_touch", status: "pending", session_id: null });
