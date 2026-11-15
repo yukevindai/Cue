@@ -200,10 +200,11 @@ export async function cleanupUsers(): Promise<void> {
 // SQL function wrappers (service role)
 // ---------------------------------------------------------------------------
 
-export type Source = "web_demo" | "mentra_touch";
-export const GESTURE: Record<Source, "web_confirm" | "backward_swipe"> = {
+export type Source = "web_demo" | "mentra_touch" | "headset_remote";
+export const GESTURE: Record<Source, "web_confirm" | "backward_swipe" | "media_next_track"> = {
   web_demo: "web_confirm",
   mentra_touch: "backward_swipe",
+  headset_remote: "media_next_track",
 };
 
 export interface Ack {
@@ -218,6 +219,8 @@ export interface Ack {
 export interface SignalOptions {
   eventId?: string;
   source?: Source;
+  /** Override the default gesture for the source (used to test invalid or alternate pairs). */
+  gesture?: string;
 }
 
 export async function signal(user: TestUser | string, sessionId: string, opts: SignalOptions = {}): Promise<Ack> {
@@ -227,7 +230,7 @@ export async function signal(user: TestUser | string, sessionId: string, opts: S
     p_session_id: sessionId,
     p_event_id: opts.eventId ?? randomUUID(),
     p_source: source,
-    p_gesture: GESTURE[source],
+    p_gesture: opts.gesture ?? GESTURE[source],
     p_occurred_at: new Date().toISOString(),
   });
   return must(res) as Ack;

@@ -1,7 +1,12 @@
 import "server-only";
 
 import { randomInt } from "node:crypto";
-import { DEMO_SESSION_CAPACITY, type DemoSession, type EncounterStatus } from "@cue/contracts";
+import {
+  DEMO_SESSION_CAPACITY,
+  type DemoSession,
+  type EncounterStatus,
+  type InterestSource,
+} from "@cue/contracts";
 import { iso, rpc, unwrap } from "@/server/db";
 import { getDeviceStatus } from "@/server/devices";
 import { HttpError } from "@/server/http";
@@ -78,7 +83,7 @@ export async function getEncounterStatus(userId: string): Promise<EncounterStatu
           .maybeSingle(),
       ) as {
         event_id: string;
-        source: "mentra_touch" | "web_demo";
+        source: InterestSource;
         received_at: string;
         expires_at: string;
       } | null;

@@ -21,6 +21,17 @@ describe("gestureMatchesSource", () => {
     expect(gestureMatchesSource("mentra_touch", "web_confirm")).toBe(false);
     expect(gestureMatchesSource("web_demo", "backward_swipe")).toBe(false);
   });
+
+  const MEDIA = ["media_next_track", "media_previous_track", "media_play_pause"] as const;
+  it.each(MEDIA)("headset_remote accepts %s", (g) => {
+    expect(gestureMatchesSource("headset_remote", g)).toBe(true);
+  });
+  it.each(["backward_swipe", "web_confirm"] as const)("headset_remote rejects %s", (g) => {
+    expect(gestureMatchesSource("headset_remote", g)).toBe(false);
+  });
+  it.each(["web_demo", "mentra_touch"] as const)("%s rejects every media gesture", (src) => {
+    for (const g of MEDIA) expect(gestureMatchesSource(src, g)).toBe(false);
+  });
 });
 
 describe("sourceAllowedForAuth", () => {
@@ -29,6 +40,10 @@ describe("sourceAllowedForAuth", () => {
     expect(sourceAllowedForAuth("device", "web_demo")).toBe(false);
     expect(sourceAllowedForAuth("session", "web_demo")).toBe(true);
     expect(sourceAllowedForAuth("session", "mentra_touch")).toBe(false);
+  });
+  it("session may send headset_remote; a device token may not", () => {
+    expect(sourceAllowedForAuth("session", "headset_remote")).toBe(true);
+    expect(sourceAllowedForAuth("device", "headset_remote")).toBe(false);
   });
 });
 
