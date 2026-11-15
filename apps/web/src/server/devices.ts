@@ -126,11 +126,22 @@ export async function getDeviceContext(device: DeviceAuth): Promise<DeviceContex
   const presence = await rpc<{ encounter_mode: boolean; ready: boolean }>("presence_state", {
     p_user_id: device.userId,
   });
+  const match = unwrap(
+    await getAdminSupabase()
+      .from("matches")
+      .select("id")
+      .eq("status", "active")
+      .or(`user_a.eq.${device.userId},user_b.eq.${device.userId}`)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ) as { id: string } | null;
   return {
     deviceId: device.deviceId,
     encounterMode: presence.encounter_mode,
     ready: presence.ready,
     serverTime: new Date().toISOString(),
+    activeMatchId: match?.id ?? null,
   };
 }
 

@@ -526,6 +526,54 @@ describe.skipIf(!stackUp || !webUp)("HTTP API (real web server + real stack)", (
   });
 
   // -------------------------------------------------------------------------
+  describe("spectacles_hand (device token only)", () => {
+    it("a Spectacles device token sends double_pinch; one-sided signal is invisible to the other person", async () => {
+      const p = await newPair();
+      const [ca, cb] = await Promise.all([cookieFor(p.a), cookieFor(p.b)]);
+      const pairing = ok(await api("POST", routes.devicePair, { cookie: ca }), PairingCode);
+      const { deviceToken } = ok(
+        await api("POST", routes.deviceClaim, freshClient(), { code: pairing.code, deviceLabel: "Snap Spectacles" }),
+        DeviceClaimResult,
+      );
+      const ack = ok(await api("POST", routes.interest, { bearer: deviceToken }, interestBody("spectacles_hand")), InterestAck);
+      expect(ack).toMatchObject({ status: "accepted", matched: false, reason: null });
+      const [row] = await eventsOf(p.a.id);
+      expect(row).toMatchObject({ source: "spectacles_hand", gesture: "double_pinch", status: "pending" });
+      expect(ok(await api("GET", routes.encounter, { cookie: cb }), EncounterStatus).pendingSignal).toBeNull();
+      expect(ok(await api("GET", routes.matches, { cookie: cb }), MatchList).matches).toEqual([]);
+    });
+
+    it("a web session cannot send spectacles_hand (403) and nothing is written", async () => {
+      const p = await newPair();
+      const ca = await cookieFor(p.a);
+      err(await api("POST", routes.interest, { cookie: ca }, interestBody("spectacles_hand")), 403, "forbidden");
+      expect(await eventsOf(p.a.id)).toHaveLength(0);
+    });
+
+    it("a Spectacles double pinch plus the other person's Mentra swipe creates one match", async () => {
+      const p = await newPair();
+      const [ca, cb] = await Promise.all([cookieFor(p.a), cookieFor(p.b)]);
+      const claim = async (cookie: string, deviceLabel: string) => {
+        const pairing = ok(await api("POST", routes.devicePair, { cookie }), PairingCode);
+        return ok(await api("POST", routes.deviceClaim, freshClient(), { code: pairing.code, deviceLabel }), DeviceClaimResult).deviceToken;
+      };
+      const [specs, mentra] = [await claim(ca, "Snap Spectacles"), await claim(cb, "Mentra Live")];
+      ok(await api("POST", routes.interest, { bearer: specs }, interestBody("spectacles_hand")), InterestAck);
+      // A one-sided signal never shows up as a match on either device.
+      expect(ok(await api("GET", routes.deviceMe, { bearer: specs }), DeviceContext).activeMatchId).toBeNull();
+      expect(ok(await api("GET", routes.deviceMe, { bearer: mentra }), DeviceContext).activeMatchId).toBeNull();
+      const ack = ok(await api("POST", routes.interest, { bearer: mentra }, interestBody("mentra_touch")), InterestAck);
+      expect(ack.matched).toBe(true);
+      const matches = await matchesBetween(p.a, p.b);
+      expect(matches).toHaveLength(1);
+      // The Spectacles wearer signalled first and learns of the match from devices/me.
+      const matchId = (matches[0] as { id: string }).id;
+      expect(ok(await api("GET", routes.deviceMe, { bearer: specs }), DeviceContext).activeMatchId).toBe(matchId);
+      expect(ok(await api("GET", routes.deviceMe, { bearer: mentra }), DeviceContext).activeMatchId).toBe(matchId);
+    });
+  });
+
+  // -------------------------------------------------------------------------
   describe("device pairing and device-token auth", () => {
     let a: Awaited<ReturnType<typeof newPair>>["a"];
     let b: Awaited<ReturnType<typeof newPair>>["b"];
@@ -570,7 +618,7 @@ describe.skipIf(!stackUp || !webUp)("HTTP API (real web server + real stack)", (
     it("GET /api/devices/me with the bearer returns the DeviceContext", async () => {
       const ctx = ok(await api("GET", routes.deviceMe, { bearer: token }), DeviceContext);
       expect(ctx).toMatchObject({ deviceId, encounterMode: true, ready: true });
-      expect(Object.keys(ctx).sort()).toEqual(["deviceId", "encounterMode", "ready", "serverTime"]);
+      expect(Object.keys(ctx).sort()).toEqual(["activeMatchId", "deviceId", "encounterMode", "ready", "serverTime"]);
       // Cookies alone are not device auth.
       err(await api("GET", routes.deviceMe, { cookie: ca }), 401, "unauthenticated");
     });

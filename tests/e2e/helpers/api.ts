@@ -160,7 +160,7 @@ export type Api = ReturnType<typeof apiFor>;
 /** Builds a valid InterestEvent. `source` defaults to the web confirm path. No place: the server reads the sender's presence. */
 export function interestEvent(
   opts: {
-    source?: "web_demo" | "mentra_touch" | "headset_remote";
+    source?: "web_demo" | "mentra_touch" | "headset_remote" | "spectacles_hand";
     /** Overrides the default gesture for the source (`media_next_track` for headset_remote). */
     gesture?: "media_next_track" | "media_previous_track" | "media_play_pause";
     eventId?: string;
@@ -168,7 +168,13 @@ export function interestEvent(
 ): Input<typeof InterestEvent> {
   const source = opts.source ?? "web_demo";
   const defaultGesture =
-    source === "mentra_touch" ? "backward_swipe" : source === "headset_remote" ? "media_next_track" : "web_confirm";
+    source === "mentra_touch"
+      ? "backward_swipe"
+      : source === "headset_remote"
+        ? "media_next_track"
+        : source === "spectacles_hand"
+          ? "double_pinch"
+          : "web_confirm";
   return {
     eventId: opts.eventId ?? randomUUID(),
     source,

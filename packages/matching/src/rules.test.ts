@@ -45,6 +45,10 @@ describe("sourceAllowedForAuth", () => {
     expect(sourceAllowedForAuth("session", "headset_remote")).toBe(true);
     expect(sourceAllowedForAuth("device", "headset_remote")).toBe(false);
   });
+  it("a device token may send spectacles_hand; a web session may not", () => {
+    expect(sourceAllowedForAuth("device", "spectacles_hand")).toBe(true);
+    expect(sourceAllowedForAuth("session", "spectacles_hand")).toBe(false);
+  });
 });
 
 describe("orderPair", () => {

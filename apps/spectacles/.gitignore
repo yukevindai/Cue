@@ -1,0 +1,5 @@
+node_modules/
+# Lens Studio generates these when the project is opened.
+lens/Cache/
+lens/Workspaces/
+lens/Support/

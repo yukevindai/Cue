@@ -56,6 +56,29 @@ See "Status log" below. Update it when a milestone lands or a decision changes.
 
 ### Status log
 
+- 2026-11-15: Spectacles diamond + match card (branch
+  `claude/spectacles-client`, PR #7). `CueLens` builds a gem 3 ft ahead; an SIK
+  tap on it sends like a double pinch. `DeviceContext.activeMatchId` (optional,
+  contracts) lets a device that signalled first learn of a mutual match; the
+  Lens then plays the match cue and shows a synthetic "Kevin, Ping-pong" card.
+  Verified: typecheck, lint, all unit + stack tests, web build, Preview shows
+  the diamond. NOT verified: tap in Preview or on a device, the card on a
+  device; live site needs PR #7 merged and migration
+  `20261115030000_spectacles_hand_source.sql` applied to Cue DB.
+- 2026-11-15: Snap Spectacles client (`apps/spectacles`, branch
+  `claude/spectacles-client`). A Lens Studio Lens: a double pinch (two
+  same-hand pinches within 450 ms, Spectacles hand tracking) sends
+  `source: spectacles_hand`, `gesture: double_pinch` with a device token, using
+  the same pairing code flow as Mentra (the Lens claims with label "Snap
+  Spectacles"). Logic lives in `lens/Assets/Scripts/Cue/Core` (plain TS,
+  unit-tested, contract parity test); `CueLens.ts` is the only Lens API file.
+  Server: `GESTURES_BY_SOURCE`, `DEVICE_SOURCES`, `sourceAllowedForAuth`, SQL
+  `interest_pair_ok` (migration `20261115030000_spectacles_hand_source.sql`,
+  NOT yet applied to hosted Cue DB). Ported to place-based matching (no
+  session; the Lens forwards only when `/api/devices/me` says `ready`).
+  Verified: unit tests, stack tests, and the real Core client against the
+  local server (pair, signal, match). Compiles in Lens Studio 5.24. NOT
+  verified on real Spectacles; see `docs/spectacles-check.md`.
 - 2026-11-15 13:30 UTC: PR #5 (place-based matching) and PR #6 (sign-in page
   explainer lines removed) merged to `main` by the owner; production
   deployment of the PR #5 merge was READY. Phones with the Mentra mini app

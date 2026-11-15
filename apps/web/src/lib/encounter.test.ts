@@ -216,6 +216,7 @@ describe("copy helpers", () => {
   it("names where the signal came from", () => {
     expect(signalSourceText("mentra_touch")).toBe("Sent from your glasses");
     expect(signalSourceText("headset_remote")).toBe("Sent from your glasses");
+    expect(signalSourceText("spectacles_hand")).toBe("Sent from your glasses");
     expect(signalSourceText("web_demo")).toBe("Sent from this page");
   });
 
