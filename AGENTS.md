@@ -49,6 +49,14 @@ See "Status log" below. Update it when a milestone lands or a decision changes.
 
 ### Status log
 
+- 2026-11-15 07:10 UTC: PR #4 (rich profiles, characters, chat) merged to
+  `main` by the owner (`59d743d`); Vercel's production deployment of that
+  commit is READY, so https://cue-gamma-five.vercel.app runs it. A Codex
+  review on PR #4 found two chat bugs (an idle refetch loop from an unstable
+  `markGone`; messages skipped when over a page arrived after "Load earlier");
+  both were reproduced, fixed and covered by e2e tests before the merge.
+  Not yet checked on the live site: profiles and chat on real phones, and a
+  live Claude call with the fuller input.
 - 2026-11-15: Rich profiles, character names and in-app chat (PR #4). Profiles
   gain age (18+), gender, city, looking-for, work/school, education, MBTI,
   ethnicity, drinking/smoking/drugs and personality cards; a character ("the
@@ -65,8 +73,6 @@ See "Status log" below. Update it when a milestone lands or a decision changes.
   walkthrough. Migration `20261115010000_rich_profiles_and_chat.sql` and the
   new demo profiles are applied to hosted Cue DB (fingerprint identical to
   local). NOT verified: real phones, a live Claude call with the fuller input.
-  The live site still runs the old code until PR #4 is merged to `main`
-  (owner's go-ahead needed); the old code works against the new schema.
 - 2026-11-15: Second glasses route added (PR #3): a Meta glasses wearer
   (Meta Adventurer on an iPhone) signals with a headset media command. No
   native app: the signed-in web page ("Meta glasses" card on Encounter,
@@ -136,7 +142,13 @@ hardware; run `pnpm typecheck && pnpm lint && pnpm test`, web build, stack-backe
 tests and `pnpm test:e2e` on the merged branch; send integration bugs back to
 the owning session; update this log.
 
-Open items needing a human: `ANTHROPIC_API_KEY` for a live wingman call; hosting the web app (Vercel or laptop + tunnel) with the Cue DB URL, anon key and service-role key, and turning off "Confirm email" in Cue DB Auth settings if new sign-ups are wanted; the real backward-swipe checkpoint on the loaner glasses.
+Open items needing a human: on the live site, profiles and chat on real
+phones and one "Find common ground" with the real key; a Mentra swipe and a
+Meta double tap matching each other; the Mentra negative checks (media
+conflict, hair, pocket, audio); the gesture name used for "Use as backward
+swipe" (to set `DEFAULT_BACKWARD_SWIPE_GESTURE_NAME` in
+`apps/mentra/src/config.ts`). "Confirm email" in Cue DB Auth settings must be
+off if new sign-ups are wanted.
 
 Hosted Supabase project for the demo: **Cue DB**, ref `ubnwwhpkjazejttdmstf`,
 region us-west-2, organization "Cue" (created by the owner 2026-11-14; the
