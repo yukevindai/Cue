@@ -42,7 +42,7 @@ function fullProfile(marker: string): ProfileOverrides {
     workOrSchool: `WORK-${marker}`,
     education: "masters",
     mbti: "INFJ",
-    ethnicity: `ETHNITOWN-${marker}`,
+    ethnicity: `ETHNICITY-${marker}`,
     drinking: "sometimes",
     smoking: "never",
     drugs: "prefer_not_to_say",
@@ -89,7 +89,7 @@ function markersFor(toggle: Toggle, marker: string): string[] {
     case "workOrSchool":
       return [`WORK-${marker}`];
     case "ethnicity":
-      return [`ETHNITOWN-${marker}`];
+      return [`ETHNICITY-${marker}`];
     default:
       return [];
   }
@@ -210,7 +210,7 @@ test.describe("sharing: every field, both directions", () => {
     const { pair, matchId } = await matchedPair(world, {
       b: {
         age: 40,
-        ethnicity: `ETHNITOWN-${marker}`,
+        ethnicity: `ETHNICITY-${marker}`,
         drinking: "often",
         smoking: "sometimes",
         drugs: "never",
@@ -242,7 +242,7 @@ test.describe("sharing: every field, both directions", () => {
       expect(other.education, "education is off by default").toBeNull();
       expect(other.age, "age is on by default").toBe(40);
     }
-    expectNoLeak(v.raw, { ethnicity: `ETHNITOWN-${marker}`, work: `WORK-${marker}`, "doctorate": "doctorate" });
+    expectNoLeak(v.raw, { ethnicity: `ETHNICITY-${marker}`, work: `WORK-${marker}`, "doctorate": "doctorate" });
   });
 
   test("changing a toggle after matching changes what the other person sees, both ways, for both people", async ({ world }) => {
@@ -273,12 +273,12 @@ test.describe("sharing: every field, both directions", () => {
 
   test("a person never sees their own hidden fields reflected anywhere but their own profile", async ({ world }) => {
     const { pair, matchId } = await matchedPair(world, {
-      a: { ethnicity: "ETHNITOWN-self", sharing: { ethnicity: false } },
+      a: { ethnicity: "ETHNICITY-self", sharing: { ethnicity: false } },
     });
     const own = must(await pair.a.api.getProfile());
-    expect(own.ethnicity).toBe("ETHNITOWN-self");
+    expect(own.ethnicity).toBe("ETHNICITY-self");
     const v = await matchViews(pair.b, matchId);
-    expectNoLeak(v.raw, { ethnicity: "ETHNITOWN-self" });
+    expectNoLeak(v.raw, { ethnicity: "ETHNICITY-self" });
   });
 });
 
@@ -395,7 +395,7 @@ test.describe("a non-matched account cannot see a profile", () => {
         "B's id": pair.b.user.id,
         "A's id": pair.a.user.id,
         "B's city": `TOWN-${marker}`,
-        "B's ethnicity": `ETHNITOWN-${marker}`,
+        "B's ethnicity": `ETHNICITY-${marker}`,
       },
     );
   });

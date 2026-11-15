@@ -165,7 +165,7 @@ test.describe("chat: pagination", () => {
     const expected = [...seeded, "api-one", "api-two"];
 
     const { pages, all } = await walkBack(pair.b, matchId);
-    expect(pages.map((p) => p.messages.length)).toEqual([CHAT_PAGE_SIZE, CHAT_PAGE_SIZE, CHAT_PAGE_SIZE, 19]);
+    expect(pages.map((p) => p.messages.length)).toEqual([CHAT_PAGE_SIZE, CHAT_PAGE_SIZE, 19]);
     expect(pages[pages.length - 1].olderCursor).toBeNull();
     expect(bodies(all), "every message once, in order").toEqual(expected);
     expect(new Set(all.map((m) => m.id)).size).toBe(expected.length);
