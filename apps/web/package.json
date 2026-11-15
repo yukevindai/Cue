@@ -24,6 +24,7 @@
     "zod": "^4.1.0"
   },
   "devDependencies": {
+    "@cue/mentra": "workspace:*",
     "@tailwindcss/turbopack": "4.3.3",
     "@types/node": "^22",
     "@types/qrcode": "1.5.5",
