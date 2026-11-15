@@ -416,6 +416,8 @@ test.describe("chat: realtime", () => {
     const third = await world.person();
     const watchB = await watchTable(pair.b, "chat_messages");
     const watchThird = await watchTable(third, "chat_messages");
+    // SUBSCRIBED can arrive a moment before Realtime is reading the WAL for this table.
+    await sleep(750);
     try {
       const sent = must(await send(pair.a, matchId, "realtime hello"));
       const ev = await watchB.waitFor(5000, (e) => e.eventType === "INSERT");
