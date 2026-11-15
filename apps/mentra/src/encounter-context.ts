@@ -7,8 +7,9 @@ import type { DeviceContext } from "@cue/contracts";
  * never be replayed later (spec section 3: "Do not replay offline interest").
  */
 export type ContextSnapshot =
-  | { state: "ready"; encounterSessionId: string }
+  | { state: "ready" }
   | { state: "encounter_mode_off" }
+  | { state: "no_place" }
   | { state: "unlinked" }
   | { state: "offline" }
   | { state: "stale" };
@@ -60,8 +61,10 @@ export class EncounterContextTracker {
     const { result, at } = this.last;
     if (!result.ok) return { state: result.reason };
     if (this.now() - at > this.maxAgeMs) return { state: "stale" };
-    const { encounterMode, encounterSessionId } = result.context;
-    if (!encounterMode || encounterSessionId === null) return { state: "encounter_mode_off" };
-    return { state: "ready", encounterSessionId };
+    const { encounterMode, ready } = result.context;
+    if (!encounterMode) return { state: "encounter_mode_off" };
+    // Mode on, but the phone has not given Cue a place yet.
+    if (!ready) return { state: "no_place" };
+    return { state: "ready" };
   }
 }
