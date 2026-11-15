@@ -179,6 +179,7 @@ describe("getDeviceContext", () => {
     deviceId: DEVICE_ID,
     encounterMode: true,
     ready: true,
+    latestMatchId: null,
     serverTime: "2026-11-14T10:00:00.000Z",
   };
 

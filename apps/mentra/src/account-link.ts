@@ -107,7 +107,16 @@ export class AccountLink {
       return res; // existing token (if any) untouched
     }
 
-    const token = res.result.deviceToken;
+    await this.adopt(res.result.deviceToken, res.result.deviceId);
+    return { ok: true, deviceId: res.result.deviceId };
+  }
+
+  /**
+   * Keeps a device token the server just issued (a pairing code claim, or a
+   * guest account created by voice): registers it as a log secret, persists it
+   * and starts using it.
+   */
+  async adopt(token: string, deviceId: string): Promise<void> {
     this.log.addSecret(token);
     try {
       await this.options.store.save(token);
@@ -116,8 +125,7 @@ export class AccountLink {
       this.log.warn("token not persisted");
     }
     this.token = token;
-    this.log.info("device linked", { deviceId: res.result.deviceId });
-    return { ok: true, deviceId: res.result.deviceId };
+    this.log.info("device linked", { deviceId });
   }
 
   /** Clears store and memory. Call when the server answers unauthorized. */

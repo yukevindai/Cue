@@ -2,6 +2,11 @@ import {
   DeviceClaimInput,
   DeviceClaimResult,
   DeviceContext,
+  DeviceHypeInput,
+  GuestDeviceInput,
+  GuestDeviceResult,
+  GuestHandoff,
+  HypeLine,
   InterestAck,
   routes,
   type InterestEvent,
@@ -14,6 +19,21 @@ import type { SubmitResult } from "./pipeline";
 export type ClaimResult =
   | { ok: true; result: DeviceClaimResult }
   | { ok: false; error: "invalid_code" | "network" | "server" | "invalid_response" };
+
+export type GuestCreateResult =
+  | { ok: true; result: GuestDeviceResult }
+  /** 400: nothing usable as a name. */
+  | { ok: false; error: "no_name" }
+  | { ok: false; error: "rate_limited" | "not_found" | "network" | "server" | "invalid_response" };
+
+export type GuestHandoffResult =
+  | { ok: true; handoff: GuestHandoff }
+  /** 403: the device does not belong to a guest account. */
+  | { ok: false; error: "not_guest" | "unauthorized" | "network" | "server" | "invalid_response" };
+
+export type HypeResult =
+  | { ok: true; line: HypeLine }
+  | { ok: false; error: "unauthorized" | "network" | "server" | "invalid_response" };
 
 export interface CueApiClientOptions {
   baseUrl: string;
@@ -80,6 +100,69 @@ export class CueApiClient {
     const body = DeviceClaimResult.safeParse(res.body);
     if (!body.success) return { ok: false, error: "invalid_response" };
     return { ok: true, result: body.data };
+  }
+
+  /**
+   * Unauthenticated: creates a guest account from what the wearer said and
+   * returns a device token for these glasses. One attempt, no retries.
+   */
+  async createGuestDevice(input: z.input<typeof GuestDeviceInput>): Promise<GuestCreateResult> {
+    const parsed = GuestDeviceInput.safeParse(input);
+    if (!parsed.success) return { ok: false, error: "no_name" };
+    let res: HttpResponse;
+    try {
+      res = await this.request("POST", routes.guestDevice, null, JSON.stringify(parsed.data));
+    } catch (error) {
+      this.log.warn("guest create failed", { error: errorKind(error) });
+      return { ok: false, error: "network" };
+    }
+    this.log.debug("guest create response", { status: res.status });
+    if (res.status === 400) return { ok: false, error: "no_name" };
+    if (res.status === 429) return { ok: false, error: "rate_limited" };
+    if (res.status === 404) return { ok: false, error: "not_found" };
+    if (res.status !== 200 && res.status !== 201) return { ok: false, error: "server" };
+    const body = GuestDeviceResult.safeParse(res.body);
+    if (!body.success) return { ok: false, error: "invalid_response" };
+    return { ok: true, result: body.data };
+  }
+
+  /** Device token required. One attempt. */
+  async requestGuestHandoff(): Promise<GuestHandoffResult> {
+    const token = this.getToken();
+    if (token === null) return { ok: false, error: "unauthorized" };
+    let res: HttpResponse;
+    try {
+      res = await this.request("POST", routes.guestHandoff, token, "{}");
+    } catch (error) {
+      this.log.warn("guest handoff failed", { error: errorKind(error) });
+      return { ok: false, error: "network" };
+    }
+    if (res.status === 401) return { ok: false, error: "unauthorized" };
+    if (res.status === 403) return { ok: false, error: "not_guest" };
+    if (res.status !== 200) return { ok: false, error: "server" };
+    const body = GuestHandoff.safeParse(res.body);
+    if (!body.success) return { ok: false, error: "invalid_response" };
+    return { ok: true, handoff: body.data };
+  }
+
+  /** Device token required. One attempt: the caller decides about a retry. */
+  async requestHype(matchId: string): Promise<HypeResult> {
+    const token = this.getToken();
+    if (token === null) return { ok: false, error: "unauthorized" };
+    const input = DeviceHypeInput.safeParse({ matchId });
+    if (!input.success) return { ok: false, error: "invalid_response" };
+    let res: HttpResponse;
+    try {
+      res = await this.request("POST", routes.deviceHype, token, JSON.stringify(input.data));
+    } catch (error) {
+      this.log.debug("hype request failed", { error: errorKind(error) });
+      return { ok: false, error: "network" };
+    }
+    if (res.status === 401 || res.status === 403) return { ok: false, error: "unauthorized" };
+    if (res.status !== 200) return { ok: false, error: "server" };
+    const body = HypeLine.safeParse(res.body);
+    if (!body.success) return { ok: false, error: "invalid_response" };
+    return { ok: true, line: body.data };
   }
 
   /** One GET, no retries: the caller polls. */

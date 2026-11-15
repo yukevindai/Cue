@@ -57,6 +57,14 @@ registerMiniapp<Channels>(async (session) => {
     },
   };
 
+  /** Speaks one line, waiting (briefly) for a cue that is still playing so the two do not overlap. */
+  async function speakLine(text: string): Promise<void> {
+    for (let waited = 0; session.speaker.isPlaying && waited < 3000; waited += 100) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    await session.speaker.speak(text);
+  }
+
   const bridge = new CueBridge({
     storage: {
       get: (key) => session.storage.get(key),
@@ -70,10 +78,19 @@ registerMiniapp<Channels>(async (session) => {
     mentraUserId: () => session.auth.mentraUserId || session.userId || null,
     onStatus: (status) => session.ui.send("cue:status", status),
     defaultServerUrl: process.env.MENTRA_PUBLIC_CUE_SERVER_URL ?? null,
+    speak: speakLine,
+    // Only offered when the manifest declares MICROPHONE; the OS-level grant is not observable.
+    transcription: session.permissions.has("microphone")
+      ? { start: (onTranscript) => session.transcription.forLanguage("en-US", (data) => onTranscript(data)) }
+      : undefined,
+    openUrl: (url) => session.system.openUrl(url),
   });
 
   // Register UI handlers before any slow await (the host holds UI requests until startup settles).
-  session.ui.onOpen(() => bridge.publish());
+  session.ui.onOpen(() => {
+    bridge.screenOpened();
+    bridge.publish();
+  });
   session.ui.on("cue:refresh", () => void bridge.refresh().then(() => bridge.publish()));
   session.ui.on("cue:set-calibration", ({ on }) => void bridge.setCalibration(on));
   session.ui.on("cue:set-backward-gesture", ({ gestureName }) => void bridge.setBackwardGesture(gestureName));
@@ -81,6 +98,7 @@ registerMiniapp<Channels>(async (session) => {
   session.ui.on("cue:unlink", () => void bridge.unlink());
   session.ui.handle("cue:set-server", ({ url }) => bridge.setServerUrl(url));
   session.ui.handle("cue:link", ({ code }) => bridge.linkWithCode(code));
+  session.ui.handle("cue:open-guest", () => bridge.openGuestHandoff());
 
   // One subscription to the bare `touch_event` stream: all gestures arrive, so
   // calibration can print them and the pipeline can ignore everything but one.

@@ -39,6 +39,13 @@ function render(status: BridgeStatus) {
   $("mapping").textContent = status.backwardGestureName ?? "(none: nothing will be sent)";
   $("identity").textContent = status.mentraUserId ? `Mentra user: ${status.mentraUserId}` : "";
 
+  $("listening").hidden = !status.listening;
+  $("guest-start").hidden = status.linked || status.serverUrl === null;
+  const guestButton = $<HTMLButtonElement>("open-guest");
+  guestButton.hidden = !(status.linked && status.guestName !== null);
+  guestButton.textContent = status.guestName !== null ? `Open Cue as ${status.guestName}` : "";
+  if (!status.linked || status.guestName === null) $<HTMLAnchorElement>("guest-link").hidden = true;
+
   const serverInput = $<HTMLInputElement>("server-url");
   if (document.activeElement !== serverInput && status.serverUrl) serverInput.value = status.serverUrl;
 
@@ -85,6 +92,25 @@ $("pair").addEventListener("click", async () => {
     if (result.ok) input.value = "";
   } catch {
     setMessage("Pairing timed out.");
+  }
+});
+
+$("open-guest").addEventListener("click", async () => {
+  const link = $<HTMLAnchorElement>("guest-link");
+  link.hidden = true;
+  setMessage("Opening Cue…");
+  try {
+    const result = await mentra.request("cue:open-guest", {}, { timeout: 15000 });
+    if (!result.ok) {
+      setMessage(result.error);
+      return;
+    }
+    // The background layer asks the phone to open the URL; the link is the fallback.
+    setMessage("Opening Cue in your browser. If nothing opens, tap the link below.");
+    link.href = result.url;
+    link.hidden = false;
+  } catch {
+    setMessage("Could not open Cue. Try again.");
   }
 });
 

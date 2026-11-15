@@ -52,3 +52,16 @@ count, Encounter mode must be on and the server must report the wearer as
 2026-11-14, under the old session model. It has not been re-verified under place
 matching, and the new audio cues (mode off, no place) have not been heard on a
 device.
+
+**Guest by voice and spoken match line (0.3.0).** While a server address is set
+and the glasses are not linked, the mini app listens through the glasses'
+microphone (`session.transcription`, English, MICROPHONE permission) and
+`parseIntroName(text, {requireLeadIn: true})` turns a final "Hi, my name is Sam"
+into `POST /api/guest/device`; the returned device token is stored like a
+pairing token and listening stops. Pairing codes still work. "Open Cue as
+{name}" asks the background for `POST /api/guest/handoff` and opens the
+one-time URL with `session.system.openUrl`. When `GET /api/devices/me` reports a
+new `latestMatchId`, `POST /api/devices/hype` is called once per match (id kept
+in storage) and the returned line is spoken about 1.2 s later. Unverified on
+hardware: see the report notes in the PR. Code: `guest-intro.ts`,
+`match-hype.ts`, `speech.ts`.

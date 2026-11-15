@@ -56,6 +56,13 @@ export class EncounterContextTracker {
     this.last = null;
   }
 
+  /** The wearer's newest active match from the last fresh context, or null. */
+  latestMatchId(): string | null {
+    if (this.last === null || !this.last.result.ok) return null;
+    if (this.now() - this.last.at > this.maxAgeMs) return null;
+    return this.last.result.context.latestMatchId;
+  }
+
   snapshot(): ContextSnapshot {
     if (this.last === null) return { state: "stale" };
     const { result, at } = this.last;
