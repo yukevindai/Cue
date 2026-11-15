@@ -10,6 +10,7 @@ import {
   normalizeJoinCode,
   occupancyText,
   rejectionCopy,
+  signalSourceText,
   spellCode,
   venueLabelProblem,
 } from "./encounter";
@@ -148,6 +149,12 @@ describe("buildInterestEvent", () => {
 });
 
 describe("copy helpers", () => {
+  it("names where the signal came from", () => {
+    expect(signalSourceText("mentra_touch")).toBe("Sent from your glasses");
+    expect(signalSourceText("headset_remote")).toBe("Sent from your glasses");
+    expect(signalSourceText("web_demo")).toBe("Sent from this page");
+  });
+
   it("maps rejection reasons", () => {
     expect(rejectionCopy("already_matched")).toMatchObject({ matchesLink: true, refresh: false });
     expect(rejectionCopy("session_inactive")).toMatchObject({ refresh: true });

@@ -6,6 +6,7 @@ import { Button, Loading, Notice, PageHeader } from "@/components/ui";
 import { describeError } from "@/lib/api";
 import { DemoControls } from "./demo-controls";
 import { GlassesCard } from "./glasses-card";
+import { HeadsetRemoteCard } from "./headset-remote-card";
 import { ModeCard } from "./mode-card";
 import { SessionCard } from "./session-card";
 import { SessionSetup } from "./session-setup";
@@ -92,6 +93,7 @@ export function EncounterView() {
         <ModeCard enabled={encounter.encounterMode} />
         <SignalPanel key={runKey} encounter={encounter} onLeftSession={setSetupNotice} />
         <GlassesCard device={encounter.device} />
+        <HeadsetRemoteCard />
         <DemoControls onEnded={setSetupNotice} onReset={() => setRunKey((k) => k + 1)} />
       </div>
     </>

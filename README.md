@@ -16,8 +16,11 @@ This is a hackathon prototype, not a production service.
 2. An organizer creates a two-person demo session and the second person joins
    it with the join code. Only these two accounts can interact.
 3. Both turn on encounter mode.
-4. Person A makes a backward swipe on the glasses. The swipe is meant to be
-   submitted as interest. Person B taps "Interested" in the web app.
+4. Person A makes a backward swipe on Mentra Live glasses. The swipe is
+   submitted as interest. Person B taps "Interested" in the web app, or
+   (experimental, not verified on a device) double taps Meta Adventurer glasses
+   paired to an iPhone: the signed-in web page receives the headset media
+   command and sends it as interest (`headset_remote`).
 5. If both signals arrive within 15 seconds (server receipt time), the server
    creates one match and consumes both signals. Otherwise the first signal
    expires and nothing is shared.
@@ -28,13 +31,19 @@ for product behavior and `docs/architecture.md` for the technical contract.
 
 ### Hardware status
 
-The real-swipe checkpoint is **not met**. `docs/hardware-check.md` (hardware
-role) records that, as of 2026-11-14, nobody has run this code against a real
-touch strip: the glasses bridge in `apps/mentra` is built and unit-tested, and
-the server path has been exercised only with injected events. An injected
-event, a test, or a button does not show that the real swipe works. The
-checkpoint is met when the on-device steps in `docs/hardware-check.md` pass on
-the loaner glasses and its results table is filled in.
+**Mentra Live.** The real-swipe checkpoint is **met** (2026-11-14): seven real
+swipes reached the live server under the wearer's account in about 0.2 to 0.3 s
+and two matches completed. On that unit the swipe's gesture name was not the
+built-in default, so the mini app's calibration override was needed. Hair
+adjustments, the pocket test, the media-control conflict and glasses audio are
+not yet recorded. See `docs/hardware-check.md`.
+
+**Meta Adventurer.** Not verified. The web page listens for headset media
+commands (double tap by default). Tests cover the server path and the page
+logic only; nobody has run it on real Meta glasses or an iPhone. The signal
+shows that some Bluetooth headset sent a media command, not that Meta glasses
+did, and the gesture is a tap pattern, not a swipe. See
+`docs/meta-glasses-check.md`.
 
 ## Run it locally
 
@@ -111,7 +120,7 @@ available for it.
 | `packages/matching` | Pure matching rules with unit tests |
 | `supabase` | Config, migrations, and synthetic seed data |
 | `tests/e2e` | Playwright end-to-end tests, helpers, and the fake Anthropic server |
-| `docs` | `spec.md`, `architecture.md`, `demo.md`, `hardware-check.md` |
+| `docs` | `spec.md`, `architecture.md`, `demo.md`, `hardware-check.md`, `meta-glasses-check.md` |
 | `scripts` | `dev-stack.sh` (local stack start, stop, reset, env) |
 
 Role branches are merged by the lead; a path may be missing on a branch that
@@ -119,8 +128,11 @@ has not merged the role that owns it.
 
 ## Limitations
 
-- One pair of glasses. One person uses the glasses; the other person uses the
-  web app. This is not a test of two glasses users.
+- Normally one pair of glasses: one person uses the glasses, the other the web
+  app. The Meta route allows two glasses wearers but is not verified on a device.
+- `headset_remote` is not proof of device: any Bluetooth headset sending a media
+  command on that phone would trigger it. The Meta gesture is a tap pattern, not
+  the backward swipe.
 - The session is pre-scoped to two accounts by the organizer. This is not crowd
   identification, and location is not proof of who someone meant to choose.
 - No identity verification.
@@ -129,9 +141,10 @@ has not merged the role that owns it.
 - The rate limit for the Claude card is in memory and works only on a single
   server instance.
 - The live Claude call is not verified until an API key is supplied.
-- The glasses swipe has not been verified on real hardware (see Hardware status).
-- The end-to-end tests cover the server path for device-token events. They do
-  not test the physical swipe.
+- The Mentra swipe was verified on one real unit (see Hardware status); the Meta
+  tap route has not been run on real hardware.
+- The end-to-end tests cover the server path (device-token and `headset_remote`
+  events). They do not test a physical swipe or tap.
 - Hackathon MVP. Not production software.
 
 ## Documentation
@@ -139,4 +152,6 @@ has not merged the role that owns it.
 - `docs/spec.md`: product spec, matching rules, and the 90-second demo.
 - `docs/architecture.md`: stack, trust model, database, API, and ownership.
 - `docs/demo.md`: setup, demo script, fallbacks, and reset steps.
+- `docs/hardware-check.md`: Mentra Live on-device checklist and results.
+- `docs/meta-glasses-check.md`: Meta Adventurer on-device checklist and the native route.
 - `AGENTS.md`: guide for coding agents and contributors.

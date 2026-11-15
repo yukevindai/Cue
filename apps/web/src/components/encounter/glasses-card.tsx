@@ -11,7 +11,7 @@ import { useServerNow } from "./use-server-now";
 
 const LINK_POLL_MS = 3000;
 
-/** Glasses link status and the pairing flow. Own device only. */
+/** Mentra Live link status and the pairing flow. Own device only. (Meta glasses: HeadsetRemoteCard.) */
 export function GlassesCard({ device }: { device: DeviceStatus }) {
   const { clockOffsetMs, refreshEncounter } = useLive();
 
@@ -69,7 +69,7 @@ export function GlassesCard({ device }: { device: DeviceStatus }) {
     <Card aria-labelledby="glasses-title">
       <div className="flex items-center justify-between gap-3">
         <h2 id="glasses-title" className="font-display text-2xl leading-tight tracking-tight">
-          Glasses
+          Mentra Live
         </h2>
         <p role="status">
           {device.linked ? (
@@ -145,8 +145,9 @@ export function GlassesCard({ device }: { device: DeviceStatus }) {
       ) : (
         <div className="mt-3">
           <p className="text-ink-soft">
-            Link your Mentra Live so a backward swipe on the temple sends your signal. Without
-            glasses you can still use the Interested button on this page.
+            For Mentra Live: link them so a backward swipe on the temple sends your signal. Wearing
+            Meta glasses? Use the Meta glasses card instead. Without glasses you can still use the
+            Interested button on this page.
           </p>
           <Button variant="secondary" className="mt-4 max-sm:w-full" onClick={getCode} busy={pairBusy}>
             Link glasses
@@ -162,7 +163,7 @@ export function GlassesCard({ device }: { device: DeviceStatus }) {
 
       {confirmUnlink ? (
         <ConfirmDialog
-          title="Unlink these glasses?"
+          title="Unlink your Mentra Live?"
           confirmLabel="Unlink"
           danger
           busy={unlinkBusy}

@@ -290,6 +290,53 @@ describe.skipIf(!stackUp || !webUp)("HTTP API (real web server + real stack)", (
   });
 
   // -------------------------------------------------------------------------
+  describe("headset_remote (web session only)", () => {
+    it("cookie + headset_remote/media_next_track is accepted; one-sided signal is invisible to the other person", async () => {
+      const p = await newPair();
+      const [ca, cb] = await Promise.all([cookieFor(p.a), cookieFor(p.b)]);
+      const ack = ok(await api("POST", routes.interest, { cookie: ca }, interestBody(p.sessionId, "headset_remote")), InterestAck);
+      expect(ack).toMatchObject({ status: "accepted", matched: false, reason: null });
+      const [row] = await eventsOf(p.a.id, p.sessionId);
+      expect(row).toMatchObject({ source: "headset_remote", gesture: "media_next_track", status: "pending" });
+      const bStatus = ok(await api("GET", routes.encounter, { cookie: cb }), EncounterStatus);
+      expect(bStatus.pendingSignal).toBeNull();
+      expect(ok(await api("GET", routes.matches, { cookie: cb }), MatchList).matches).toEqual([]);
+      const aStatus = ok(await api("GET", routes.encounter, { cookie: ca }), EncounterStatus);
+      expect(aStatus.pendingSignal?.source).toBe("headset_remote");
+    });
+
+    it("a device bearer token cannot send headset_remote (403) and nothing is written", async () => {
+      const p = await newPair();
+      const ca = await cookieFor(p.a);
+      const pairing = ok(await api("POST", routes.devicePair, { cookie: ca }), PairingCode);
+      const { deviceToken } = ok(await api("POST", routes.deviceClaim, freshClient(), { code: pairing.code }), DeviceClaimResult);
+      err(await api("POST", routes.interest, { bearer: deviceToken }, interestBody(p.sessionId, "headset_remote")), 403, "forbidden");
+      expect(await eventsOf(p.a.id, p.sessionId)).toHaveLength(0);
+    });
+
+    it("headset_remote with a gesture from another source is a 400 (contract refine) and writes nothing", async () => {
+      const p = await newPair();
+      const ca = await cookieFor(p.a);
+      for (const gesture of ["web_confirm", "backward_swipe"]) {
+        err(await api("POST", routes.interest, { cookie: ca }, interestBody(p.sessionId, "headset_remote", { gesture })), 400, "invalid_request");
+      }
+      err(await api("POST", routes.interest, { cookie: ca }, interestBody(p.sessionId, "web_demo", { gesture: "media_next_track" })), 400, "invalid_request");
+      expect(await eventsOf(p.a.id, p.sessionId)).toHaveLength(0);
+    });
+
+    it("a Mentra device swipe plus the other person's headset_remote creates one match", async () => {
+      const p = await newPair();
+      const [ca, cb] = await Promise.all([cookieFor(p.a), cookieFor(p.b)]);
+      const pairing = ok(await api("POST", routes.devicePair, { cookie: ca }), PairingCode);
+      const { deviceToken } = ok(await api("POST", routes.deviceClaim, freshClient(), { code: pairing.code }), DeviceClaimResult);
+      ok(await api("POST", routes.interest, { bearer: deviceToken }, interestBody(p.sessionId, "mentra_touch")), InterestAck);
+      const ack = ok(await api("POST", routes.interest, { cookie: cb }, interestBody(p.sessionId, "headset_remote")), InterestAck);
+      expect(ack.matched).toBe(true);
+      expect(await matchesOf(p.sessionId)).toHaveLength(1);
+    });
+  });
+
+  // -------------------------------------------------------------------------
   describe("device pairing and device-token auth", () => {
     let a: Awaited<ReturnType<typeof newPair>>["a"];
     let b: Awaited<ReturnType<typeof newPair>>["b"];

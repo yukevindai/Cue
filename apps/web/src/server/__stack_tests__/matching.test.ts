@@ -41,6 +41,8 @@ describe.skipIf(!stackUp)("matching (SQL submit_interest, real stack)", () => {
       { first: "B", source: "web_demo" },
       { first: "A", source: "mentra_touch" },
       { first: "B", source: "mentra_touch" },
+      { first: "A", source: "headset_remote" },
+      { first: "B", source: "headset_remote" },
     ];
     it.each(cases)("$first signals first via $source", async ({ first, source }) => {
       const p = await newPair();
@@ -73,6 +75,68 @@ describe.skipIf(!stackUp)("matching (SQL submit_interest, real stack)", () => {
       expect(first1).toMatchObject({ status: "consumed", match_id: m.id, source });
       expect(second).toMatchObject({ status: "consumed", match_id: m.id, source });
       expect(first1.resolved_at).not.toBeNull();
+    });
+  });
+
+  describe("mixed sources: mentra_touch with headset_remote", () => {
+    it.each([
+      { first: "mentra_touch" as Source, second: "headset_remote" as Source },
+      { first: "headset_remote" as Source, second: "mentra_touch" as Source },
+    ])("A via $first then B via $second gives exactly one match, both consumed", async ({ first, second }) => {
+      const p = await newPair();
+      const ack1 = await signal(p.a, p.sessionId, { source: first });
+      expect(ack1).toMatchObject({ status: "accepted", matched: false, reason: null });
+      const ack2 = await signal(p.b, p.sessionId, { source: second });
+      expect(ack2).toMatchObject({ status: "accepted", matched: true, reason: null });
+      const matches = await matchesOf(p.sessionId);
+      expect(matches).toHaveLength(1);
+      expect(ack2.match_id).toBe(matches[0].id);
+      const [ra] = await eventsOf(p.a.id, p.sessionId);
+      const [rb] = await eventsOf(p.b.id, p.sessionId);
+      expect(ra).toMatchObject({ status: "consumed", match_id: matches[0].id, source: first });
+      expect(rb).toMatchObject({ status: "consumed", match_id: matches[0].id, source: second });
+    });
+  });
+
+  describe("source and gesture pairs are enforced in SQL", () => {
+    it.each([
+      { source: "headset_remote" as Source, gesture: "backward_swipe" },
+      { source: "headset_remote" as Source, gesture: "web_confirm" },
+      { source: "web_demo" as Source, gesture: "media_next_track" },
+      { source: "mentra_touch" as Source, gesture: "media_next_track" },
+      { source: "web_demo" as Source, gesture: "media_play_pause" },
+    ])("$source + $gesture is rejected invalid_event and stores nothing", async ({ source, gesture }) => {
+      const p = await newPair();
+      const ack = await signal(p.a, p.sessionId, { source, gesture });
+      expect(ack).toMatchObject({ status: "rejected", reason: "invalid_event", matched: false });
+      expect(await eventsOf(p.a.id, p.sessionId)).toHaveLength(0);
+    });
+
+    it.each(["media_next_track", "media_previous_track", "media_play_pause"])(
+      "headset_remote + %s is accepted",
+      async (gesture) => {
+        const p = await newPair();
+        const ack = await signal(p.a, p.sessionId, { source: "headset_remote", gesture });
+        expect(ack).toMatchObject({ status: "accepted", matched: false, reason: null });
+        const [row] = await eventsOf(p.a.id, p.sessionId);
+        expect(row).toMatchObject({ source: "headset_remote", gesture, status: "pending" });
+      },
+    );
+
+    it("the table CHECK also refuses a bad pair written directly", async () => {
+      const p = await newPair();
+      const res = await admin.from("interest_events").insert({
+        event_id: randomUUID(),
+        user_id: p.a.id,
+        session_id: p.sessionId,
+        source: "headset_remote",
+        gesture: "backward_swipe",
+        occurred_at: new Date().toISOString(),
+        received_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + 15_000).toISOString(),
+        status: "pending",
+      });
+      expect(res.error).not.toBeNull();
     });
   });
 

@@ -1,11 +1,33 @@
 import { z } from "zod";
 import { IsoDateTime, Uuid } from "./common";
 
-export const InterestSource = z.enum(["mentra_touch", "web_demo"]);
+/**
+ * Where a signal came from.
+ * - `mentra_touch`: the Mentra Live bridge, authenticated with a device token.
+ * - `web_demo`: the "Interested" button, authenticated with the web session.
+ * - `headset_remote`: a media command (for example a double tap on the temple
+ *   of Meta glasses) received by the signed-in web page from whatever Bluetooth
+ *   headset is the phone's audio route. Authenticated with the web session. It
+ *   shows that a headset sent the command, not which headset it was.
+ */
+export const InterestSource = z.enum(["mentra_touch", "web_demo", "headset_remote"]);
 export type InterestSource = z.infer<typeof InterestSource>;
 
-export const InterestGesture = z.enum(["backward_swipe", "web_confirm"]);
+export const InterestGesture = z.enum([
+  "backward_swipe",
+  "web_confirm",
+  "media_next_track",
+  "media_previous_track",
+  "media_play_pause",
+]);
 export type InterestGesture = z.infer<typeof InterestGesture>;
+
+/** The gestures each source may carry. The same table is enforced in SQL. */
+export const GESTURES_BY_SOURCE: Record<InterestSource, readonly InterestGesture[]> = {
+  mentra_touch: ["backward_swipe"],
+  web_demo: ["web_confirm"],
+  headset_remote: ["media_next_track", "media_previous_track", "media_play_pause"],
+};
 
 /**
  * Body of POST /api/interest. Application-owned labels; the server derives the
@@ -23,9 +45,7 @@ export const InterestEvent = z
   })
   .strict()
   .refine(
-    (e) =>
-      (e.source === "mentra_touch" && e.gesture === "backward_swipe") ||
-      (e.source === "web_demo" && e.gesture === "web_confirm"),
+    (e) => GESTURES_BY_SOURCE[e.source].includes(e.gesture),
     { message: "gesture does not belong to source" },
   );
 export type InterestEvent = z.infer<typeof InterestEvent>;

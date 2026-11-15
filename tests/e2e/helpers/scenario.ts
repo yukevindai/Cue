@@ -89,11 +89,11 @@ export class World {
   }
 }
 
-/** Sends one web (`web_demo`/`web_confirm`) signal for `who` in the pair's session. */
+/** Sends one web-session (`web_demo` by default, or `headset_remote`) signal for `who` in the pair's session. */
 export function signal(
   pair: Pick<Pair, "session">,
   who: Person,
-  opts: { source?: "web_demo" | "mentra_touch"; eventId?: string } = {},
+  opts: Parameters<typeof interestEvent>[1] = {},
 ) {
   return who.api.interest(interestEvent(pair.session.id, opts));
 }

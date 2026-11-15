@@ -41,6 +41,29 @@ function note(c: AudioContext, freq: number, at: number, dur: number, peak: numb
   osc.stop(at + dur + 0.05);
 }
 
+/**
+ * Short confirmations for a headset signal, played through the phone's current
+ * audio route (so through the glasses when they are the headset).
+ * "sent": one bright rising blip. "not sent": two low, flat beeps.
+ */
+export function playSentTone(): void {
+  const c = getContext();
+  if (!c) return;
+  if (c.state === "suspended") void c.resume().catch(() => {});
+  const t = c.currentTime + 0.01;
+  note(c, 880.0, t, 0.12, 0.18); // A5
+  note(c, 1318.51, t + 0.09, 0.22, 0.16); // E6
+}
+
+export function playNotSentTone(): void {
+  const c = getContext();
+  if (!c) return;
+  if (c.state === "suspended") void c.resume().catch(() => {});
+  const t = c.currentTime + 0.01;
+  note(c, 220.0, t, 0.14, 0.22); // A3
+  note(c, 220.0, t + 0.22, 0.14, 0.22);
+}
+
 export function playChime(): void {
   const c = getContext();
   if (!c) return;

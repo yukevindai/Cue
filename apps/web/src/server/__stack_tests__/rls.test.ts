@@ -245,6 +245,7 @@ describe.skipIf(!stackUp)("RLS and direct database access (real stack)", () => {
       ["block_user", { p_blocker_id: u1.id, p_blocked_id: u3.id }],
       ["start_device_pairing", { p_user_id: u1.id, p_code_hash: "c", p_ttl_seconds: 60 }],
       ["unlink_device", { p_user_id: u1.id }],
+      ["interest_pair_ok", { p_source: "headset_remote", p_gesture: "media_next_track" }],
       ["expire_own_signals", { p_user_id: u1.id }],
     ];
     for (const [who, client] of [

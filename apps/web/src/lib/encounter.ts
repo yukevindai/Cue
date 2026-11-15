@@ -125,8 +125,11 @@ export function deriveSignalView(
   return { kind: "idle" };
 }
 
+/** Both kinds of glasses read the same to the wearer; only the web button is "this page". */
 export function signalSourceText(source: InterestSource): string {
-  return source === "mentra_touch" ? "Sent from your glasses" : "Sent from this page";
+  return source === "mentra_touch" || source === "headset_remote"
+    ? "Sent from your glasses"
+    : "Sent from this page";
 }
 
 /** The exact body of POST /api/interest for the web button. The schema is strict. */
