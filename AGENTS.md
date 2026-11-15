@@ -39,6 +39,10 @@ pnpm test:e2e      # Playwright; pass --trace off
   `ANTHROPIC_API_KEY` to the browser or glasses. Keep `import "server-only"` in
   server modules.
 - One-sided interest must stay invisible to the other person.
+- App text is English only.
+- Guest accounts and the spoken wingman are demo features. A device token may
+  reach only the wearer's own data: `/api/devices/hype` (their own match) and
+  `/api/guest/handoff` (a sign-in link for their own guest account).
 - A button or simulated event does not satisfy the glasses swipe requirement;
   say so plainly if hardware is unavailable rather than faking it.
 - No secrets or real personal data in the repo. Seed data is synthetic. No
@@ -56,6 +60,37 @@ See "Status log" below. Update it when a milestone lands or a decision changes.
 
 ### Status log
 
+- 2026-11-15 15:30 UTC: Demo-only guest accounts and a spoken wingman line
+  (PR #11), on the owner's instruction. Guests: `POST /api/guest {intro}`
+  reads a name with `parseIntroName` (contracts), creates an ordinary account
+  (`guest-<uuid>@guest.cue.invalid`, random password, name-only profile) and
+  signs it in; no migration; `OwnProfile.isGuest`. Sign-in/up pages have a
+  "Say hi" card (browser speech recognition, typed fallback). Mentra mini app
+  0.3.0 listens while unlinked (MICROPHONE permission) and calls
+  `POST /api/guest/device`; "Open Cue as {name}" uses `POST /api/guest/handoff`
+  and `GET /g/<token>` (single use, lifetime set by Supabase's email OTP
+  expiry, 3600 s locally). Limits: 40 per 10 min per address (in memory), 300
+  guests per 24 h, switch `CUE_GUESTS_ENABLED`. Spoken line:
+  `POST /api/matches/[id]/hype` and `POST /api/devices/hype` return one or two
+  Gen Z style sentences built only from the existing wingman's verified shared
+  items plus the other person's display name and venue; validated; fixed
+  fallback on any failure or when AI assist is off. The web page speaks it
+  (switch "Wingman voice"), the Mentra app speaks it via
+  `DeviceContext.latestMatchId`. CONSEQUENCE: each match now calls Claude
+  without a tap (still gated by both people's AI assist). Removal after the
+  demos: `docs/guest-accounts.md`. Verified by the lead from a clean local DB:
+  typecheck, lint, unit + stack tests (contracts 43, matching 54, mentra 160,
+  web 424), web build, `pnpm test:e2e` 249/249, and a two-guest browser
+  walkthrough with speech output stubbed. NOT verified: real speech
+  recognition or audio on any phone, listening/speaking through Meta or Mentra
+  glasses, Mentra transcription and `openUrl`, the model's real wording (no
+  key here). Also since the last entry: PR #8 (website install of the mini
+  app; the owner installed it on a phone with no laptop), PR #9 (calibration
+  label fix; web depends on `@cue/mentra` so mini app changes rebuild the
+  site), PR #10 (Chinese line removed; app text is English only) are merged. A
+  real Mentra swipe and a real Meta double tap reached the live site under
+  place-based matching on 2026-11-15 13:53 UTC (no new match: the two accounts
+  were already matched).
 - 2026-11-15 13:30 UTC: PR #5 (place-based matching) and PR #6 (sign-in page
   explainer lines removed) merged to `main` by the owner; production
   deployment of the PR #5 merge was READY. Phones with the Mentra mini app
