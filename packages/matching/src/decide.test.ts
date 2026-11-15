@@ -1,76 +1,98 @@
 import { describe, expect, it } from "vitest";
-import { decideInterest, type InterestInput, type OwnEvent } from "./index";
+import {
+  decideInterest,
+  EARTH_RADIUS_M,
+  type Candidate,
+  type InterestInput,
+  type OwnEvent,
+  type PhoneLocation,
+  type Presence,
+} from "./index";
 
+// Synthetic coordinates only: small offsets around latitude 0, longitude 0.
 const NOW = new Date("2026-11-14T12:00:00.000Z");
 const at = (ms: number) => new Date(NOW.getTime() + ms);
 const ME = "bbbbbbbb-0000-4000-8000-000000000002";
 const THEM = "aaaaaaaa-0000-4000-8000-000000000001";
-const SESSION = "11111111-0000-4000-8000-000000000000";
+const OTHER = "cccccccc-0000-4000-8000-000000000003";
+const VENUE = "11111111-0000-4000-8000-000000000000";
+const VENUE2 = "22222222-0000-4000-8000-000000000000";
 const EVENT = "eeeeeeee-0000-4000-8000-000000000000";
+const M_PER_DEG = (2 * Math.PI * EARTH_RADIUS_M) / 360;
 
+const loc = (northM: number, over: Partial<PhoneLocation> = {}): PhoneLocation => ({
+  lat: northM / M_PER_DEG,
+  lng: 0,
+  accuracyM: 5,
+  locatedAt: at(-2000),
+  ...over,
+});
+const checkIn = (venueId = VENUE, agoMs = 60_000) => ({ venueId, active: true, checkedInAt: at(-agoMs) });
+const presence = (over: Partial<Presence> = {}): Presence => ({
+  encounterMode: true,
+  checkIn: null,
+  location: loc(0),
+  ...over,
+});
+const candidate = (over: Partial<Candidate> & { receivedAgoMs?: number } = {}): Candidate => {
+  const { receivedAgoMs = 1000, ...rest } = over;
+  return {
+    userId: THEM,
+    presence: presence({ location: loc(10) }),
+    pendingSignal: { receivedAt: at(-receivedAgoMs), expiresAt: at(15_000 - receivedAgoMs) },
+    blocked: false,
+    activeMatchWithCaller: false,
+    ...rest,
+  };
+};
 const base = (over: Partial<InterestInput> = {}): InterestInput => ({
   now: NOW,
   userId: ME,
-  sessionId: SESSION,
   event: { eventId: EVENT, source: "mentra_touch", gesture: "backward_swipe" },
-  session: { status: "active" },
-  member: { encounterMode: true },
+  presence: presence(),
   ownEvents: [],
-  other: {
-    userId: THEM,
-    blockedByCaller: false,
-    blocksCaller: false,
-    activeMatchWithCaller: false,
-    pendingSignal: null,
-  },
+  candidates: [],
   ...over,
-});
-const other = (o: Partial<NonNullable<InterestInput["other"]>>): InterestInput["other"] => ({
-  ...base().other!,
-  ...o,
 });
 const own = (o: Partial<OwnEvent>): OwnEvent => ({
   eventId: "99999999-0000-4000-8000-000000000000",
-  sessionId: SESSION,
   status: "pending",
   receivedAt: at(-5000),
   expiresAt: at(10_000),
   ...o,
 });
-const theirs = (receivedAgoMs: number) => ({ receivedAt: at(-receivedAgoMs), expiresAt: at(15_000 - receivedAgoMs) });
+const PENDING = { status: "accepted", matched: false, receivedAt: NOW, expiresAt: at(15_000) } as const;
 
 describe("rejections and order", () => {
   it("invalid_event for a mismatched gesture, before anything else", () => {
-    const d = decideInterest(base({ event: { eventId: EVENT, source: "web_demo", gesture: "backward_swipe" }, member: null }));
+    const d = decideInterest(base({ event: { eventId: EVENT, source: "web_demo", gesture: "backward_swipe" }, presence: null }));
     expect(d).toEqual({ status: "rejected", reason: "invalid_event" });
   });
-  it("not_in_session for a non-member or third party", () => {
-    expect(decideInterest(base({ member: null }))).toEqual({ status: "rejected", reason: "not_in_session" });
+  it("encounter_mode_off with no presence row or mode off", () => {
+    expect(decideInterest(base({ presence: null }))).toEqual({ status: "rejected", reason: "encounter_mode_off" });
+    expect(decideInterest(base({ presence: presence({ encounterMode: false }) }))).toEqual({
+      status: "rejected",
+      reason: "encounter_mode_off",
+    });
   });
-  it("not_in_session for a missing session", () => {
-    expect(decideInterest(base({ session: null }))).toEqual({ status: "rejected", reason: "not_in_session" });
+  it("no_place without a check-in or a usable location", () => {
+    const cases: Partial<Presence>[] = [
+      { location: null },
+      { location: loc(0, { locatedAt: at(-60_000) }) },
+      { location: loc(0, { accuracyM: 101 }) },
+      { location: null, checkIn: checkIn(VENUE, 8 * 3600_000) },
+      { location: null, checkIn: { ...checkIn(), active: false } },
+    ];
+    for (const c of cases) {
+      expect(decideInterest(base({ presence: presence(c) }))).toEqual({ status: "rejected", reason: "no_place" });
+    }
   });
-  it("non-member is rejected even when the event id was seen before", () => {
-    const d = decideInterest(base({ member: null, ownEvents: [own({ eventId: EVENT })] }));
-    expect(d).toEqual({ status: "rejected", reason: "not_in_session" });
+  it("encounter_mode_off wins over no_place", () => {
+    const d = decideInterest(base({ presence: presence({ encounterMode: false, location: null }) }));
+    expect(d).toEqual({ status: "rejected", reason: "encounter_mode_off" });
   });
-  it("session_inactive when ended", () => {
-    expect(decideInterest(base({ session: { status: "ended" } }))).toEqual({ status: "rejected", reason: "session_inactive" });
-  });
-  it("encounter_mode_off", () => {
-    expect(decideInterest(base({ member: { encounterMode: false } }))).toEqual({ status: "rejected", reason: "encounter_mode_off" });
-  });
-  it("session_inactive wins over encounter_mode_off", () => {
-    const d = decideInterest(base({ session: { status: "ended" }, member: { encounterMode: false } }));
-    expect(d).toEqual({ status: "rejected", reason: "session_inactive" });
-  });
-  it("blocked when caller blocked the other, even if already matched", () => {
-    const d = decideInterest(base({ other: other({ blockedByCaller: true, activeMatchWithCaller: true, pendingSignal: theirs(1000) }) }));
-    expect(d).toEqual({ status: "rejected", reason: "blocked" });
-  });
-  it("already_matched", () => {
-    const d = decideInterest(base({ other: other({ activeMatchWithCaller: true, pendingSignal: theirs(1000) }) }));
-    expect(d).toEqual({ status: "rejected", reason: "already_matched" });
+  it("a check-in alone is a place", () => {
+    expect(decideInterest(base({ presence: presence({ location: null, checkIn: checkIn() }) }))).toEqual(PENDING);
   });
 });
 
@@ -94,67 +116,105 @@ describe("duplicates", () => {
       status: "duplicate", expiresAt: null, matched: false,
     });
   });
-  it("repeated event id answers duplicate even after the session ended or encounter mode is off", () => {
+  it("repeated event id answers duplicate even with mode off or no place", () => {
     const e = own({ eventId: EVENT, status: "consumed" });
-    expect(decideInterest(base({ ownEvents: [e], session: { status: "ended" } })).status).toBe("duplicate");
-    expect(decideInterest(base({ ownEvents: [e], member: { encounterMode: false } })).status).toBe("duplicate");
+    expect(decideInterest(base({ ownEvents: [e], presence: null })).status).toBe("duplicate");
+    expect(decideInterest(base({ ownEvents: [e], presence: presence({ location: null }) })).status).toBe("duplicate");
   });
   it("a new event id while own signal is pending is a duplicate and never matches", () => {
     const e = own({});
-    const d = decideInterest(base({ ownEvents: [e], other: other({ pendingSignal: theirs(1000) }) }));
+    const d = decideInterest(base({ ownEvents: [e], candidates: [candidate()] }));
     expect(d).toEqual({ status: "duplicate", receivedAt: e.receivedAt, expiresAt: e.expiresAt, matched: false });
   });
   it("own pending exactly at expiry does not count; a fresh signal is accepted", () => {
-    const d = decideInterest(base({ ownEvents: [own({ expiresAt: NOW })] }));
-    expect(d).toEqual({ status: "accepted", matched: false, receivedAt: NOW, expiresAt: at(15_000) });
+    expect(decideInterest(base({ ownEvents: [own({ expiresAt: NOW })] }))).toEqual(PENDING);
   });
-  it("own expired/consumed/cancelled events and pending in another session do not count", () => {
-    const ownEvents = [
-      own({ status: "expired" }), own({ status: "consumed" }), own({ status: "cancelled" }),
-      own({ sessionId: "22222222-0000-4000-8000-000000000000" }),
-    ];
+  it("own expired/consumed/cancelled events do not count", () => {
+    const ownEvents = [own({ status: "expired" }), own({ status: "consumed" }), own({ status: "cancelled" })];
     expect(decideInterest(base({ ownEvents })).status).toBe("accepted");
   });
 });
 
-describe("matching", () => {
-  it("accepted pending when nobody else is in the session", () => {
-    expect(decideInterest(base({ other: null }))).toEqual({
-      status: "accepted", matched: false, receivedAt: NOW, expiresAt: at(15_000),
-    });
+describe("matching by phone location", () => {
+  it("accepted pending when nobody else has signalled", () => {
+    expect(decideInterest(base())).toEqual(PENDING);
   });
-  it("accepted pending when other has no signal", () => {
-    expect(decideInterest(base()).status).toBe("accepted");
-    expect(decideInterest(base())).toMatchObject({ matched: false });
-  });
-  it("matches when other's signal is alive; firstSignalAt is theirs; pair ordered", () => {
-    const d = decideInterest(base({ other: other({ pendingSignal: theirs(5000) }) }));
+  it("matches a nearby pending signal: Nearby, firstSignalAt theirs, pair ordered", () => {
+    const d = decideInterest(base({ candidates: [candidate({ receivedAgoMs: 5000 })] }));
     expect(d).toEqual({
       status: "accepted", matched: true, receivedAt: NOW, firstSignalAt: at(-5000),
-      pair: { userA: THEM, userB: ME },
+      pair: { userA: THEM, userB: ME }, otherUserId: THEM, place: { kind: "nearby" },
     });
   });
-  it("pair order does not depend on who goes second", () => {
-    const d = decideInterest(base({ userId: THEM, other: other({ userId: ME, pendingSignal: theirs(1) }) }));
-    expect(d).toMatchObject({ matched: true, pair: { userA: THEM, userB: ME } });
+  it("radius allows for both accuracies: in range at 40 m net, out of range just beyond", () => {
+    const inRange = candidate({ presence: presence({ location: loc(49.9) }) }); // 49.9 - 5 - 5 = 39.9
+    const outOfRange = candidate({ presence: presence({ location: loc(50.1) }) });
+    expect(decideInterest(base({ candidates: [inRange] }))).toMatchObject({ matched: true });
+    expect(decideInterest(base({ candidates: [outOfRange] }))).toEqual(PENDING);
   });
-  it("matches 1 ms before the other's expiry", () => {
-    const d = decideInterest(base({ other: other({ pendingSignal: theirs(14_999) }) }));
-    expect(d).toMatchObject({ matched: true });
+  it("a candidate whose location is stale or inaccurate cannot match by location", () => {
+    for (const l of [loc(1, { locatedAt: at(-60_000) }), loc(1, { accuracyM: 150 })]) {
+      expect(decideInterest(base({ candidates: [candidate({ presence: presence({ location: l }) })] }))).toEqual(PENDING);
+    }
   });
-  it("does not match exactly at the other's expiry: stays pending", () => {
-    const d = decideInterest(base({ other: other({ pendingSignal: theirs(15_000) }) }));
-    expect(d).toEqual({ status: "accepted", matched: false, receivedAt: NOW, expiresAt: at(15_000) });
+  it("matches 1 ms before the other's expiry, not at it", () => {
+    expect(decideInterest(base({ candidates: [candidate({ receivedAgoMs: 14_999 })] }))).toMatchObject({ matched: true });
+    expect(decideInterest(base({ candidates: [candidate({ receivedAgoMs: 15_000 })] }))).toEqual(PENDING);
   });
-  it("does not match against an older expired signal", () => {
-    expect(decideInterest(base({ other: other({ pendingSignal: theirs(40_000) }) }))).toMatchObject({ matched: false });
+  it("the nearest candidate wins, whatever the signal order", () => {
+    const near = candidate({ userId: OTHER, presence: presence({ location: loc(20) }), receivedAgoMs: 9000 });
+    const far = candidate({ presence: presence({ location: loc(30) }), receivedAgoMs: 1000 });
+    expect(decideInterest(base({ candidates: [far, near] }))).toMatchObject({ matched: true, otherUserId: OTHER });
   });
-  it("other blocked caller: accepted pending, never matched, no disclosure", () => {
-    const d = decideInterest(base({ other: other({ blocksCaller: true, pendingSignal: theirs(1000) }) }));
-    expect(d).toEqual({ status: "accepted", matched: false, receivedAt: NOW, expiresAt: at(15_000) });
+  it("equal distances: the most recent signal wins", () => {
+    const older = candidate({ userId: OTHER, receivedAgoMs: 9000 });
+    const newer = candidate({ receivedAgoMs: 1000 });
+    expect(decideInterest(base({ candidates: [older, newer] }))).toMatchObject({ otherUserId: THEM });
   });
-  it("other blocked caller but there is an active match: already_matched still wins", () => {
-    const d = decideInterest(base({ other: other({ blocksCaller: true, activeMatchWithCaller: true }) }));
-    expect(d).toEqual({ status: "rejected", reason: "already_matched" });
+  it("candidates with mode off, the caller themself, blocked or already matched are skipped", () => {
+    const skip = [
+      candidate({ presence: presence({ encounterMode: false, location: loc(1) }) }),
+      candidate({ userId: ME }),
+      candidate({ blocked: true }),
+      candidate({ activeMatchWithCaller: true }),
+    ];
+    for (const c of skip) expect(decideInterest(base({ candidates: [c] }))).toEqual(PENDING);
+    const fallback = candidate({ userId: OTHER, presence: presence({ location: loc(35) }) });
+    expect(decideInterest(base({ candidates: [...skip, fallback] }))).toMatchObject({ otherUserId: OTHER });
+  });
+});
+
+describe("matching by venue", () => {
+  const atVenue = (venueId = VENUE): Presence => presence({ location: null, checkIn: checkIn(venueId) });
+  it("same venue with no locations matches, labelled by the venue", () => {
+    const d = decideInterest(base({ presence: atVenue(), candidates: [candidate({ presence: atVenue() })] }));
+    expect(d).toMatchObject({ matched: true, place: { kind: "venue", venueId: VENUE } });
+  });
+  it("different venues and no locations never match", () => {
+    expect(decideInterest(base({ presence: atVenue(), candidates: [candidate({ presence: atVenue(VENUE2) })] }))).toEqual(PENDING);
+  });
+  it("a candidate whose check-in is over 8 hours old does not share the venue", () => {
+    const stale = presence({ location: null, checkIn: checkIn(VENUE, 8 * 3600_000) });
+    expect(decideInterest(base({ presence: atVenue(), candidates: [candidate({ presence: stale })] }))).toEqual(PENDING);
+  });
+  it("venue-only candidates: the most recent signal wins", () => {
+    const older = candidate({ userId: OTHER, presence: atVenue(), receivedAgoMs: 8000 });
+    const newer = candidate({ presence: atVenue(), receivedAgoMs: 2000 });
+    expect(decideInterest(base({ presence: atVenue(), candidates: [older, newer] }))).toMatchObject({ otherUserId: THEM });
+  });
+  it("same venue far apart by location still matches by venue; label is the venue", () => {
+    const me = presence({ checkIn: checkIn(), location: loc(0) });
+    const them = presence({ checkIn: checkIn(), location: loc(500) });
+    expect(decideInterest(base({ presence: me, candidates: [candidate({ presence: them })] }))).toMatchObject({
+      matched: true, place: { kind: "venue", venueId: VENUE },
+    });
+  });
+  it("a located candidate ranks before a venue-only one", () => {
+    const me = presence({ checkIn: checkIn(), location: loc(0) });
+    const venueOnly = candidate({ userId: OTHER, presence: atVenue(), receivedAgoMs: 100 });
+    const located = candidate({ presence: presence({ location: loc(30) }), receivedAgoMs: 9000 });
+    expect(decideInterest(base({ presence: me, candidates: [venueOnly, located] }))).toMatchObject({
+      otherUserId: THEM, place: { kind: "nearby" },
+    });
   });
 });
