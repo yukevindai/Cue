@@ -49,6 +49,24 @@ See "Status log" below. Update it when a milestone lands or a decision changes.
 
 ### Status log
 
+- 2026-11-15: Rich profiles, character names and in-app chat (PR #4). Profiles
+  gain age (18+), gender, city, looking-for, work/school, education, MBTI,
+  ethnicity, drinking/smoking/drugs and personality cards; a character ("the
+  Night Owl" etc.) is derived by fixed rules (`computeArchetype`, contracts).
+  One sharing toggle per field; work, education, ethnicity and habits are
+  hidden by default. Social links are gone (column kept, emptied, never
+  returned). Chat: `chat_messages`/`chat_reads`, `/api/matches/[id]/messages`,
+  page `/matches/[id]/chat`, deleted when a match ends. Claude gives the opener
+  only ("Use this opener" fills the composer), never reads chat, and never
+  receives age, gender, ethnicity or habits (`NEVER_SENT_TO_AI`). Design:
+  `docs/profiles-and-chat.md`. Verified by the lead on the final tree:
+  typecheck, lint, unit + stack tests (contracts 13, matching 41, mentra 119,
+  web 291), web build, `pnpm test:e2e` 142/142, and a two-phone-width browser
+  walkthrough. Migration `20261115010000_rich_profiles_and_chat.sql` and the
+  new demo profiles are applied to hosted Cue DB (fingerprint identical to
+  local). NOT verified: real phones, a live Claude call with the fuller input.
+  The live site still runs the old code until PR #4 is merged to `main`
+  (owner's go-ahead needed); the old code works against the new schema.
 - 2026-11-15: Second glasses route added (PR #3): a Meta glasses wearer
   (Meta Adventurer on an iPhone) signals with a headset media command. No
   native app: the signed-in web page ("Meta glasses" card on Encounter,
