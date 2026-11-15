@@ -61,7 +61,7 @@ See "Status log" below. Update it when a milestone lands or a decision changes.
   receives age, gender, ethnicity or habits (`NEVER_SENT_TO_AI`). Design:
   `docs/profiles-and-chat.md`. Verified by the lead on the final tree:
   typecheck, lint, unit + stack tests (contracts 13, matching 41, mentra 119,
-  web 291), web build, `pnpm test:e2e` 142/142, and a two-phone-width browser
+  web 291), web build, `pnpm test:e2e` 144/144, and a two-phone-width browser
   walkthrough. Migration `20261115010000_rich_profiles_and_chat.sql` and the
   new demo profiles are applied to hosted Cue DB (fingerprint identical to
   local). NOT verified: real phones, a live Claude call with the fuller input.

@@ -27,6 +27,8 @@ const POLL_LIVE_MS = 15_000;
 const POLL_DEGRADED_MS = 4_000;
 /** Within this many pixels of the bottom counts as "reading the newest". */
 const NEAR_BOTTOM_PX = 140;
+/** Upper bound on pages fetched in one catch-up (50 messages each). */
+const MAX_CATCH_UP_PAGES = 40;
 
 export function ChatView({ id }: { id: string }) {
   const m = useMatch(id);
@@ -83,7 +85,8 @@ export function ChatPanel({
   const [live, setLive] = useState(false);
   const [unseenBelow, setUnseenBelow] = useState(false);
 
-  const pagedOlder = useRef(false);
+  /** Ids of every loaded message, to tell when a fresh page meets loaded history. */
+  const seen = useRef(new Set<string>());
   const stick = useRef(true);
   const prependFrom = useRef<number | null>(null);
 
@@ -106,15 +109,31 @@ export function ChatPanel({
         st.again = false;
         try {
           const page = await api.listMessages(matchId);
+          const firstLoad = seen.current.size === 0;
+          let incoming = page.messages;
+          // More than a page arrived while away: walk back until the new
+          // messages meet what is already loaded, so none are skipped.
+          let cursor = page.olderCursor;
+          for (
+            let pages = 0;
+            !firstLoad && cursor && pages < MAX_CATCH_UP_PAGES && !incoming.some((m) => seen.current.has(m.id));
+            pages++
+          ) {
+            const older = await api.listMessages(matchId, { before: cursor });
+            incoming = [...older.messages, ...incoming];
+            cursor = older.olderCursor;
+          }
+          for (const m of incoming) seen.current.add(m.id);
           stick.current = stick.current || nearBottom();
           setMessages((prev) => {
-            const next = mergeMessages(prev, page.messages);
+            const next = mergeMessages(prev, incoming);
             if (!stick.current && next.length > prev.length && next[next.length - 1]?.mine === false) {
               setUnseenBelow(true);
             }
             return next;
           });
-          if (!pagedOlder.current) setOlderCursor(page.olderCursor);
+          // After the first load the cursor keeps pointing before the oldest loaded message.
+          if (firstLoad) setOlderCursor(page.olderCursor);
           setLoaded(true);
           setLoadError(null);
           // The newest page marks the conversation read; let the badges catch up.
@@ -218,7 +237,7 @@ export function ChatPanel({
     setOlderError(null);
     try {
       const page = await api.listMessages(matchId, { before: olderCursor });
-      pagedOlder.current = true;
+      for (const m of page.messages) seen.current.add(m.id);
       prependFrom.current = document.documentElement.scrollHeight;
       stick.current = false;
       setMessages((prev) => mergeMessages(prev, page.messages));
@@ -236,6 +255,7 @@ export function ChatPanel({
     setOutbox((box) => box.map((x) => (x.clientId === o.clientId ? { ...x, status: "sending", error: undefined } : x)));
     try {
       const sent = await api.sendMessage(matchId, { clientId: o.clientId, body: o.body });
+      seen.current.add(sent.id);
       setMessages((prev) => mergeMessages(prev, [sent]));
       setOutbox((box) => box.filter((x) => x.clientId !== o.clientId));
     } catch (err) {

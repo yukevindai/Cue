@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { MatchCard } from "@cue/contracts";
 import { api, describeError, isApiError } from "@/lib/api";
 import { useLive } from "@/components/live-provider";
@@ -72,6 +72,13 @@ export function useMatch(id: string) {
     return () => ctrl.abort();
   }, [id, attempt]);
 
+  // Stable identities: the conversation's fetch and subscription depend on these.
+  const retry = useCallback(() => {
+    setFetched({ state: "loading" });
+    setAttempt((n) => n + 1);
+  }, []);
+  const markGone = useCallback(() => setFetched({ state: "gone" }), []);
+
   const card = listed ?? (fetched.state === "ok" ? fetched.card : null);
   const gone = fetched.state === "gone" || (wasListed && matches !== null && listed === null);
 
@@ -80,11 +87,8 @@ export function useMatch(id: string) {
     gone,
     leaving,
     error: fetched.state === "error" ? fetched.message : null,
-    retry: () => {
-      setFetched({ state: "loading" });
-      setAttempt((n) => n + 1);
-    },
-    markGone: () => setFetched({ state: "gone" }),
+    retry,
+    markGone,
     setLeaving,
   };
 }

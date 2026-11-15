@@ -388,6 +388,46 @@ test.describe("UI: chat", () => {
     await expect(messageLog(page)).toContainText("old-00");
     await expect(page.getByRole("button", { name: "Load earlier" })).toHaveCount(0);
   });
+
+  test("an open, idle conversation does not keep re-requesting", async ({ world, browser }) => {
+    const { pair, matchId } = await matchedPair(world, { venue: VENUE });
+    const page = await openAs(browser, pair.a, chatPath(matchId), { matched: true });
+    await expect(composer(page, pair.b.displayName)).toBeEnabled();
+    let requests = 0;
+    page.on("request", (r) => {
+      if (r.url().includes(`/api/matches/${matchId}/messages`)) requests++;
+    });
+    await page.waitForTimeout(5000);
+    expect(requests, "message requests in 5 idle seconds").toBeLessThanOrEqual(3);
+  });
+
+  test("more than a page of new messages after loading earlier ones leaves no gap", async ({ world, browser }) => {
+    const { pair, matchId } = await matchedPair(world, { venue: VENUE });
+    const base = Date.now() - 3_600_000;
+    const batch = (prefix: string, count: number, offset: number) =>
+      Array.from({ length: count }, (_, i) => ({
+        match_id: matchId,
+        sender_id: pair.b.user.id,
+        client_id: randomUUID(),
+        body: `${prefix}-${String(i).padStart(3, "0")}.`,
+        created_at: new Date(base + (offset + i) * 1000).toISOString(),
+      }));
+    expect((await adminClient().from("chat_messages").insert(batch("old", 55, 0))).error).toBeNull();
+
+    const page = await openAs(browser, pair.a, chatPath(matchId), { matched: true });
+    await expect(messageLog(page)).toContainText("old-054.");
+    await page.getByRole("button", { name: "Load earlier" }).click();
+    await expect(messageLog(page)).toContainText("old-000.");
+
+    // 130 arrive at once: the newest page (50) does not reach the loaded history.
+    expect((await adminClient().from("chat_messages").insert(batch("new", 130, 100))).error).toBeNull();
+    await expect(messageLog(page)).toContainText("new-129.", { timeout: 20_000 });
+    const text = await messageLog(page).innerText();
+    const missing = Array.from({ length: 130 }, (_, i) => `new-${String(i).padStart(3, "0")}.`).filter(
+      (body) => !text.includes(body),
+    );
+    expect(missing, "new messages missing from the conversation").toEqual([]);
+  });
 });
 
 test.describe("UI: opener from common ground", () => {
