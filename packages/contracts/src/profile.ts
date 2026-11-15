@@ -102,7 +102,7 @@ export const SharingSettings = z.object({
   smoking: z.boolean().default(false),
   /** Sensitive. Off unless the person turns it on. Never sent to Claude. */
   drugs: z.boolean().default(false),
-  /** Allow the shared, non-sensitive fields to be sent to Claude for the wingman card. */
+  /** Allow shared fields, except those in NEVER_SENT_TO_AI, to be sent to Claude for the wingman card. */
   aiAssist: z.boolean().default(true),
 });
 export type SharingSettings = z.infer<typeof SharingSettings>;
@@ -113,7 +113,15 @@ export const DEFAULT_SHARING: SharingSettings = SharingSettings.parse({});
  * Fields that are never sent to Claude, whatever the sharing settings say.
  * The wingman input builder must not read them, and a test asserts it.
  */
-export const NEVER_SENT_TO_AI = ["ethnicity", "drinking", "smoking", "drugs", "gender", "genderSelfDescribed"] as const;
+export const NEVER_SENT_TO_AI = [
+  "age",
+  "gender",
+  "genderSelfDescribed",
+  "ethnicity",
+  "drinking",
+  "smoking",
+  "drugs",
+] as const;
 
 // ---------------------------------------------------------------------------
 // Profile
