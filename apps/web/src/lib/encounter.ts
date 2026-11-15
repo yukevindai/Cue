@@ -127,7 +127,7 @@ export function deriveSignalView(
 
 /** Both kinds of glasses read the same to the wearer; only the web button is "this page". */
 export function signalSourceText(source: InterestSource): string {
-  return source === "mentra_touch" || source === "headset_remote"
+  return source === "mentra_touch" || source === "headset_remote" || source === "spectacles_hand"
     ? "Sent from your glasses"
     : "Sent from this page";
 }

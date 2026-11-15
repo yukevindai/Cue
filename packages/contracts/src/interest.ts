@@ -9,8 +9,10 @@ import { IsoDateTime, Uuid } from "./common";
  *   of Meta glasses) received by the signed-in web page from whatever Bluetooth
  *   headset is the phone's audio route. Authenticated with the web session. It
  *   shows that a headset sent the command, not which headset it was.
+ * - `spectacles_hand`: a hand-tracking gesture recognised by the Cue Lens on
+ *   Snap Spectacles (apps/spectacles), authenticated with a device token.
  */
-export const InterestSource = z.enum(["mentra_touch", "web_demo", "headset_remote"]);
+export const InterestSource = z.enum(["mentra_touch", "web_demo", "headset_remote", "spectacles_hand"]);
 export type InterestSource = z.infer<typeof InterestSource>;
 
 export const InterestGesture = z.enum([
@@ -19,6 +21,8 @@ export const InterestGesture = z.enum([
   "media_next_track",
   "media_previous_track",
   "media_play_pause",
+  /** Two pinches of the same hand in quick succession (Spectacles hand tracking). */
+  "double_pinch",
 ]);
 export type InterestGesture = z.infer<typeof InterestGesture>;
 
@@ -27,7 +31,11 @@ export const GESTURES_BY_SOURCE: Record<InterestSource, readonly InterestGesture
   mentra_touch: ["backward_swipe"],
   web_demo: ["web_confirm"],
   headset_remote: ["media_next_track", "media_previous_track", "media_play_pause"],
+  spectacles_hand: ["double_pinch"],
 };
+
+/** Sources sent by glasses software with a device token (never with a web session). */
+export const DEVICE_SOURCES: readonly InterestSource[] = ["mentra_touch", "spectacles_hand"];
 
 /**
  * Body of POST /api/interest. Application-owned labels; the server derives the

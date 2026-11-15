@@ -49,6 +49,18 @@ See "Status log" below. Update it when a milestone lands or a decision changes.
 
 ### Status log
 
+- 2026-11-15: Snap Spectacles client (`apps/spectacles`, branch
+  `claude/spectacles-client`). A Lens Studio Lens: a double pinch (two
+  same-hand pinches within 450 ms, Spectacles hand tracking) sends
+  `source: spectacles_hand`, `gesture: double_pinch` with a device token, using
+  the same pairing code flow as Mentra (the Lens claims with label "Snap
+  Spectacles"). Logic lives in `lens/Assets/Scripts/Cue/Core` (plain TS,
+  unit-tested, contract parity test); `CueLens.ts` is the only Lens API file.
+  Server: `GESTURES_BY_SOURCE`, `DEVICE_SOURCES`, `sourceAllowedForAuth`, SQL
+  `interest_pair_ok` (migration `20261115020000_spectacles_hand_source.sql`,
+  NOT yet applied to hosted Cue DB). Verified: unit tests, stack tests, and the
+  real Core client against the local server (pair, signal, match). NOT verified:
+  Lens Studio compile or real Spectacles; see `docs/spectacles-check.md`.
 - 2026-11-15: Rich profiles, character names and in-app chat (PR #4). Profiles
   gain age (18+), gender, city, looking-for, work/school, education, MBTI,
   ethnicity, drinking/smoking/drugs and personality cards; a character ("the

@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "verbatimModuleSyntax": true,
+    "allowImportingTsExtensions": true,
+    "types": ["node"]
+  },
+  // CueLens.ts uses Lens Studio globals (BaseScriptComponent, @input, require
+  // of LensStudio: modules) and is compiled by Lens Studio only. Core/ must
+  // compile here with no Lens types: that is what keeps it portable.
+  "include": ["lens/Assets/Scripts/Cue/Core", "test", "scripts"],
+  "exclude": ["lens/Assets/Scripts/Cue/CueLens.ts"]
+}

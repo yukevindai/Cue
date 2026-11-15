@@ -11,7 +11,10 @@ import { useServerNow } from "./use-server-now";
 
 const LINK_POLL_MS = 3000;
 
-/** Mentra Live link status and the pairing flow. Own device only. (Meta glasses: HeadsetRemoteCard.) */
+/**
+ * Glasses link status and the pairing flow (Mentra Live or Snap Spectacles; both
+ * claim the same pairing code). Own device only. (Meta glasses: HeadsetRemoteCard.)
+ */
 export function GlassesCard({ device }: { device: DeviceStatus }) {
   const { clockOffsetMs, refreshEncounter } = useLive();
 
@@ -69,7 +72,7 @@ export function GlassesCard({ device }: { device: DeviceStatus }) {
     <Card aria-labelledby="glasses-title">
       <div className="flex items-center justify-between gap-3">
         <h2 id="glasses-title" className="font-display text-2xl leading-tight tracking-tight">
-          Mentra Live
+          Mentra Live or Spectacles
         </h2>
         <p role="status">
           {device.linked ? (
@@ -89,8 +92,9 @@ export function GlassesCard({ device }: { device: DeviceStatus }) {
               : "Hasn't checked in yet"}
           </p>
           <p className="mt-3 text-ink-soft">
-            Swipe backward along the temple, toward your ear, to signal. Forward swipes and taps do
-            nothing.
+            {isSpectacles(device.deviceLabel)
+              ? "Pinch twice quickly with one hand to signal. A single pinch does nothing."
+              : "Swipe backward along the temple, toward your ear, to signal. Forward swipes and taps do nothing."}
           </p>
           <Button
             variant="quiet"
@@ -145,8 +149,9 @@ export function GlassesCard({ device }: { device: DeviceStatus }) {
       ) : (
         <div className="mt-3">
           <p className="text-ink-soft">
-            For Mentra Live: link them so a backward swipe on the temple sends your signal. Wearing
-            Meta glasses? Use the Meta glasses card instead. Without glasses you can still use the
+            For Mentra Live: link them so a backward swipe on the temple sends your signal. For Snap
+            Spectacles: open the Cue Lens and enter the code there; a double pinch sends your
+            signal. Wearing Meta glasses? Use the Meta glasses card instead. Without glasses you can still use the
             Interested button on this page.
           </p>
           <Button variant="secondary" className="mt-4 max-sm:w-full" onClick={getCode} busy={pairBusy}>
@@ -163,7 +168,7 @@ export function GlassesCard({ device }: { device: DeviceStatus }) {
 
       {confirmUnlink ? (
         <ConfirmDialog
-          title="Unlink your Mentra Live?"
+          title="Unlink your glasses?"
           confirmLabel="Unlink"
           danger
           busy={unlinkBusy}
@@ -171,9 +176,14 @@ export function GlassesCard({ device }: { device: DeviceStatus }) {
           onConfirm={unlink}
           onCancel={() => setConfirmUnlink(false)}
         >
-          <p>Swipes will stop sending signals until you link again.</p>
+          <p>Your glasses will stop sending signals until you link again.</p>
         </ConfirmDialog>
       ) : null}
     </Card>
   );
+}
+
+/** The Spectacles Lens claims with this label (apps/spectacles, config.ts). */
+function isSpectacles(label: string | null | undefined): boolean {
+  return label?.toLowerCase().includes("spectacles") === true;
 }

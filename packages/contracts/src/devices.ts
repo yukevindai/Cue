@@ -4,7 +4,7 @@ import { IsoDateTime, Uuid } from "./common";
 /**
  * Account-to-device association.
  * 1. Signed-in web user calls POST /api/devices/pair -> short pairing code.
- * 2. The glasses bridge calls POST /api/devices/claim with that code and
+ * 2. The glasses client (Mentra miniapp or Spectacles Lens) calls POST /api/devices/claim with that code and
  *    receives a long-lived device token (stored hashed server-side).
  * 3. The bridge sends `Authorization: Bearer <deviceToken>` on
  *    POST /api/interest and GET /api/devices/me.
@@ -19,8 +19,9 @@ export type PairingCode = z.infer<typeof PairingCode>;
 
 export const DeviceClaimInput = z.object({
   code: z.string().trim().toUpperCase().regex(/^[A-Z0-9]{6}$/),
+  /** Human label shown in the web app, e.g. "Mentra Live" or "Snap Spectacles". */
   deviceLabel: z.string().trim().min(1).max(60).default("Mentra Live"),
-  /** Identifier reported by the Mentra runtime for the wearer, if any. */
+  /** Identifier reported by the Mentra runtime for the wearer, if any. Spectacles send null. */
   mentraUserId: z.string().max(200).nullable().default(null),
 });
 export type DeviceClaimInput = z.infer<typeof DeviceClaimInput>;

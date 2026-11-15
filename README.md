@@ -26,7 +26,9 @@ This is a hackathon prototype, not a production service.
    submitted as interest. Person B taps "Interested" in the web app, or
    (experimental, not verified on a device) double taps Meta Adventurer glasses
    paired to an iPhone: the signed-in web page receives the headset media
-   command and sends it as interest (`headset_remote`).
+   command and sends it as interest (`headset_remote`). Or (experimental, not
+   verified on a device) double pinches while wearing Snap Spectacles running
+   the Cue Lens (`spectacles_hand`).
 5. If both signals arrive within 15 seconds (server receipt time), the server
    creates one match and consumes both signals. Otherwise the first signal
    expires and nothing is shared.
@@ -57,6 +59,12 @@ logic only; nobody has run it on real Meta glasses or an iPhone. The signal
 shows that some Bluetooth headset sent a media command, not that Meta glasses
 did, and the gesture is a tap pattern, not a swipe. See
 `docs/meta-glasses-check.md`.
+
+**Snap Spectacles.** Not verified on a device. The Cue Lens (`apps/spectacles`)
+sends a double pinch as interest with a device token, after the same pairing
+code flow as Mentra. Its logic is unit-tested and was driven against the local
+server; the Lens Studio adapter has not been compiled or run on Spectacles. See
+`docs/spectacles-check.md`.
 
 ## Run it locally
 
@@ -132,6 +140,7 @@ available for it.
 |---|---|
 | `apps/web` | Next.js 16 app: pages, API routes, server code, Claude card (`src/server/ai`) |
 | `apps/mentra` | Glasses bridge (MentraOS miniapp) that forwards a backward swipe as an interest event |
+| `apps/spectacles` | Snap Spectacles Lens (Lens Studio) that sends a double pinch as an interest event |
 | `packages/contracts` | Shared request and response schemas and the API route list |
 | `packages/matching` | Pure matching rules with unit tests |
 | `supabase` | Config, migrations, and synthetic seed data |
@@ -171,6 +180,8 @@ has not merged the role that owns it.
 - The profile, character and chat screens have not been tried on the real phones.
 - The Mentra swipe was verified on one real unit (see Hardware status); the Meta
   tap route has not been run on real hardware.
+- The Spectacles Lens has not been run on real Spectacles or opened in Lens
+  Studio.
 - The end-to-end tests cover the server path (device-token and `headset_remote`
   events). They do not test a physical swipe or tap.
 - Hackathon MVP. Not production software.
@@ -184,4 +195,5 @@ has not merged the role that owns it.
 - `docs/demo.md`: setup, demo script, fallbacks, and reset steps.
 - `docs/hardware-check.md`: Mentra Live on-device checklist and results.
 - `docs/meta-glasses-check.md`: Meta Adventurer on-device checklist and the native route.
+- `docs/spectacles-check.md`: Snap Spectacles verification status and on-device checklist.
 - `AGENTS.md`: guide for coding agents and contributors.

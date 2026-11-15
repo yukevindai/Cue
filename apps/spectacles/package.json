@@ -1,0 +1,22 @@
+{
+  "name": "@cue/spectacles",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint lens/Assets/Scripts/Cue/Core test scripts",
+    "test": "vitest run",
+    "tones": "node scripts/write-tones.ts"
+  },
+  "devDependencies": {
+    "@cue/contracts": "workspace:*",
+    "@eslint/js": "^9",
+    "@types/node": "^22",
+    "eslint": "^9",
+    "typescript": "^5.9.0",
+    "typescript-eslint": "^8",
+    "vitest": "^3.2.0",
+    "zod": "^4.1.0"
+  }
+}

@@ -200,11 +200,12 @@ export async function cleanupUsers(): Promise<void> {
 // SQL function wrappers (service role)
 // ---------------------------------------------------------------------------
 
-export type Source = "web_demo" | "mentra_touch" | "headset_remote";
-export const GESTURE: Record<Source, "web_confirm" | "backward_swipe" | "media_next_track"> = {
+export type Source = "web_demo" | "mentra_touch" | "headset_remote" | "spectacles_hand";
+export const GESTURE: Record<Source, "web_confirm" | "backward_swipe" | "media_next_track" | "double_pinch"> = {
   web_demo: "web_confirm",
   mentra_touch: "backward_swipe",
   headset_remote: "media_next_track",
+  spectacles_hand: "double_pinch",
 };
 
 export interface Ack {

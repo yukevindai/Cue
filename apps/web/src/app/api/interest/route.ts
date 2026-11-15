@@ -2,7 +2,7 @@ import { InterestEvent } from "@cue/contracts";
 import { handle, parseBody } from "@/server/http";
 import { authenticateInterestCaller, submitInterest } from "@/server/interest";
 
-/** POST InterestEvent -> InterestAck. Cookie session (web_demo) or device token (mentra_touch). */
+/** POST InterestEvent -> InterestAck. Cookie session (web_demo, headset_remote) or device token (mentra_touch, spectacles_hand). */
 export async function POST(req: Request): Promise<Response> {
   return handle(async () => {
     const caller = await authenticateInterestCaller(req);

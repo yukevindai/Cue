@@ -1,4 +1,4 @@
-import { DEMO_SESSION_CAPACITY, GESTURES_BY_SOURCE } from "@cue/contracts";
+import { DEMO_SESSION_CAPACITY, DEVICE_SOURCES, GESTURES_BY_SOURCE } from "@cue/contracts";
 import type { InterestGesture, InterestSource } from "@cue/contracts";
 
 export function gestureMatchesSource(source: InterestSource, gesture: InterestGesture): boolean {
@@ -7,11 +7,14 @@ export function gestureMatchesSource(source: InterestSource, gesture: InterestGe
 
 /**
  * Which credential may speak for which input. A device token (the Mentra
- * bridge) may only send its touch source. A browser session may send the web
- * button, or a headset media command that the signed-in page itself received.
+ * bridge or the Spectacles Lens) may only send a glasses source
+ * (`DEVICE_SOURCES`). A browser session may send the web button, or a headset
+ * media command that the signed-in page itself received.
  */
 export function sourceAllowedForAuth(auth: "session" | "device", source: InterestSource): boolean {
-  return auth === "device" ? source === "mentra_touch" : source === "web_demo" || source === "headset_remote";
+  return auth === "device"
+    ? DEVICE_SOURCES.includes(source)
+    : source === "web_demo" || source === "headset_remote";
 }
 
 export function canJoinSession(activeMemberCount: number): boolean {

@@ -55,6 +55,33 @@ importers:
         specifier: ^3.2.0
         version: 3.2.7(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0)
 
+  apps/spectacles:
+    devDependencies:
+      '@cue/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@eslint/js':
+        specifier: ^9
+        version: 9.39.5
+      '@types/node':
+        specifier: ^22
+        version: 22.20.5
+      eslint:
+        specifier: ^9
+        version: 9.39.5(jiti@2.7.0)
+      typescript:
+        specifier: ^5.9.0
+        version: 5.9.3
+      typescript-eslint:
+        specifier: ^8
+        version: 8.72.2(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3)
+      vitest:
+        specifier: ^3.2.0
+        version: 3.2.7(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0)
+      zod:
+        specifier: ^4.1.0
+        version: 4.6.7
+
   apps/web:
     dependencies:
       '@anthropic-ai/sdk':

@@ -111,7 +111,7 @@ authority for atomicity.
 
 ### Signal sources
 
-Every interest signal carries a `source` and a `gesture`. There are three
+Every interest signal carries a `source` and a `gesture`. There are four
 sources:
 
 | `source` | Gestures | Credential | Meaning |
@@ -119,9 +119,12 @@ sources:
 | `mentra_touch` | `backward_swipe` | device token | Backward swipe on Mentra Live, sent by the miniapp. |
 | `web_demo` | `web_confirm` | web session | The "Interested" button in the web app. |
 | `headset_remote` | `media_next_track`, `media_previous_track`, `media_play_pause` | web session | A media command received by the signed-in page (Meta Adventurer glasses paired to an iPhone). |
+| `spectacles_hand` | `double_pinch` | device token | Two quick same-hand pinches recognised by the Cue Lens on Snap Spectacles (`apps/spectacles`). |
 
-Credential rule: a **device token** may send `mentra_touch` only; a **web
-session** may send `web_demo` or `headset_remote`. The user id always comes from
+Credential rule: a **device token** may send `mentra_touch` or
+`spectacles_hand` (`DEVICE_SOURCES`); a **web session** may send `web_demo` or
+`headset_remote`. The server does not record which kind of glasses claimed a
+token, so either glasses source works with any of the user's device tokens. The user id always comes from
 the credential, never the body.
 
 The allowed source/gesture pairs live in one place per layer:
@@ -129,8 +132,8 @@ The allowed source/gesture pairs live in one place per layer:
 schema and `packages/matching`) and the SQL function `public.interest_pair_ok`,
 which backs the `interest_events` check constraint and the guard in
 `submit_interest`. They must be kept in step. The migration that added the
-third source is `supabase/migrations/20261115000000_headset_remote_source.sql`;
-matching rules are unchanged, so any two sources can complete a match.
+third source is `supabase/migrations/20261115000000_headset_remote_source.sql`
+and the fourth `20261115020000_spectacles_hand_source.sql`; matching rules are unchanged, so any two sources can complete a match.
 
 `headset_remote` is **not proof of device**. It shows that a Bluetooth headset
 connected to that phone sent a media command. AirPods, or any headset that
@@ -203,7 +206,7 @@ written:
 
 | Role | Owns (only this role edits) |
 |---|---|
-| Hardware | `apps/mentra/**`, `docs/hardware-check.md`, `docs/meta-glasses-check.md` |
+| Hardware | `apps/mentra/**`, `apps/spectacles/**`, `docs/hardware-check.md`, `docs/meta-glasses-check.md`, `docs/spectacles-check.md` |
 | Backend | `supabase/**`, `packages/matching/**`, `apps/web/src/server/**` except `server/ai/**`, `apps/web/src/app/api/**` except `api/matches/[id]/suggestions/**` |
 | Frontend | `apps/web/src/app/**` except `api/**`, `apps/web/src/components/**`, `apps/web/src/lib/**` except `lib/supabase/**` and `lib/env.ts`, `apps/web/public/**` |
 | AI / integration | `apps/web/src/server/ai/**`, `apps/web/src/app/api/matches/[id]/suggestions/**`, `tests/e2e/**`, `playwright.config.ts`, `docs/demo.md`, `docs/profiles-and-chat.md`, `README.md` |

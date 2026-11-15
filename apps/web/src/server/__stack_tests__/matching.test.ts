@@ -43,6 +43,8 @@ describe.skipIf(!stackUp)("matching (SQL submit_interest, real stack)", () => {
       { first: "B", source: "mentra_touch" },
       { first: "A", source: "headset_remote" },
       { first: "B", source: "headset_remote" },
+      { first: "A", source: "spectacles_hand" },
+      { first: "B", source: "spectacles_hand" },
     ];
     it.each(cases)("$first signals first via $source", async ({ first, source }) => {
       const p = await newPair();
@@ -78,10 +80,12 @@ describe.skipIf(!stackUp)("matching (SQL submit_interest, real stack)", () => {
     });
   });
 
-  describe("mixed sources: mentra_touch with headset_remote", () => {
+  describe("mixed sources: any two glasses sources match", () => {
     it.each([
       { first: "mentra_touch" as Source, second: "headset_remote" as Source },
       { first: "headset_remote" as Source, second: "mentra_touch" as Source },
+      { first: "spectacles_hand" as Source, second: "mentra_touch" as Source },
+      { first: "headset_remote" as Source, second: "spectacles_hand" as Source },
     ])("A via $first then B via $second gives exactly one match, both consumed", async ({ first, second }) => {
       const p = await newPair();
       const ack1 = await signal(p.a, p.sessionId, { source: first });
@@ -105,6 +109,9 @@ describe.skipIf(!stackUp)("matching (SQL submit_interest, real stack)", () => {
       { source: "web_demo" as Source, gesture: "media_next_track" },
       { source: "mentra_touch" as Source, gesture: "media_next_track" },
       { source: "web_demo" as Source, gesture: "media_play_pause" },
+      { source: "spectacles_hand" as Source, gesture: "backward_swipe" },
+      { source: "mentra_touch" as Source, gesture: "double_pinch" },
+      { source: "headset_remote" as Source, gesture: "double_pinch" },
     ])("$source + $gesture is rejected invalid_event and stores nothing", async ({ source, gesture }) => {
       const p = await newPair();
       const ack = await signal(p.a, p.sessionId, { source, gesture });
