@@ -7,6 +7,7 @@
  * changed from a test; the gate is unit-tested in guest-config.test.ts) and
  * the 300-per-day cap (would need 300 accounts).
  */
+import { GUEST_RATE_LIMIT } from "../guest-config";
 import { randomUUID } from "node:crypto";
 import {
   ApiError,
@@ -247,10 +248,12 @@ describe.skipIf(!stackUp || !webUp)("guest accounts (real web server + real stac
     err(await api("POST", routes.guest, freshClient(), { intro: "Sam", extra: 1 }), 400, "invalid_request");
   });
 
-  it("limits each guest route to 5 requests per 10 minutes per address (429)", async () => {
+  it("limits each guest route per address (429)", async () => {
     for (const route of [routes.guest, routes.guestDevice]) {
       const client = freshClient();
-      for (let i = 0; i < 5; i++) err(await api("POST", route, client, { intro: "hello" }), 400, "invalid_request");
+      for (let i = 0; i < GUEST_RATE_LIMIT.limit; i++) {
+        err(await api("POST", route, client, { intro: "hello" }), 400, "invalid_request");
+      }
       err(await api("POST", route, client, { intro: "hello" }), 429, "rate_limited");
       // A different address is not affected.
       err(await api("POST", route, freshClient(), { intro: "hello" }), 400, "invalid_request");

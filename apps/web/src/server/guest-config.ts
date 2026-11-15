@@ -8,8 +8,11 @@ export function guestsEnabled(env: Record<string, string | undefined> = process.
   return !(value === "off" || value === "false" || value === "0");
 }
 
-/** Per client address, for each guest route. */
-export const GUEST_RATE_LIMIT = { limit: 5, windowMs: 10 * 60_000 } as const;
+/**
+ * Per client address, for each guest route. Generous on purpose: at a demo,
+ * everyone on the venue's Wi-Fi arrives from the same address.
+ */
+export const GUEST_RATE_LIMIT = { limit: 40, windowMs: 10 * 60_000 } as const;
 /** Guest accounts created in any rolling 24 hours, counted from Supabase Auth. */
 export const GUEST_DAILY_CAP = 300;
 /**
