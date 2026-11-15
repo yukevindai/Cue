@@ -17,6 +17,8 @@ Working product name: **Cue** (the spec leaves the name undecided).
 - Claude wingman through `@anthropic-ai/sdk`, server only.
 - `apps/mentra`: glasses bridge that forwards a verified backward touch-strip
   swipe as an `InterestEvent`.
+- Meta glasses (no app): a web page that receives headset media commands and
+  sends them as `InterestEvent`s. See "Signal sources".
 
 ## Local development
 
@@ -96,6 +98,40 @@ expiry, duplicate handling) with unit tests; it is the readable reference and
 is used by the server for pre-checks and by tests. The SQL function is the
 authority for atomicity.
 
+### Signal sources
+
+Every interest signal carries a `source` and a `gesture`. There are three
+sources:
+
+| `source` | Gestures | Credential | Meaning |
+|---|---|---|---|
+| `mentra_touch` | `backward_swipe` | device token | Backward swipe on Mentra Live, sent by the miniapp. |
+| `web_demo` | `web_confirm` | web session | The "Interested" button in the web app. |
+| `headset_remote` | `media_next_track`, `media_previous_track`, `media_play_pause` | web session | A media command received by the signed-in page (Meta Adventurer glasses paired to an iPhone). |
+
+Credential rule: a **device token** may send `mentra_touch` only; a **web
+session** may send `web_demo` or `headset_remote`. The user id always comes from
+the credential, never the body.
+
+The allowed source/gesture pairs live in one place per layer:
+`GESTURES_BY_SOURCE` in `packages/contracts/src/interest.ts` (used by the zod
+schema and `packages/matching`) and the SQL function `public.interest_pair_ok`,
+which backs the `interest_events` check constraint and the guard in
+`submit_interest`. They must be kept in step. The migration that added the
+third source is `supabase/migrations/20261115000000_headset_remote_source.sql`;
+matching rules are unchanged, so any two sources can complete a match.
+
+`headset_remote` is **not proof of device**. It shows that a Bluetooth headset
+connected to that phone sent a media command. AirPods, or any headset that
+sends "next track", would trigger it. The Meta gesture is a tap pattern, not a
+backward swipe. Nothing in this route has been run on real Meta glasses; see
+`docs/meta-glasses-check.md`.
+
+`docs/spec.md` deferred "a second glasses ecosystem". `headset_remote` is a
+deliberately narrow addition (web media commands from a signed-in page), not a
+second native integration. The native Meta toolkit route is described in
+`docs/meta-glasses-check.md` and is not built.
+
 ### Realtime
 
 Clients subscribe to Postgres changes and then refetch through the API:
@@ -124,7 +160,7 @@ travels over realtime.
 
 | Role | Owns (only this role edits) |
 |---|---|
-| Hardware | `apps/mentra/**`, `docs/hardware-check.md` |
+| Hardware | `apps/mentra/**`, `docs/hardware-check.md`, `docs/meta-glasses-check.md` |
 | Backend | `supabase/**`, `packages/matching/**`, `apps/web/src/server/**` except `server/ai/**`, `apps/web/src/app/api/**` except `api/matches/[id]/suggestions/**` |
 | Frontend | `apps/web/src/app/**` except `api/**`, `apps/web/src/components/**`, `apps/web/src/lib/**` except `lib/supabase/**` and `lib/env.ts`, `apps/web/public/**` |
 | AI / integration | `apps/web/src/server/ai/**`, `apps/web/src/app/api/matches/[id]/suggestions/**`, `tests/e2e/**`, `playwright.config.ts`, `docs/demo.md`, `README.md` |

@@ -3,10 +3,13 @@
 Target length: 90 seconds, plus questions. Source of truth for behavior:
 `docs/spec.md` section 7. This runbook must not promise more than the build does.
 
-**Hardware caveat.** As of 2026-11-14, `docs/hardware-check.md` records that the
-real-swipe checkpoint is not met: the swipe has not been run on real glasses.
-Run the on-device steps in that file before the demo and fill in its table. If
-they do not pass, say so openly and use the fallback in this file. A button, an
+**Hardware status.** On 2026-11-14 the real-swipe checkpoint in
+`docs/hardware-check.md` was met on the loaner Mentra Live: real swipes reached
+the live server under the wearer's account and completed matches. The gesture
+mapping had to be set on the phone first ("Use as backward swipe" in the mini
+app). Re-run the on-device steps before each demo, because the mapping is stored
+on one phone and a reinstall loses it. If they do not pass on the day, say so
+openly and use the fallback in this file. A button, an
 injected event, or a web input is not the glasses path and must not be
 presented as one.
 
@@ -55,6 +58,43 @@ other uses the web app. The organizer placed exactly these two accounts in an
 isolated session, and each signal can only target the other person. This is a
 controlled demo. It is not a way to pick one person out of a crowd, and where
 two people are standing does not prove who either of them meant."
+
+## Two-glasses variant (Mentra Live and Meta Adventurer)
+
+Use only if `docs/meta-glasses-check.md` steps 1 to 4 have passed on the day.
+As of writing, nothing in this route has been run on real Meta glasses or a real
+iPhone; if the check has not passed, use the button fallback below and say so.
+
+Setup for the Meta wearer:
+
+- [ ] The Meta glasses are paired to the wearer's iPhone and are its audio
+      output.
+- [ ] On the iPhone, in Safari, the wearer signs in to the Cue site as their
+      demo account (not the same browser profile as the other account).
+- [ ] The wearer joins the session, turns encounter mode on, and on Encounter
+      taps "Listen for my glasses" on the "Meta glasses" card. The quiet track is
+      heard in the glasses.
+- [ ] A test tap shows "Last command:" updating. The chosen signal is double tap
+      unless changed with "Use as my signal".
+- [ ] The Mentra wearer is paired and in encounter mode as in the checklist above.
+- [ ] The phone stays unlocked with the Cue page in front; background and locked
+      behavior is not verified.
+
+Script change: at 0:25 the Mentra wearer swipes backward; at 0:40 the Meta wearer
+double taps the right temple instead of tapping "Interested". Everything else is
+the same.
+
+Say aloud:
+
+"One person signals with a backward swipe on Mentra Live. The other uses Meta
+glasses, where the gesture is a double tap, not a swipe. On the Meta side Cue
+receives a headset media command from the phone. That shows a Bluetooth headset
+sent a command; it does not verify that the glasses are Meta glasses, and
+another headset would do the same. The pair is pre-scoped by the organizer, so
+each signal can only target the other person in this session."
+
+Fallback: if the Meta taps do not arrive, the Meta wearer taps "Interested" in
+the web app, and say that this is not the glasses path.
 
 ## Reset between runs
 

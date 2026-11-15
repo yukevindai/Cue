@@ -4,12 +4,16 @@ For the person holding the loaner glasses. Follow top to bottom; it should take
 under ten minutes once the laptop tools are installed. Fill in the table at the
 end and commit it.
 
-> **Status: the real-swipe checkpoint is NOT met.**
-> Nobody has touched a real touch strip with this code yet. Everything up to
-> the glasses has been built and tested; the server path has been exercised
-> only with events injected by a script (`pnpm inject`), which does **not**
-> count as the swipe working (spec section 5). The checkpoint is met when
-> step 6 below passes on the loaner and the table is filled in.
+> **Status: the real-swipe checkpoint is MET (2026-11-14).**
+> On a real Mentra Live unit, seven real backward swipes reached the live
+> server under the wearer's account in about 0.2 to 0.3 s, and two completed
+> matches. One caveat: on that unit the gesture name for the toward-the-ear
+> swipe was **not** the built-in default `backward_swipe`. The tester had to tap
+> "Use as backward swipe" in the mini app's calibration list. The exact name
+> shown was not recorded, so the default in `apps/mentra/src/config.ts` is
+> still wrong for that unit. Not yet recorded: the media-control conflict, hair
+> adjustments, the pocket test, and audio from the glasses. The Meta Adventurer
+> tap route is separate and not verified: `docs/meta-glasses-check.md`.
 
 ## What was chosen and why
 
@@ -94,7 +98,9 @@ should now show the device as linked ("Mentra Live").
    ear**. Look at the top row of the gesture list (also in the laptop log as
    `CALIBRATION raw gesture: "…"`). Do it five times.
 3. Slide **toward the lenses** five times. Then single tap, double tap, long press.
-4. Write the names in the table. Expected for toward-the-ear: `backward_swipe`.
+4. Write the names in the table. The published SDK source suggests
+   `backward_swipe` for toward-the-ear, but on the unit tested on 2026-11-14
+   that default did NOT match and the override below was needed.
    If a different name shows up for toward-the-ear, tap **Use as backward
    swipe** on that row (stored on the phone), and also change
    `DEFAULT_BACKWARD_SWIPE_GESTURE_NAME` in `apps/mentra/src/config.ts`.
@@ -186,6 +192,22 @@ with a `BridgeHost` backed by AsyncStorage and `expo-audio` (see
 `apps/mentra/src/bridge.ts`). This fallback is **not built**. Ask the Mentra
 staff on site which route they support before spending the time.
 
+## Lessons from the first on-site run
+
+- **Windows QR code.** The Mentra CLI's QR code can point at a virtual network
+  adapter (for example a VM or VPN adapter) that the phone cannot reach. Use the
+  PC's real hotspot or LAN address instead.
+- **`zip` on Windows.** The Mentra CLI needs a `zip` program on the PATH; install
+  one before `pnpm miniapp:dev`.
+- **Two different codes.** In the web app, the Glasses card's "Link glasses"
+  code is the **pairing code** you type into the miniapp. The big code at the
+  top of Encounter is the **session join code** for the second person. They are
+  not interchangeable.
+- **One browser, one account.** Two tabs of one browser share one login. Give
+  each demo account its own browser profile (or device).
+- **Check the gesture name.** Do step 5 even if the default looks right: the
+  default `backward_swipe` was wrong on this unit.
+
 ## Results (fill in on site)
 
 | Item | Value |
@@ -199,11 +221,11 @@ staff on site which route they support before spending the time.
 | Raw gesture for swipe toward the ear | |
 | Raw gesture for swipe toward the lenses | |
 | Raw names seen for tap / double tap / long press | |
-| Configured backward gesture (`config.ts` or UI override) | `backward_swipe` (default, unconfirmed) |
-| Step 6 passed (real swipe → wearer's row)? | **not yet run** |
-| Forward swipe / taps submit nothing? | |
-| Hair-adjustment accidental activations (n / 10 each) | |
-| Stock action on backward swipe (volume, track, beep)? | |
-| Cue audible from glasses? Delay? | |
-| Works with phone locked in pocket? | |
-| Route used (miniapp / Bluetooth fallback) | |
+| Configured backward gesture (`config.ts` or UI override) | UI override ("Use as backward swipe"); the default `backward_swipe` did not match on this unit. Name shown: not recorded |
+| Step 6 passed (real swipe → wearer's row)? | **Yes, 2026-11-14.** 7 real swipes reached the live server under the wearer's account in about 0.2 to 0.3 s; 2 matches completed |
+| Forward swipe / taps submit nothing? | not yet recorded |
+| Hair-adjustment accidental activations (n / 10 each) | not yet recorded |
+| Stock action on backward swipe (volume, track, beep)? | not yet recorded |
+| Cue audible from glasses? Delay? | not yet recorded |
+| Works with phone locked in pocket? | not yet recorded |
+| Route used (miniapp / Bluetooth fallback) | miniapp |
