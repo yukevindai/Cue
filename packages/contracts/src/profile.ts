@@ -178,6 +178,8 @@ export const OwnProfile = ProfileInput.extend({
   /** Increments on every content or sharing change; used for wingman cache keys. */
   version: z.number().int().nonnegative(),
   updatedAt: IsoDateTime,
+  /** A demo guest account (no email or password). Signing out of one loses it. */
+  isGuest: z.boolean().default(false),
 });
 export type OwnProfile = z.infer<typeof OwnProfile>;
 
