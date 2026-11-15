@@ -37,12 +37,12 @@ function fullProfile(marker: string): ProfileOverrides {
     age: 31,
     gender: "non_binary",
     genderSelfDescribed: `GENDERWORDS-${marker}`,
-    location: `CITY-${marker}`,
+    location: `TOWN-${marker}`,
     lookingFor: "friendship",
     workOrSchool: `WORK-${marker}`,
     education: "masters",
     mbti: "INFJ",
-    ethnicity: `ETHNICITY-${marker}`,
+    ethnicity: `ETHNITOWN-${marker}`,
     drinking: "sometimes",
     smoking: "never",
     drugs: "prefer_not_to_say",
@@ -85,11 +85,11 @@ function markersFor(toggle: Toggle, marker: string): string[] {
     case "gender":
       return [`GENDERWORDS-${marker}`];
     case "location":
-      return [`CITY-${marker}`];
+      return [`TOWN-${marker}`];
     case "workOrSchool":
       return [`WORK-${marker}`];
     case "ethnicity":
-      return [`ETHNICITY-${marker}`];
+      return [`ETHNITOWN-${marker}`];
     default:
       return [];
   }
@@ -210,7 +210,7 @@ test.describe("sharing: every field, both directions", () => {
     const { pair, matchId } = await matchedPair(world, {
       b: {
         age: 40,
-        ethnicity: `ETHNICITY-${marker}`,
+        ethnicity: `ETHNITOWN-${marker}`,
         drinking: "often",
         smoking: "sometimes",
         drugs: "never",
@@ -242,7 +242,7 @@ test.describe("sharing: every field, both directions", () => {
       expect(other.education, "education is off by default").toBeNull();
       expect(other.age, "age is on by default").toBe(40);
     }
-    expectNoLeak(v.raw, { ethnicity: `ETHNICITY-${marker}`, work: `WORK-${marker}`, "doctorate": "doctorate" });
+    expectNoLeak(v.raw, { ethnicity: `ETHNITOWN-${marker}`, work: `WORK-${marker}`, "doctorate": "doctorate" });
   });
 
   test("changing a toggle after matching changes what the other person sees, both ways, for both people", async ({ world }) => {
@@ -273,12 +273,12 @@ test.describe("sharing: every field, both directions", () => {
 
   test("a person never sees their own hidden fields reflected anywhere but their own profile", async ({ world }) => {
     const { pair, matchId } = await matchedPair(world, {
-      a: { ethnicity: "ETHNICITY-self", sharing: { ethnicity: false } },
+      a: { ethnicity: "ETHNITOWN-self", sharing: { ethnicity: false } },
     });
     const own = must(await pair.a.api.getProfile());
-    expect(own.ethnicity).toBe("ETHNICITY-self");
+    expect(own.ethnicity).toBe("ETHNITOWN-self");
     const v = await matchViews(pair.b, matchId);
-    expectNoLeak(v.raw, { ethnicity: "ETHNICITY-self" });
+    expectNoLeak(v.raw, { ethnicity: "ETHNITOWN-self" });
   });
 });
 
@@ -374,20 +374,17 @@ test.describe("a non-matched account cannot see a profile", () => {
     );
     const third = await world.person({ bio: "THIRD-BIO" });
 
-    const results = [
-      await third.api.getMatch(matchId),
-      await third.api.listMatches(),
-      await third.api.getProfile(),
-      await third.api.suggestions(matchId),
-      await third.api.listMessages(matchId),
-      await third.api.sendMessage(matchId, { clientId: randomUUID(), body: "hi" }),
-    ];
-    expect(results[0].status).toBe(404);
-    expect(results[1].data?.matches).toEqual([]);
-    expect(results[2].data?.userId).toBe(third.user.id);
-    expect(results[3].status).toBe(404);
-    expect(results[4].status).toBe(404);
-    expect(results[5].status).toBe(404);
+    const rGetMatch = await third.api.getMatch(matchId);
+    const rList = await third.api.listMatches();
+    const rProfile = await third.api.getProfile();
+    const rSuggest = await third.api.suggestions(matchId);
+    const rMessages = await third.api.listMessages(matchId);
+    const rSend = await third.api.sendMessage(matchId, { clientId: randomUUID(), body: "hi" });
+    const results = [rGetMatch, rList, rProfile, rSuggest, rMessages, rSend];
+    expect(rGetMatch.status).toBe(404);
+    expect(rList.data?.matches).toEqual([]);
+    expect(rProfile.data?.userId).toBe(third.user.id);
+    for (const r of [rSuggest, rMessages, rSend]) expect(r.status).toBe(404);
 
     expectNoLeak(
       results.map((r) => r.text),
@@ -397,8 +394,8 @@ test.describe("a non-matched account cannot see a profile", () => {
         "A's name": pair.a.displayName,
         "B's id": pair.b.user.id,
         "A's id": pair.a.user.id,
-        "B's city": `CITY-${marker}`,
-        "B's ethnicity": `ETHNICITY-${marker}`,
+        "B's city": `TOWN-${marker}`,
+        "B's ethnicity": `ETHNITOWN-${marker}`,
       },
     );
   });
