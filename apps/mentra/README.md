@@ -31,6 +31,13 @@ pnpm miniapp:dev                           # needs Bun; prints the install QR
 pnpm inject --server http://localhost:3000 --code ABC123 --gesture backward_swipe
 ```
 
+**Installing without a laptop.** Every web build also builds this miniapp and
+publishes its release files under `/mentra/` on the site
+(`apps/web/scripts/build-mentra-bundle.mjs`). The page `/mentra` shows the
+install QR code for the Mentra app's developer scanner. Not yet verified on a
+phone: see `docs/hardware-check.md`, step 2. Bump `version` in `miniapp.json`
+when the bundle changes, so phones take the new one.
+
 `MENTRA_PUBLIC_CUE_SERVER_URL` sets the default Cue web origin at build time.
 The device token lives only in the miniapp's storage and is never logged.
 

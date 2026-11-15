@@ -56,6 +56,19 @@ See "Status log" below. Update it when a milestone lands or a decision changes.
 
 ### Status log
 
+- 2026-11-15 13:30 UTC: PR #5 (place-based matching) and PR #6 (sign-in page
+  explainer lines removed) merged to `main` by the owner; production
+  deployment of the PR #5 merge was READY. Phones with the Mentra mini app
+  installed before PR #5 must reinstall it (old builds send a session id and
+  are rejected). Website install for the Mentra mini app added (PR #7): every
+  web build runs `apps/web/scripts/build-mentra-bundle.mjs`, which builds
+  `apps/mentra` and writes `miniapp.json`, `icon.png`, `bundle.zip` to
+  `apps/web/public/mentra/` (generated, git-ignored; zip written with
+  node:zlib, same layout as `mentra-miniapp pack`). Public page `/mentra`
+  shows the `miniapp://release?url=<site>/mentra&…` QR code and link. Mini app
+  version is now 0.2.0. NOT verified: that the MentraOS app accepts a public
+  https release URL (the Mentra tool only generates LAN http ones); the laptop
+  install remains the fallback. The swipe itself is unchanged.
 - 2026-11-15 12:30 UTC: Place-based matching (PR #5) replaces the two-person
   demo session, on the owner's instruction (reverses the spec's "never choose
   the nearest account"). A signal carries no session; `submit_signal` pairs it
@@ -77,8 +90,7 @@ See "Status log" below. Update it when a milestone lands or a decision changes.
   the old session tables and `submit_interest` stay until a follow-up
   migration drops them (`block_user` still reads them). NOT verified: real
   phone GPS, iPhone background behaviour, real Mentra swipe or Meta double tap
-  under the new model. The live site runs the old session code until PR #5 is
-  merged (owner's go-ahead needed).
+  under the new model.
 - 2026-11-15 07:10 UTC: PR #4 (rich profiles, characters, chat) merged to
   `main` by the owner (`59d743d`); Vercel's production deployment of that
   commit is READY, so https://cue-gamma-five.vercel.app runs it. A Codex
@@ -172,7 +184,8 @@ hardware; run `pnpm typecheck && pnpm lint && pnpm test`, web build, stack-backe
 tests and `pnpm test:e2e` on the merged branch; send integration bugs back to
 the owning session; update this log.
 
-Open items needing a human, on the live site after PR #5 is merged: two real
+Open items needing a human, on the live site: installing the Mentra mini app
+from `/mentra` on a real phone (no laptop); two real
 phones matching by location (outdoors and indoors) and by venue QR; whether an
 iPhone keeps reporting location with Cue in the background (expected not);
 a real Mentra swipe and a real Meta double tap matching by place; one "Find

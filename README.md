@@ -81,6 +81,11 @@ built-in default, so the mini app's calibration override was needed. Hair
 adjustments, the pocket test, the media-control conflict and glasses audio are
 not yet recorded. See `docs/hardware-check.md`.
 
+The Mentra mini app can be installed from the site itself, without a laptop: open
+`/mentra` on a second screen and scan its QR code with the Mentra app's developer
+scanner. This has not yet been tried on a real phone; `docs/hardware-check.md`
+step 2 has the laptop fallback.
+
 **Meta Adventurer.** Not verified. The web page listens for headset media
 commands (double tap by default). Tests cover the server path and the page
 logic only; nobody has run it on real Meta glasses or an iPhone, or paired it by
