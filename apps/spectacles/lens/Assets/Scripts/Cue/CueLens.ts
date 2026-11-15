@@ -13,8 +13,12 @@
  * NOT VERIFIED ON REAL SPECTACLES. API names follow the Spectacles docs
  * (Gesture Module, Internet Access, Keyboard); see docs/spectacles-check.md.
  *
- * Setup in Lens Studio (5.3+, Spectacles project): put this script on a scene
- * object, set Server Url to the Cue web origin (https), and wire the inputs.
+ * Setup in Lens Studio (5.15.4 or newer, Spectacles project): put this script
+ * on ONE scene object and set Server Url and Base Material (an Image
+ * material). Everything else (status text, audio, diamond, match card) is
+ * built in code at start when its input is left empty, so the Lens moves
+ * between Lens Studio versions without re-authoring the scene. Any input you
+ * do wire wins over the built-in default.
  */
 import { CueClient, type CueHost } from "./Core/cue-client";
 import { CUE_TEXT, type FeedbackCue, type FeedbackSink } from "./Core/feedback";
@@ -35,30 +39,42 @@ export class CueLens extends BaseScriptComponent {
   serverUrl: string = "https://cue-gamma-five.vercel.app";
 
   @input
-  @hint("Head-locked Text that shows the status line and cue messages (wearer only).")
-  statusText: Text;
-
-  @input
-  @hint("AudioComponent used to play the three cues.")
-  audio: AudioComponent;
-
-  @input signalSentSound: AudioTrackAsset;
-  @input matchSound: AudioTrackAsset;
-  @input notSentSound: AudioTrackAsset;
+  @allowUndefined
+  @hint("Image material (+ > Material > Image). Cloned for the built-in diamond and match card.")
+  baseMaterial: Material;
 
   @input
   @allowUndefined
-  @hint("3D object (e.g. a Box) that becomes the diamond. Pinch-tapping it sends the signal.")
+  @hint("Picture on the built-in match card. Empty: Assets/Images/match-card-kevin.png.")
+  matchCardTexture: Texture;
+
+  @input
+  @allowUndefined
+  @hint("Head-locked Text for the status line. Empty: one is created under the camera.")
+  statusText: Text;
+
+  @input
+  @allowUndefined
+  @hint("AudioComponent used to play the three cues. Empty: one is created on this object.")
+  audio: AudioComponent;
+
+  @input @allowUndefined signalSentSound: AudioTrackAsset;
+  @input @allowUndefined matchSound: AudioTrackAsset;
+  @input @allowUndefined notSentSound: AudioTrackAsset;
+
+  @input
+  @allowUndefined
+  @hint("Object with a RenderMeshVisual that becomes the diamond. Empty: built from Base Material.")
   diamond: SceneObject;
 
   @input
   @allowUndefined
-  @hint("Camera Object. The diamond is placed 3 ft in front of it when the Lens starts.")
+  @hint("Camera Object. Empty: the first camera with Device Tracking in the scene.")
   cameraObject: SceneObject;
 
   @input
   @allowUndefined
-  @hint("Shown for a few seconds when there is a match (e.g. the Kevin, Ping-pong card). Start it disabled.")
+  @hint("Shown for a few seconds on a match. Empty: a card is built from Base Material + Match Card Texture.")
   matchCard: SceneObject;
 
   @input
@@ -86,7 +102,12 @@ export class CueLens extends BaseScriptComponent {
   }
 
   private onStart(): void {
-    require("LensStudio:TextInputModule");
+    try {
+      require("LensStudio:TextInputModule"); // newer Lens Studio; older ones have global.textInputSystem only
+    } catch (_e) {
+      // fine
+    }
+    this.buildMissingParts();
     const host: CueHost = {
       serverUrl: this.serverUrl,
       transport: (request) => this.httpFetch(request),
@@ -103,6 +124,69 @@ export class CueLens extends BaseScriptComponent {
     if (this.matchCard) this.matchCard.enabled = false;
     this.ensureAudioListener();
     this.setUpDiamond();
+  }
+
+  /**
+   * Runtime-first scene (see spectacles-agent-skills "portable design"): each
+   * part whose input is empty is created here, so a fresh project needs only
+   * this script and one Image material.
+   */
+  private buildMissingParts(): void {
+    if (!this.cameraObject) this.cameraObject = findWorldCamera();
+    const root = this.getSceneObject();
+    const camera = this.cameraObject ? this.cameraObject.getComponent("Component.Camera") : null;
+
+    if (!this.statusText && this.cameraObject) {
+      const obj = global.scene.createSceneObject("Cue Status");
+      obj.setParent(this.cameraObject);
+      if (camera) obj.layer = camera.renderLayer;
+      obj.getTransform().setLocalPosition(new vec3(0, -10, -60));
+      const text = obj.createComponent("Component.Text");
+      text.size = 60;
+      text.horizontalOverflow = HorizontalOverflow.Wrap;
+      text.worldSpaceRect = Rect.create(-12, 12, -4, 4);
+      text.textFill.color = new vec4(1, 1, 1, 1);
+      this.statusText = text;
+    }
+    if (!this.audio) this.audio = root.createComponent("Component.AudioComponent");
+    if (!this.signalSentSound) this.signalSentSound = loadAsset("../../Audio/cue-signal-sent.wav") as AudioTrackAsset;
+    if (!this.matchSound) this.matchSound = loadAsset("../../Audio/cue-match.wav") as AudioTrackAsset;
+    if (!this.notSentSound) this.notSentSound = loadAsset("../../Audio/cue-not-sent.wav") as AudioTrackAsset;
+
+    if (!this.baseMaterial) {
+      if (!this.diamond || !this.matchCard) print("Cue: set Base Material (an Image material) to see the diamond and match card.");
+      return;
+    }
+    if (!this.diamond) {
+      const obj = global.scene.createSceneObject("Cue Diamond");
+      if (camera) obj.layer = camera.renderLayer;
+      const visual = obj.createComponent("Component.RenderMeshVisual");
+      const mat = this.baseMaterial.clone();
+      // 5.15 clone() resets values: set everything on the clone.
+      mat.mainPass.blendMode = BlendMode.Disabled;
+      mat.mainPass.depthTest = true;
+      mat.mainPass.depthWrite = true;
+      mat.mainPass.twoSided = true;
+      mat.mainPass.baseColor = new vec4(0.55, 0.85, 1, 1);
+      visual.mainMaterial = mat;
+      this.diamond = obj;
+    }
+    if (!this.matchCard) {
+      const texture = this.matchCardTexture ?? (loadAsset("../../Images/match-card-kevin.png") as Texture);
+      const obj = global.scene.createSceneObject("Cue Match Card");
+      if (camera) obj.layer = camera.renderLayer;
+      const visual = obj.createComponent("Component.RenderMeshVisual");
+      visual.mesh = buildQuadMesh(24, 32); // the card picture is 600 x 800
+      const mat = this.baseMaterial.clone();
+      mat.mainPass.blendMode = BlendMode.PremultipliedAlpha;
+      mat.mainPass.depthTest = true;
+      mat.mainPass.depthWrite = false;
+      mat.mainPass.twoSided = true;
+      mat.mainPass.baseColor = new vec4(1, 1, 1, 1);
+      if (texture) mat.mainPass.baseTex = texture;
+      visual.mainMaterial = mat;
+      this.matchCard = obj;
+    }
   }
 
   /**
@@ -278,6 +362,54 @@ export class CueLens extends BaseScriptComponent {
       global.textInputSystem.requestKeyboard(options);
     });
   }
+}
+
+/** First camera in the scene that has Device Tracking (the world camera), else the first camera. */
+function findWorldCamera(): SceneObject | null {
+  let fallback: SceneObject | null = null;
+  const queue: SceneObject[] = [];
+  for (let i = 0; i < global.scene.getRootObjectsCount(); i++) queue.push(global.scene.getRootObject(i));
+  while (queue.length > 0) {
+    const obj = queue.shift() as SceneObject;
+    if (obj.getComponent("Component.Camera")) {
+      if (obj.getComponent("Component.DeviceTracking")) return obj;
+      if (fallback === null) fallback = obj;
+    }
+    for (let i = 0; i < obj.getChildrenCount(); i++) queue.push(obj.getChild(i));
+  }
+  return fallback;
+}
+
+/** requireAsset that returns null instead of throwing when the file is missing. */
+function loadAsset(path: string): Asset | null {
+  try {
+    return requireAsset(path);
+  } catch (e) {
+    print(`Cue: missing asset ${path}: ${e}`);
+    return null;
+  }
+}
+
+/** A flat card facing +Z (towards a camera that looks down -Z), centred on its origin. */
+function buildQuadMesh(width: number, height: number): RenderMesh {
+  const builder = new MeshBuilder([
+    { name: "position", components: 3 },
+    { name: "normal", components: 3, normalized: true },
+    { name: "texture0", components: 2 },
+  ]);
+  builder.topology = MeshTopology.Triangles;
+  builder.indexType = MeshIndexType.UInt16;
+  const w = width / 2;
+  const h = height / 2;
+  builder.appendVerticesInterleaved([
+    -w, -h, 0, 0, 0, 1, 0, 0,
+    w, -h, 0, 0, 0, 1, 1, 0,
+    w, h, 0, 0, 0, 1, 1, 1,
+    -w, h, 0, 0, 0, 1, 0, 1,
+  ]);
+  builder.appendIndices([0, 1, 2, 0, 2, 3]);
+  builder.updateMesh();
+  return builder.getMesh();
 }
 
 /**

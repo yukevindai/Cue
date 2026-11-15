@@ -73,6 +73,17 @@ submit gets 401, the Lens deletes its token and returns to "Not linked".
 
 ## Set up in Lens Studio
 
+**Shortest path (any Lens Studio from 5.15.4):** one scene object with
+`CueLens`, Server Url, and **Base Material** set to an Image material
+(+ > Material > Image). Every other input can stay empty: the status text,
+audio, sounds (`requireAsset` from `Assets/Audio`), diamond and match card
+(`Assets/Images/match-card-kevin.png`) are built in code at start, and the
+camera is found by its Device Tracking component. To move to an older Lens
+Studio, create a fresh Spectacles project there and copy `Scripts/Cue`,
+`Audio` and `Images` in without `.meta` files; never copy `.lspkg` packages
+or open a newer `.esproj`. The wiring below still works and wins over the
+built-in defaults.
+
 Needs Lens Studio 5.3+ and Spectacles OS 5.58+ (Internet Access requirement).
 
 1. Create a new **Spectacles** project in Lens Studio.
