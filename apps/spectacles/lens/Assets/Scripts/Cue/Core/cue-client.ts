@@ -47,6 +47,10 @@ export class CueClient {
   private linkState: LinkState = "unlinked";
   private lastStatus: string | null = null;
   private running = false;
+  /** Last active match id seen from the server; undefined until the first good poll. */
+  private knownMatchId: string | null | undefined = undefined;
+  /** Set when our own ack already announced a match, so the next poll does not announce it twice. */
+  private matchAnnouncedByAck = false;
 
   constructor(private readonly host: CueHost) {
     this.log = host.logger ?? silentLogger;
@@ -106,6 +110,7 @@ export class CueClient {
     }
     const snapshot = await this.context.refresh();
     if (snapshot.state === "unlinked") this.onUnauthorized();
+    else if (snapshot.state !== "offline") this.watchMatch(this.context.activeMatchId());
     this.renderStatus();
     return snapshot;
   }
@@ -113,9 +118,41 @@ export class CueClient {
   /** Feed every pinch-down from both hands. */
   async onPinchDown(pinch: PinchDown): Promise<PinchOutcome> {
     if (!this.detector.feed(pinch)) return { kind: "not_double" };
+    return this.act();
+  }
+
+  /** A tap on the diamond: same action as a double pinch, without the detector. */
+  async onTap(): Promise<PinchOutcome> {
+    return this.act();
+  }
+
+  private async act(): Promise<PinchOutcome> {
     if (this.linkState === "linking") return { kind: "pairing", linked: false };
     if (this.linkState === "unlinked") return { kind: "pairing", linked: await this.pair() };
-    return this.pipeline.onDoublePinch();
+    const outcome = await this.pipeline.onDoublePinch();
+    if (outcome.kind === "submitted" && outcome.cue === "match") this.matchAnnouncedByAck = true;
+    return outcome;
+  }
+
+  /**
+   * Announces a match the wearer did not complete themselves (they signalled
+   * first). Only a mutual match ever has an id, so this never reveals a
+   * one-sided signal. A match that already existed when the Lens started is
+   * not announced again.
+   */
+  private watchMatch(id: string | null): void {
+    if (this.knownMatchId === undefined) {
+      this.knownMatchId = id;
+      return;
+    }
+    if (id === this.knownMatchId) return;
+    this.knownMatchId = id;
+    if (id === null) return;
+    if (this.matchAnnouncedByAck) {
+      this.matchAnnouncedByAck = false;
+      return;
+    }
+    this.host.feedback.play("match");
   }
 
   /** Asks for a code, claims it, and starts polling with the new token. */
@@ -143,6 +180,8 @@ export class CueClient {
     this.account.unlink();
     this.context.reset();
     this.detector.reset();
+    this.knownMatchId = undefined;
+    this.matchAnnouncedByAck = false;
     this.linkState = "unlinked";
   }
 

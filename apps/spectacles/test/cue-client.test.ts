@@ -10,13 +10,14 @@ import { ack, deviceContext, DEVICE, fakeClock, fakeTransport, json, TOKEN } fro
 interface ServerState {
   linked: boolean;
   encounterMode: boolean;
+  activeMatchId: string | null;
   /** What POST /api/interest answers, given the posted body. */
   interest: (body: { eventId: string }) => ReturnType<typeof json>;
 }
 
 function setup(opts: { token?: string | null; code?: string | null } = {}) {
   const clock = fakeClock();
-  const server: ServerState = { linked: true, encounterMode: true, interest: (b) => json(200, ack(b.eventId)) };
+  const server: ServerState = { linked: true, encounterMode: true, activeMatchId: null, interest: (b) => json(200, ack(b.eventId)) };
   const transport = fakeTransport((req: HttpRequest) => {
     const path = new URL(req.url).pathname;
     if (path === "/api/devices/claim") {
@@ -25,7 +26,8 @@ function setup(opts: { token?: string | null; code?: string | null } = {}) {
     }
     if (req.headers.Authorization !== `Bearer ${TOKEN}` || !server.linked) return json(401, {});
     if (path === "/api/devices/me") {
-      return json(200, deviceContext(server.encounterMode ? {} : { encounterMode: false, encounterSessionId: null }));
+      const base = server.encounterMode ? {} : { encounterMode: false, encounterSessionId: null };
+      return json(200, deviceContext({ ...base, activeMatchId: server.activeMatchId }));
     }
     if (path === "/api/interest") return server.interest(JSON.parse(req.body ?? "{}") as { eventId: string });
     return json(404, {});
@@ -70,7 +72,7 @@ describe("CueClient: pairing", () => {
     expect(s.codeRequests()).toBe(1);
     expect(s.store.data[STORAGE_KEYS.deviceToken]).toBe(TOKEN);
     expect(s.client.getLinkState()).toBe("linked");
-    expect(s.feedback.statuses.at(-1)).toBe("Encounter on. Double pinch to signal");
+    expect(s.feedback.statuses.at(-1)).toBe("Encounter on. Tap the diamond to signal");
     expect(interestPosts(s.transport)).toHaveLength(0); // pairing gesture is never a signal
   });
 
@@ -171,5 +173,66 @@ describe("CueClient: signalling", () => {
     const out = await s.doublePinch();
     expect(out).toMatchObject({ kind: "failed", error: "unauthorized" });
     expect(s.client.getLinkState()).toBe("unlinked");
+  });
+});
+
+describe("CueClient: diamond tap and match announcements", () => {
+  const MATCH_1 = "44444444-4444-4444-8444-444444444444";
+  const MATCH_2 = "55555555-5555-4555-8555-555555555555";
+
+  it("a tap sends one signal like a double pinch", async () => {
+    const s = setup({ token: TOKEN });
+    s.client.start();
+    await s.client.refreshOnce();
+    s.clock.advance(2000);
+    const out = await s.client.onTap();
+    expect(out.kind).toBe("submitted");
+    expect(interestPosts(s.transport)).toHaveLength(1);
+    expect(s.feedback.cues).toEqual(["signal_sent"]);
+  });
+
+  it("a tap while unlinked opens the keyboard instead of signalling", async () => {
+    const s = setup();
+    s.client.start();
+    expect(await s.client.onTap()).toEqual({ kind: "pairing", linked: true });
+    expect(interestPosts(s.transport)).toHaveLength(0);
+  });
+
+  it("announces a match that appears after the wearer signalled first", async () => {
+    const s = setup({ token: TOKEN });
+    s.client.start();
+    await s.client.refreshOnce(); // baseline: no match
+    s.clock.advance(2000);
+    await s.client.onTap();
+    expect(s.feedback.cues).toEqual(["signal_sent"]);
+    s.server.activeMatchId = MATCH_1; // the other person signalled
+    await s.client.refreshOnce();
+    expect(s.feedback.cues).toEqual(["signal_sent", "match"]);
+    await s.client.refreshOnce();
+    expect(s.feedback.cues).toEqual(["signal_sent", "match"]); // once only
+  });
+
+  it("does not announce a match twice when our own ack completed it", async () => {
+    const s = setup({ token: TOKEN });
+    s.server.interest = (b) => json(200, ack(b.eventId, { matched: true, expiresAt: null }));
+    s.client.start();
+    await s.client.refreshOnce();
+    s.clock.advance(2000);
+    await s.client.onTap();
+    expect(s.feedback.cues).toEqual(["match"]);
+    s.server.activeMatchId = MATCH_1;
+    await s.client.refreshOnce();
+    expect(s.feedback.cues).toEqual(["match"]);
+  });
+
+  it("does not announce a match that already existed when the Lens started, but does announce a new one", async () => {
+    const s = setup({ token: TOKEN });
+    s.server.activeMatchId = MATCH_1;
+    s.client.start();
+    await s.client.refreshOnce();
+    expect(s.feedback.cues).toEqual([]);
+    s.server.activeMatchId = MATCH_2;
+    await s.client.refreshOnce();
+    expect(s.feedback.cues).toEqual(["match"]);
   });
 });

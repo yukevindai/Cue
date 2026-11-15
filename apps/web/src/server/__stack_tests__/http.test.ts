@@ -390,9 +390,17 @@ describe.skipIf(!stackUp || !webUp)("HTTP API (real web server + real stack)", (
       };
       const [specs, mentra] = [await claim(ca, "Snap Spectacles"), await claim(cb, "Mentra Live")];
       ok(await api("POST", routes.interest, { bearer: specs }, interestBody(p.sessionId, "spectacles_hand")), InterestAck);
+      // A one-sided signal never shows up as a match on either device.
+      expect(ok(await api("GET", routes.deviceMe, { bearer: specs }), DeviceContext).activeMatchId).toBeNull();
+      expect(ok(await api("GET", routes.deviceMe, { bearer: mentra }), DeviceContext).activeMatchId).toBeNull();
       const ack = ok(await api("POST", routes.interest, { bearer: mentra }, interestBody(p.sessionId, "mentra_touch")), InterestAck);
       expect(ack.matched).toBe(true);
-      expect(await matchesOf(p.sessionId)).toHaveLength(1);
+      const matches = await matchesOf(p.sessionId);
+      expect(matches).toHaveLength(1);
+      // The Spectacles wearer signalled first and learns of the match from devices/me.
+      const matchId = (matches[0] as { id: string }).id;
+      expect(ok(await api("GET", routes.deviceMe, { bearer: specs }), DeviceContext).activeMatchId).toBe(matchId);
+      expect(ok(await api("GET", routes.deviceMe, { bearer: mentra }), DeviceContext).activeMatchId).toBe(matchId);
     });
   });
 

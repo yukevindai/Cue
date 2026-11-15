@@ -30,6 +30,8 @@ export interface DeviceContext {
   encounterMode: boolean;
   encounterSessionId: string | null;
   serverTime: string;
+  /** The wearer's newest active (mutual) match. Absent on older servers. */
+  activeMatchId?: string | null;
 }
 
 export interface DeviceClaimInput {
@@ -93,12 +95,16 @@ export function parseDeviceContext(value: unknown): DeviceContext | null {
   if (o === null) return null;
   if (!isUuid(o.deviceId) || typeof o.encounterMode !== "boolean") return null;
   if (!(o.encounterSessionId === null || isUuid(o.encounterSessionId)) || !isString(o.serverTime)) return null;
-  return {
+  const hasMatch = o.activeMatchId !== undefined;
+  if (hasMatch && !(o.activeMatchId === null || isUuid(o.activeMatchId))) return null;
+  const context: DeviceContext = {
     deviceId: o.deviceId,
     encounterMode: o.encounterMode,
     encounterSessionId: o.encounterSessionId as string | null,
     serverTime: o.serverTime,
   };
+  if (hasMatch) context.activeMatchId = o.activeMatchId as string | null;
+  return context;
 }
 
 export function parseDeviceClaimResult(value: unknown): DeviceClaimResult | null {

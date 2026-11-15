@@ -10,8 +10,9 @@ import type { InterestAck } from "./wire";
  *  - `signal_sent`: the server holds the wearer's signal (accepted, or a
  *    duplicate of one already pending). Identical whether or not the other
  *    person has signalled.
- *  - `match`: THIS signal completed a mutual match (`ack.matched`). The person
- *    who signalled first learns of the match in the web app, not here.
+ *  - `match`: a mutual match exists: either THIS signal completed it
+ *    (`ack.matched`), or the server's `activeMatchId` changed while the wearer
+ *    was waiting (they signalled first). Never fired for a one-sided signal.
  *  - `not_sent`: the signal was not recorded (rejected for any reason, or the
  *    network failed). One cue for every reason, so e.g. a block is not visible.
  * Gestures that never leave the device are silent.
@@ -27,7 +28,7 @@ export function cueForAck(ack: InterestAck): FeedbackCue {
 /** Text shown for a cue. Never names the other person or a reason. */
 export const CUE_TEXT: Record<FeedbackCue, string> = {
   signal_sent: "Signal sent",
-  match: "It's a match. Check Cue on your phone",
+  match: "It's a match!",
   not_sent: "Not sent. Try again",
 };
 
@@ -37,11 +38,11 @@ export type LinkState = "unlinked" | "linking" | "linked";
 export function statusText(link: LinkState, context: ContextSnapshot): string {
   if (link === "linking") return "Linking...";
   if (link === "unlinked" || context.state === "unlinked") {
-    return "Not linked. Get a code in Cue on your phone, then double pinch to enter it";
+    return "Not linked. Get a code in Cue on your phone, then tap the diamond to enter it";
   }
   switch (context.state) {
     case "ready":
-      return "Encounter on. Double pinch to signal";
+      return "Encounter on. Tap the diamond to signal";
     case "encounter_mode_off":
       return "Linked. Turn on encounter mode in Cue";
     case "offline":

@@ -47,6 +47,12 @@ export class EncounterContextTracker {
     return this.snapshot();
   }
 
+  /** The newest active match id from the last good answer, or null. */
+  activeMatchId(): string | null {
+    if (this.last === null || !this.last.result.ok) return null;
+    return this.last.result.context.activeMatchId ?? null;
+  }
+
   /** Forget everything (after unlinking or re-pairing). */
   reset(): void {
     this.generation++;

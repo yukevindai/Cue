@@ -41,5 +41,11 @@ export const DeviceContext = z.object({
   encounterMode: z.boolean(),
   encounterSessionId: Uuid.nullable(),
   serverTime: IsoDateTime,
+  /**
+   * The wearer's newest active match, so glasses can show the match even when
+   * the wearer signalled first. Only ever the wearer's own mutual match, never
+   * a one-sided signal. Optional so older servers and clients stay compatible.
+   */
+  activeMatchId: Uuid.nullable().optional(),
 });
 export type DeviceContext = z.infer<typeof DeviceContext>;

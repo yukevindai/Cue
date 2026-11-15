@@ -22,6 +22,11 @@ import { FEEDBACK_DISPLAY_MS } from "./Core/config";
 import type { HttpRequest, HttpResponse } from "./Core/http";
 import { createLogger } from "./Core/logger";
 import type { KeyValueStore } from "./Core/account-link";
+import { Interactable } from "SpectaclesInteractionKit.lspkg/Components/Interaction/Interactable/Interactable";
+
+/** 3 ft in front of the wearer, in Lens Studio units (cm). */
+const DIAMOND_DISTANCE_CM = 91.44;
+const DIAMOND_SPIN_DEG_PER_SEC = 40;
 
 @component
 export class CueLens extends BaseScriptComponent {
@@ -42,6 +47,25 @@ export class CueLens extends BaseScriptComponent {
   @input notSentSound: AudioTrackAsset;
 
   @input
+  @allowUndefined
+  @hint("3D object (e.g. a Box) that becomes the diamond. Pinch-tapping it sends the signal.")
+  diamond: SceneObject;
+
+  @input
+  @allowUndefined
+  @hint("Camera Object. The diamond is placed 3 ft in front of it when the Lens starts.")
+  cameraObject: SceneObject;
+
+  @input
+  @allowUndefined
+  @hint("Shown for a few seconds when there is a match (e.g. the Kevin, Ping-pong card). Start it disabled.")
+  matchCard: SceneObject;
+
+  @input
+  @hint("How long the match card stays up, in seconds.")
+  matchCardSeconds: number = 8;
+
+  @input
   @hint("Development only: skip the keyboard and claim this pairing code on the first double pinch.")
   devPairingCode: string = "";
 
@@ -54,6 +78,7 @@ export class CueLens extends BaseScriptComponent {
   private client: CueClient | null = null;
   private restingStatus = "";
   private feedbackToken = 0;
+  private matchCardToken = 0;
 
   onAwake(): void {
     this.createEvent("OnStartEvent").bind(() => this.onStart());
@@ -75,6 +100,60 @@ export class CueLens extends BaseScriptComponent {
     this.client.start();
     void this.client.run();
     this.listenForPinches();
+    if (this.matchCard) this.matchCard.enabled = false;
+    this.setUpDiamond();
+  }
+
+  /** Builds the gem mesh, places it 3 ft ahead, spins it, and makes it tappable (SIK Interactable). */
+  private setUpDiamond(): void {
+    if (!this.diamond) return;
+    const visual = this.diamond.getComponent("Component.RenderMeshVisual");
+    if (visual) visual.mesh = buildDiamondMesh(6, 4, 8);
+    const transform = this.diamond.getTransform();
+    transform.setLocalScale(vec3.one());
+
+    const collider = this.diamond.createComponent("Physics.ColliderComponent") as ColliderComponent;
+    const shape = Shape.createSphereShape();
+    shape.radius = 8;
+    collider.shape = shape;
+
+    const interactable = this.diamond.createComponent(Interactable.getTypeName()) as Interactable;
+    interactable.onTriggerEnd.add(() => {
+      void this.client?.onTap();
+    });
+
+    // Place once tracking has settled; world-locked after that, so the wearer can look around it.
+    void this.sleep(500).then(() => this.placeDiamond());
+    this.createEvent("UpdateEvent").bind(() => {
+      const spin = quat.angleAxis(DIAMOND_SPIN_DEG_PER_SEC * MathUtils.DegToRad * getDeltaTime(), vec3.up());
+      transform.setWorldRotation(spin.multiply(transform.getWorldRotation()));
+    });
+  }
+
+  private placeDiamond(): void {
+    if (!this.diamond || !this.cameraObject) return;
+    const cam = this.cameraObject.getTransform();
+    const ahead = cam.back; // a Lens Studio camera looks down its local -Z
+    const flat = new vec3(ahead.x, 0, ahead.z);
+    const dir = flat.length > 0.001 ? flat.normalize() : new vec3(0, 0, -1);
+    this.diamond.getTransform().setWorldPosition(cam.getWorldPosition().add(dir.uniformScale(DIAMOND_DISTANCE_CM)));
+  }
+
+  private showMatchCard(): void {
+    if (!this.matchCard) return;
+    if (this.cameraObject) {
+      // Card floats just above the diamond's line of sight, facing the wearer.
+      const cam = this.cameraObject.getTransform();
+      const pos = cam.getWorldPosition().add(cam.back.uniformScale(70)).add(vec3.up().uniformScale(8));
+      const t = this.matchCard.getTransform();
+      t.setWorldPosition(pos);
+      t.setWorldRotation(cam.getWorldRotation());
+    }
+    this.matchCard.enabled = true;
+    const token = ++this.matchCardToken;
+    void this.sleep(this.matchCardSeconds * 1000).then(() => {
+      if (token === this.matchCardToken && this.matchCard) this.matchCard.enabled = false;
+    });
   }
 
   private listenForPinches(): void {
@@ -132,6 +211,7 @@ export class CueLens extends BaseScriptComponent {
           this.audio.audioTrack = track;
           this.audio.play(1);
         }
+        if (cue === "match") this.showMatchCard();
         // Show the cue, then return to the resting status unless a newer cue arrived.
         const token = ++this.feedbackToken;
         this.setText(CUE_TEXT[cue]);
@@ -180,4 +260,40 @@ export class CueLens extends BaseScriptComponent {
       global.textInputSystem.requestKeyboard(options);
     });
   }
+}
+
+/**
+ * A brilliant-cut style gem: a ring of `sides` girdle points, a short crown
+ * (top point) and a deeper pavilion (bottom point). Flat-shaded, so every
+ * triangle gets its own three vertices and face normal.
+ */
+function buildDiamondMesh(radius: number, crown: number, pavilion: number, sides = 8): RenderMesh {
+  const builder = new MeshBuilder([
+    { name: "position", components: 3 },
+    { name: "normal", components: 3, normalized: true },
+  ]);
+  builder.topology = MeshTopology.Triangles;
+  builder.indexType = MeshIndexType.UInt16;
+  const top = new vec3(0, crown, 0);
+  const bottom = new vec3(0, -pavilion, 0);
+  const ring: vec3[] = [];
+  for (let i = 0; i < sides; i++) {
+    const a = (i / sides) * Math.PI * 2;
+    ring.push(new vec3(Math.cos(a) * radius, 0, Math.sin(a) * radius));
+  }
+  let index = 0;
+  const tri = (a: vec3, b: vec3, c: vec3) => {
+    const n = b.sub(a).cross(c.sub(a)).normalize();
+    builder.appendVerticesInterleaved([a.x, a.y, a.z, n.x, n.y, n.z, b.x, b.y, b.z, n.x, n.y, n.z, c.x, c.y, c.z, n.x, n.y, n.z]);
+    builder.appendIndices([index, index + 1, index + 2]);
+    index += 3;
+  };
+  for (let i = 0; i < sides; i++) {
+    const a = ring[i];
+    const b = ring[(i + 1) % sides];
+    tri(top, b, a); // crown, counter-clockwise seen from outside
+    tri(bottom, a, b); // pavilion
+  }
+  builder.updateMesh();
+  return builder.getMesh();
 }

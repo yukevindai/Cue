@@ -44,11 +44,28 @@ GestureModule pinch-down (left/right hand)
 A single pinch never sends anything: it is how Spectacles users select things.
 Two hands pinching at once never pair.
 
-Feedback after a signal is one of three cues, decided only by the wearer's own
+**The diamond.** If the **Diamond** input is set, the Lens builds a small
+spinning gem mesh, places it about 3 ft (91 cm) in front of the wearer at
+start, and makes it a Spectacles Interaction Kit `Interactable`. Tapping
+(pinch-selecting) the diamond does exactly what a double pinch does in the
+table above. Both routes go through the same encounter gate and debounce.
+
+**The match card.** If the **Match Card** input is set (an Image, e.g.
+`Assets/Images/match-card-kevin.png`, a synthetic demo card "Kevin, Sport:
+Ping-pong"), it is shown for **Match Card Seconds** (default 8) in front of the
+wearer whenever the match cue plays. The match cue plays in two cases:
+this wearer's own signal completed the match (from the ack), or the wearer
+signalled first and `GET /api/devices/me` later reports a new
+`activeMatchId`. `activeMatchId` only ever names a mutual, active match the
+wearer is part of, so one-sided interest is still never shown. The first
+value seen after the Lens starts is a baseline and is not announced.
+
+Feedback after a signal is one of three cues, decided by the wearer's own
 ack, exactly as on Mentra: **Signal sent** (also for a duplicate), **It's a
 match** (this signal completed the match), **Not sent** (any rejection or
 network failure, one cue for every reason so a block is not visible). The
-person who signalled first sees the match in the web app, not on the Lens.
+person who signalled first also gets the match cue and card on the Lens, from
+`activeMatchId` (see above).
 
 If the web app unlinks the device (or the token is revoked), the next poll or
 submit gets 401, the Lens deletes its token and returns to "Not linked".
@@ -58,8 +75,8 @@ submit gets 401, the Lens deletes its token and returns to "Not linked".
 Needs Lens Studio 5.3+ and Spectacles OS 5.58+ (Internet Access requirement).
 
 1. Create a new **Spectacles** project in Lens Studio.
-2. Copy `lens/Assets/Scripts/Cue/` and `lens/Assets/Audio/` into the project's
-   `Assets/` folder.
+2. Copy `lens/Assets/Scripts/Cue/`, `lens/Assets/Audio/` and
+   `lens/Assets/Images/` into the project's `Assets/` folder.
 3. Add a scene object with a head-locked **Text** component (the status line),
    and an **Audio** component.
 4. Add `CueLens` (Script) to a scene object and set its inputs:
@@ -67,6 +84,13 @@ Needs Lens Studio 5.3+ and Spectacles OS 5.58+ (Internet Access requirement).
      Must be `https` for a Lens you can publish; plain `http` (a laptop on the
      LAN) needs Experimental APIs and is for testing only.
    - **Status Text**, **Audio**: the components from step 3.
+   - **Diamond** (optional): a scene object with a RenderMeshVisual and a
+     material (e.g. a Box with a PBR material). The Lens replaces its mesh
+     with the gem and adds the collider and Interactable. Needs the
+     Spectacles Interaction Kit package in the project.
+   - **Camera Object**: the main camera, used to place the diamond and card.
+   - **Match Card** (optional): a scene object with an Image component
+     showing `Assets/Images/match-card-kevin.png`.
    - **Signal Sent / Match / Not Sent Sound**: the three WAVs.
    - **Dev Pairing Code** (optional): skip the keyboard while testing in the
      Preview window. Single use; clear it before publishing.

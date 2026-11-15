@@ -49,6 +49,10 @@ describe("contract parity", () => {
     expect(InterestAck.parse(rejected)).toEqual(parseInterestAck(rejected));
     const ctx = deviceContext({ encounterSessionId: null, encounterMode: false });
     expect(DeviceContext.parse(ctx)).toEqual(parseDeviceContext(ctx));
+    const withMatch = deviceContext({ activeMatchId: "44444444-4444-4444-8444-444444444444" });
+    expect(DeviceContext.parse(withMatch)).toEqual(parseDeviceContext(withMatch));
+    const noMatch = deviceContext({ activeMatchId: null });
+    expect(DeviceContext.parse(noMatch)).toEqual(parseDeviceContext(noMatch));
     const claim = { deviceId: "33333333-3333-4333-8333-333333333333", deviceToken: "t".repeat(43) };
     expect(DeviceClaimResult.parse(claim)).toEqual(parseDeviceClaimResult(claim));
   });

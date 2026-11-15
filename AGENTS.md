@@ -49,6 +49,16 @@ See "Status log" below. Update it when a milestone lands or a decision changes.
 
 ### Status log
 
+- 2026-11-15: Spectacles diamond + match card (branch
+  `claude/spectacles-client`, PR #7). `CueLens` builds a gem 3 ft ahead; an SIK
+  tap on it sends like a double pinch. `DeviceContext.activeMatchId` (optional,
+  contracts) lets a device that signalled first learn of a mutual match; the
+  Lens then plays the match cue and shows a synthetic "Kevin, Ping-pong" card.
+  Verified: typecheck, lint, all unit + stack tests, web build, Preview shows
+  the diamond. NOT verified: tap in Preview or on a device, the card on a
+  device; live site needs PR #7 merged and migration
+  `20261115020000_spectacles_hand_source.sql` applied to Cue DB.
+
 - 2026-11-15: Snap Spectacles client (`apps/spectacles`, branch
   `claude/spectacles-client`). A Lens Studio Lens: a double pinch (two
   same-hand pinches within 450 ms, Spectacles hand tracking) sends

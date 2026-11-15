@@ -150,8 +150,8 @@ export function GlassesCard({ device }: { device: DeviceStatus }) {
         <div className="mt-3">
           <p className="text-ink-soft">
             For Mentra Live: link them so a backward swipe on the temple sends your signal. For Snap
-            Spectacles: open the Cue Lens and enter the code there; a double pinch sends your
-            signal. Wearing Meta glasses? Use the Meta glasses card instead. Without glasses you can still use the
+            Spectacles: open the Cue Lens and enter the code there; pinching the diamond (or a
+            double pinch) sends your signal. Wearing Meta glasses? Use the Meta glasses card instead. Without glasses you can still use the
             Interested button on this page.
           </p>
           <Button variant="secondary" className="mt-4 max-sm:w-full" onClick={getCode} busy={pairBusy}>

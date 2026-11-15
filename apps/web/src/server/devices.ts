@@ -131,11 +131,22 @@ export async function getDeviceContext(device: DeviceAuth): Promise<DeviceContex
       .is("left_at", null)
       .maybeSingle(),
   ) as { session_id: string; encounter_mode: boolean } | null;
+  const match = unwrap(
+    await getAdminSupabase()
+      .from("matches")
+      .select("id")
+      .eq("status", "active")
+      .or(`user_a.eq.${device.userId},user_b.eq.${device.userId}`)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ) as { id: string } | null;
   return {
     deviceId: device.deviceId,
     encounterMode: member?.encounter_mode ?? false,
     encounterSessionId: member?.session_id ?? null,
     serverTime: new Date().toISOString(),
+    activeMatchId: match?.id ?? null,
   };
 }
 
