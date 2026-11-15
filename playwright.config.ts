@@ -45,6 +45,8 @@ export default defineConfig({
       ANTHROPIC_BASE_URL: `http://127.0.0.1:${FAKE_ANTHROPIC_PORT}`,
       // Short model timeout so the "hang" test is quick.
       WINGMAN_TIMEOUT_MS: "3000",
+      // Same for the spoken wingman line (its default is 8 s).
+      HYPE_TIMEOUT_MS: "3000",
     },
   },
 });

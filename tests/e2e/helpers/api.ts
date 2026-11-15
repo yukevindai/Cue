@@ -13,6 +13,7 @@ import {
   DeviceContext,
   EncounterModeInput,
   EncounterStatus,
+  HypeLine,
   InterestAck,
   InterestEvent,
   LocationInput,
@@ -146,6 +147,10 @@ export function apiFor(ctx: APIRequestContext) {
     /** Body is sent as given, so tests can send invalid or extra keys. */
     sendMessage: (id: string, body: Record<string, unknown>) =>
       call(ctx, "POST", routes.messages(id), { body, schema: ChatMessage }),
+    /** POST /api/matches/[id]/hype (session). */
+    hype: (id: string) => call(ctx, "POST", routes.hype(id), { body: {}, schema: HypeLine }),
+    /** POST /api/devices/hype (device token). Body is sent as given. */
+    deviceHype: (body: Record<string, unknown>) => call(ctx, "POST", routes.deviceHype, { body, schema: HypeLine }),
     block: (userId: string) =>
       call<void>(ctx, "POST", routes.blocks, { body: { userId } satisfies Input<typeof BlockInput> }),
     devicePair: () => call(ctx, "POST", routes.devicePair, { body: {}, schema: PairingCode }),
