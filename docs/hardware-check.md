@@ -33,7 +33,7 @@ end and commit it.
 
 **Runtime: a MentraOS local miniapp** (`@mentra/miniapp` 3.4.0), background
 layer. It runs inside the Mentra phone app, receives touch-strip events, and
-calls the Cue API with a device token. Code: `apps/mentra`.
+calls the SocialEyes API with a device token. Code: `apps/mentra`.
 
 Evidence (read from the published packages on 2026-11-14, nothing run on a device):
 
@@ -60,7 +60,7 @@ checked.
 
 - Bun ≥ 1.3 (`curl -fsSL https://bun.sh/install | bash`) — the Mentra CLI needs it. Node 22 and pnpm for the repo.
 - `pnpm install` at the repo root.
-- The Cue web app reachable **from the phone**: the deployed HTTPS URL, or an
+- The SocialEyes web app reachable **from the phone**: the deployed HTTPS URL, or an
   HTTPS tunnel to `pnpm dev`. `http://<laptop-ip>:3000` on shared Wi-Fi may work
   on iOS; on Android plain HTTP from a miniapp is unconfirmed, so prefer HTTPS.
 - Phone: the Mentra app, signed in, glasses paired and connected in it.
@@ -111,14 +111,14 @@ manifest is refused (`minHostVersion` is 1.42.0), stop and go to "Fallback".
 For the demo itself, when the laptop will not be nearby:
 `MENTRA_PUBLIC_CUE_SERVER_URL=… pnpm miniapp:release`, scan that QR instead.
 
-## 3. Open "Cue" in the Mentra app and set the server
+## 3. Open "SocialEyes" in the Mentra app and set the server
 
 If the Server field is empty or wrong, enter the web origin (no path) and Save.
 The second pill should leave "Server unreachable".
 
 ## 4. Pair with an account
 
-In the Cue web app, signed in as the wearer (`alex@cue.demo` / `cue-demo-123`
+In the SocialEyes web app, signed in as the wearer (`alex@cue.demo` / `cue-demo-123`
 locally), open the encounter page and request a pairing code (it calls
 `POST /api/devices/pair`). Type the 6 characters into "Pair" in the miniapp
 within the code's lifetime. Expect the pill "Paired". The web encounter page
@@ -144,10 +144,10 @@ should now show the device as linked ("Mentra Live").
 ## 6. First checkpoint: a real backward swipe reaches the server under the right account
 
 1. In the web app on the wearer's phone (same account as the paired glasses),
-   turn on Encounter mode and give Cue a place: allow location, or check in at a
+   turn on Encounter mode and give SocialEyes a place: allow location, or check in at a
    venue ("Host a place", or scan a venue's QR code / "Enter a venue code"). The
    "Where you are" card must read "Ready". The glasses cannot report where the
-   wearer is: the place always comes from the phone. Keep the Cue page open on
+   wearer is: the place always comes from the phone. Keep the SocialEyes page open on
    the phone if relying on location. The miniapp pill turns to "Encounter mode
    ON" within ~2 s. The miniapp forwards a swipe only once the server reports
    the wearer as ready; otherwise it drops it and plays a cue.
@@ -245,7 +245,7 @@ A. Microphone permission and transcription (needs the glasses **unlinked**, so
 
 B. Hand off to the phone:
 
-5. Tap "Open Cue as <name>". Expect the phone's browser to open Cue, signed in
+5. Tap "Open Cue as <name>". Expect the phone's browser to open SocialEyes, signed in
    as that guest, on Encounter. If nothing opens, the "Open Cue" link below the
    button should work. Record which browser opened.
 
@@ -326,7 +326,7 @@ staff on site which route they support before spending the time.
 | Forward swipe / taps submit nothing? | not yet recorded |
 | Hair-adjustment accidental activations (n / 10 each) | not yet recorded |
 | Stock action on backward swipe (volume, track, beep)? | not yet recorded |
-| Cue audible from glasses? Delay? | not yet recorded |
+| SocialEyes audible from glasses? Delay? | not yet recorded |
 | Works with phone locked in pocket? | not yet recorded |
 | Route used (miniapp / Bluetooth fallback) | miniapp |
 | Mini app installed from the website with no laptop? | Reported yes by the owner on 2026-11-15; app version, phone and steps not recorded |

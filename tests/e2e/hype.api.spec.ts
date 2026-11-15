@@ -1,5 +1,5 @@
 // The spoken wingman line: POST /api/matches/{id}/hype (session) and POST /api/devices/hype (device token).
-// The model is the suite's fake server, so this proves what Cue sends and how it handles the answer,
+// The model is the suite's fake server, so this proves what SocialEyes sends and how it handles the answer,
 // not what a real Claude writes. It also proves nothing about audio: speaking is the browser's or the
 // glasses' job (see guest-voice.ui.spec.ts for the page side, with a fake speech synthesiser).
 import { randomUUID } from "node:crypto";

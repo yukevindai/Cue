@@ -163,7 +163,7 @@ export function ChatPanel({
       if (data.session) await supabase.realtime.setAuth(data.session.access_token);
       if (disposed) return;
       channel = supabase
-        .channel(`cue-chat-${matchId}`)
+        .channel(`socialeyes-chat-${matchId}`)
         .on(
           "postgres_changes",
           { event: "*", schema: "public", table: "chat_messages", filter: `match_id=eq.${matchId}` },
@@ -306,7 +306,7 @@ export function ChatPanel({
             <path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
           <p>
-            You&rsquo;re talking inside Cue. Your phone number and socials stay private unless you choose to share
+            You&rsquo;re talking inside SocialEyes. Your phone number and socials stay private unless you choose to share
             them.
           </p>
         </div>

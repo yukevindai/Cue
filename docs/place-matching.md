@@ -20,14 +20,14 @@ knowing it will sometimes pair you with someone you did not mean in a crowd.
 This **reverses two rules in `docs/spec.md`**: "Never choose a random or nearest
 account" and "exactly two people per session". `docs/spec.md` is kept unchanged
 as the historical spec. Where it disagrees with this file or the code, this file
-and the code describe what Cue does.
+and the code describe what SocialEyes does.
 
 ## What counts as "the same place"
 
 Either of these, for both people:
 
 1. **A shared venue check-in.** Both are checked into the same venue. Anyone can
-   "Host a place": name it, and Cue makes a six-character code and a QR code that
+   "Host a place": name it, and SocialEyes makes a six-character code and a QR code that
    opens `/v/<code>`. Other people scan the QR code (or type the code under
    "Enter a venue code") to check in. A check-in lasts `CHECK_IN_HOURS` (8) unless
    the person leaves first. Everyone checked into one venue can match, wherever
@@ -36,7 +36,7 @@ Either of these, for both people:
    accurate enough, and the two are within `MATCH_RADIUS_M` (40 m) once both
    reported accuracies are allowed for.
 
-A person is **ready** when Encounter mode is on and Cue has a place for them (a
+A person is **ready** when Encounter mode is on and SocialEyes has a place for them (a
 valid venue check-in, or a usable location). Only ready people's signals can
 match.
 
@@ -47,7 +47,7 @@ venue they are checked into (and when), and their last reported phone location.
 
 - **Encounter mode** is a switch on the Encounter page. Turning it on is what
   makes the open page ask the browser for location.
-- **Location.** While Encounter mode is on and the Cue page is visible, the page
+- **Location.** While Encounter mode is on and the SocialEyes page is visible, the page
   watches the phone's position and sends it to `POST /api/encounter/location` at
   least every `LOCATION_REPORT_INTERVAL_MS` (15 s), and sooner after a move of
   about 10 m (never more often than every 3 s). A location is usable for matching
@@ -94,7 +94,7 @@ created, never anything about the other person.
   them (`DELETE /api/encounter/location`), on "End demo", on sign-out, and when
   they are older than `LOCATION_RETENTION_MINUTES` (10). The 10-minute clearing
   is not a separate timer: it runs whenever any phone reports a location and
-  whenever anyone's status is read (each open Cue page polls it, and linked
+  whenever anyone's status is read (each open SocialEyes page polls it, and linked
   glasses check in every 2 seconds). On a system nobody is using, an old row
   can therefore sit until the next such read. A stale location is already
   unusable for matching after 60 s.
@@ -148,14 +148,14 @@ signals 30 per 10 seconds.
   `/encounter?venue=<code>`, which checks the person in and says "You're checked
   in at <name>". Signed out, it goes to sign-in and comes back afterwards.
 - **Match moment**: "It's mutual." with the other person's name, character, the
-  place label and the time. It says "Cue pairs you with the nearest person who
+  place label and the time. It says "SocialEyes pairs you with the nearest person who
   signalled within the same few seconds. In a crowd, that can be the wrong
   person." and offers "Not who you meant? Unmatch".
 
 ## Glasses
 
 The glasses do not know where the wearer is. The wearer's place comes from their
-phone: a venue check-in, or the location reported by the open Cue page on the
+phone: a venue check-in, or the location reported by the open SocialEyes page on the
 same account. The Mentra bridge asks `GET /api/devices/me` about every 2 s and
 forwards a swipe **only** when the server says the wearer is `ready`. Otherwise
 the swipe is dropped (nothing is queued or replayed) and the wearer hears a cue:
@@ -175,14 +175,14 @@ headset command comes through the signed-in page, which is open by definition.
   pairing.
 - **Location can be faked.** A modified client can report any position. Nothing
   verifies it.
-- **The Cue page must be open for location.** It reports only while Encounter
+- **The SocialEyes page must be open for location.** It reports only while Encounter
   mode is on and the page is visible. On iPhone, location is expected not to
   update in the background or with the phone locked. That has not been checked on
   a real phone. A venue check-in does not need location.
 - **Self-reported venues.** Anyone can create one with any name. A code or QR
   image can be shared outside the place, and anyone who has it can check in.
 - **Throughput.** One advisory lock serialises every matching decision. That is
-  fine for a demo and is the limit on how many signals per second Cue can handle.
+  fine for a demo and is the limit on how many signals per second SocialEyes can handle.
 - **Sign-up from a QR link loses the venue code.** Signing in returns to the
   venue link; signing up does not. A new user must scan again or type the code.
 - **No print layout** for the QR code. It is shown on screen; printing it means

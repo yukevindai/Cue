@@ -63,7 +63,7 @@ describe("deriveSignalView", () => {
     expect(deriveSignalView(status(), T0)).toEqual({ kind: "idle" });
   });
 
-  it("is no_place while Cue doesn't know where the person is", () => {
+  it("is no_place while SocialEyes doesn't know where the person is", () => {
     const s = status({ ready: false, location: { status: "none", accuracyM: null, locatedAt: null } });
     expect(deriveSignalView(s, T0)).toEqual({ kind: "no_place" });
   });
@@ -132,7 +132,7 @@ describe("venue code and name", () => {
   });
 
   it("builds the URL a venue's QR code opens", () => {
-    expect(venueCheckInUrl("https://cue.example/", "AB3K7Q")).toBe("https://cue.example/v/AB3K7Q");
+    expect(venueCheckInUrl("https://socialeyes.example/", "AB3K7Q")).toBe("https://socialeyes.example/v/AB3K7Q");
   });
 });
 
@@ -148,10 +148,10 @@ describe("place", () => {
     expect(placeSummary(status({ checkIn: CHECK_IN })).detail).toMatch(/checked in at Main hall/);
   });
 
-  it("says Cue doesn't know where you are when not ready", () => {
+  it("says SocialEyes doesn't know where you are when not ready", () => {
     expect(placeSummary(status({ ready: false }))).toMatchObject({
       tone: "not_ready",
-      headline: "Cue doesn't know where you are yet",
+      headline: "SocialEyes doesn't know where you are yet",
     });
   });
 
@@ -161,7 +161,7 @@ describe("place", () => {
       serverLocationText(
         status({ location: { status: "inaccurate", accuracyM: 240.4, locatedAt: iso(T0) } }),
       ),
-    ).toMatch(/about 240 m\. Cue needs 100 m or better/);
+    ).toMatch(/about 240 m\. SocialEyes needs 100 m or better/);
     expect(
       serverLocationText(status({ location: { status: "stale", accuracyM: 12, locatedAt: iso(T0) } })),
     ).toMatch(/out of date/);

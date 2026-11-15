@@ -125,7 +125,7 @@ describe("locationLine", () => {
     expect(locationLine(true, located, "Location on, accurate to about 12 m").text).toBe(
       "Location on, accurate to about 12 m",
     );
-    expect(locationLine(true, located, null).text).toMatch(/Sending it to Cue/);
+    expect(locationLine(true, located, null).text).toMatch(/Sending it to SocialEyes/);
     expect(locationLine(true, { kind: "locating" }, null).text).toBe("Finding your location…");
   });
 

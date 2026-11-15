@@ -94,7 +94,7 @@ const POLL_DEGRADED_MS = 4_000;
 const POLL_ENCOUNTER_MS = 10_000;
 
 function seenKey(userId: string) {
-  return `cue.seen-matches.${userId}`;
+  return `socialeyes.seen-matches.${userId}`;
 }
 function readSeen(userId: string): Set<string> {
   try {
@@ -264,7 +264,7 @@ export function LiveProvider({
       if (disposed) return;
 
       channel = supabase
-        .channel(`cue-live-${userId}`)
+        .channel(`socialeyes-live-${userId}`)
         .on("postgres_changes", { event: "*", schema: "public", table: "matches" }, () => {
           // A match appearing or ending also changes the pending signal.
           refreshAll();

@@ -46,7 +46,7 @@ export function VenueArrival({ code }: { code: string }) {
   if (invalid || arrival.state === "unknown") {
     return (
       <Notice tone="warn" title="That venue code isn't known" className="mb-6">
-        No place on Cue has the code {code ? <span className="font-mono">{code}</span> : "in that link"}.
+        No place on SocialEyes has the code {code ? <span className="font-mono">{code}</span> : "in that link"}.
         Check the code on the sign and type it under &ldquo;Enter a venue code&rdquo; below.
       </Notice>
     );

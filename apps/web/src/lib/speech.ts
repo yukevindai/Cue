@@ -8,7 +8,7 @@
  * `window.webkitSpeechRecognition` / `window.speechSynthesis` before the page
  * loads and these wrappers pick the fakes up.
  *
- * The Web Speech API types are declared locally (minimal, only what Cue uses)
+ * The Web Speech API types are declared locally (minimal, only what SocialEyes uses)
  * instead of adding a dependency; TypeScript's DOM lib does not ship the
  * recognition half.
  */
@@ -99,7 +99,7 @@ export type RecognitionProblem =
   | "aborted"
   | "failed";
 
-/** Maps a `SpeechRecognitionErrorEvent.error` code to Cue's problem kinds. */
+/** Maps a `SpeechRecognitionErrorEvent.error` code to SocialEyes's problem kinds. */
 export function recognitionProblem(code: string): RecognitionProblem {
   switch (code) {
     case "not-allowed":

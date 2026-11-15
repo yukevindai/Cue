@@ -166,7 +166,7 @@ export function validateForm(f: FormState): { input: ProfileInput | null; errors
   const age = parseAge(f.age);
   if (age === "invalid") put("age", "Enter your age as a number, like 27.");
   else if (age !== null && age < MIN_AGE)
-    put("age", `Cue is only for adults, ${MIN_AGE} and over. Leave this empty if you'd rather not say.`);
+    put("age", `SocialEyes is only for adults, ${MIN_AGE} and over. Leave this empty if you'd rather not say.`);
   else if (age !== null && age > MAX_AGE) put("age", `Enter an age from ${MIN_AGE} to ${MAX_AGE}.`);
 
   const parsed = ProfileInput.safeParse(toDraft(f));

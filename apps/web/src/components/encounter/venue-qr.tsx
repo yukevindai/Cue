@@ -76,7 +76,7 @@ export function VenueQr({ checkIn, onHide }: { checkIn: CheckIn; onHide: () => v
         Check in at {checkIn.name}
       </h3>
       <p className="mt-1 text-sm text-ink-soft">
-        Point a phone camera at the code, or type the code into Cue&apos;s Encounter page.
+        Point a phone camera at the code, or type the code into the SocialEyes Encounter page.
       </p>
 
       <div className="mx-auto mt-4 grid aspect-square w-full max-w-64 place-items-center rounded-xl bg-white p-3">

@@ -1,6 +1,6 @@
-# Cue
+# SocialEyes
 
-Cue is a hackathon MVP (Immerse the Bay, 2026-11-14). A person signals interest
+SocialEyes is a hackathon MVP (Immerse the Bay, 2026-11-14). A person signals interest
 with a backward swipe on the temple touch strip of Mentra Live smart glasses.
 If another person in the same place signals within 15 seconds, the web app
 creates a match with the closest one. The match card shows the other person's approved profile, the
@@ -19,11 +19,11 @@ This is a hackathon prototype, not a production service.
    and drinking, smoking and drugs (those four, and work or school and education,
    are off by default). The server derives one of twelve characters (for example
    "The Night Owl") from the cards. External social links are not collected.
-2. Both turn on Encounter mode. Cue needs to know they are in the same place:
+2. Both turn on Encounter mode. SocialEyes needs to know they are in the same place:
    either both check into the same venue (anyone can "Host a place" and show its
    QR code; others scan it or type its six-character code), or both phones
    report a location, and the two are within 40 m allowing for each phone's
-   reported accuracy. The open Cue page reports location only while Encounter
+   reported accuracy. The open SocialEyes page reports location only while Encounter
    mode is on.
 3. Person A makes a backward swipe on Mentra Live glasses. The swipe is
    submitted as interest. Person B taps "Interested" in the web app, or
@@ -41,7 +41,7 @@ This is a hackathon prototype, not a production service.
    Claude sees only the fields each person shared with AI assist on, never age,
    gender, ethnicity, drinking, smoking or drugs, and never chat messages. It
    writes one opener and sends nothing.
-7. On a match Cue also says one or two short sentences about it in a casual
+7. On a match SocialEyes also says one or two short sentences about it in a casual
    friend's voice ("Your wingman"), through the glasses when they are the phone's
    audio device, otherwise the phone speaker. It is requested automatically,
    needs AI assist on for both people, and is built from the same checked shared
@@ -50,7 +50,7 @@ This is a hackathon prototype, not a production service.
    voice" switch on Encounter turns the speech off in that browser.
 
 The one-sided interest stays invisible to the other person. This is not a
-two-person private session any more: Cue pairs a signal with the closest other
+two-person private session any more: SocialEyes pairs a signal with the closest other
 person who signalled in the same place, so in a crowd it can pick someone you did
 not mean. The match screen offers "Not who you meant? Unmatch". See
 `docs/place-matching.md` for the rule, what is stored and the limits.
@@ -71,7 +71,7 @@ glasses link themselves to a new guest account, and "Open Cue as Sam" signs the
 phone in. A guest who signs out cannot get back in. Guest accounts are for the
 demo and are deleted afterwards. Switch it off with `CUE_GUESTS_ENABLED=off`;
 details, limits and the removal checklist are in `docs/guest-accounts.md`.
-Spoken entry sends audio to the browser vendor's speech service (Cue receives
+Spoken entry sends audio to the browser vendor's speech service (SocialEyes receives
 only the text); it has not been tried on real phones or glasses.
 
 A name-only guest gives the wingman nothing specific to say, so they hear the
@@ -226,7 +226,7 @@ has not merged the role that owns it.
   fake it. It is kept only while Encounter mode is on (deleted on mode off or
   after 10 minutes without an update) and never shown, saved with a match or sent
   to Claude.
-- The Cue page must be open for location. It is expected not to update in the
+- The SocialEyes page must be open for location. It is expected not to update in the
   background or with an iPhone locked; that is not verified on a real phone.
 - Venues are self-reported: anyone can create one, and a code can be shared
   outside the place. The QR code has no print layout, and signing up (rather than

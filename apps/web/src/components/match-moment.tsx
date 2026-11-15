@@ -59,7 +59,7 @@ function useHype(matchId: string): string | null {
 }
 
 /**
- * The one loud moment in Cue. Shown over whatever view the user is on when a
+ * The one loud moment in SocialEyes. Shown over whatever view the user is on when a
  * mutual match lands. A modal <dialog>, so focus is trapped, Escape closes it,
  * and screen readers announce it.
  */
@@ -187,7 +187,7 @@ export function MatchMoment({ match, onDismiss }: { match: MatchCard; onDismiss:
             Their card stays in Matches. There&rsquo;s no rush.
           </p>
           <p className="mt-6 max-w-sm text-sm text-cream/80">
-            Cue pairs you with the nearest person who signalled within the same few seconds. In a
+            SocialEyes pairs you with the nearest person who signalled within the same few seconds. In a
             crowd, that can be the wrong person.
           </p>
           <button

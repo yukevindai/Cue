@@ -50,7 +50,7 @@ export function venueNameProblem(raw: string): string | null {
   return null;
 }
 
-/** `https://cue.example/v/AB3K7Q`: what a venue's QR code opens. */
+/** `https://socialeyes.example/v/AB3K7Q`: what a venue's QR code opens. */
 export function venueCheckInUrl(origin: string, code: string): string {
   return `${origin.replace(/\/+$/, "")}/v/${encodeURIComponent(code)}`;
 }
@@ -68,7 +68,7 @@ export interface PlaceSummary {
 }
 
 /**
- * The headline for "where Cue thinks you are". Driven by the server's `ready`
+ * The headline for "where SocialEyes thinks you are". Driven by the server's `ready`
  * flag, which is the only thing that decides whether a signal can match.
  */
 export function placeSummary(encounter: EncounterStatus): PlaceSummary {
@@ -90,7 +90,7 @@ export function placeSummary(encounter: EncounterStatus): PlaceSummary {
   }
   return {
     tone: "not_ready",
-    headline: "Cue doesn't know where you are yet",
+    headline: "SocialEyes doesn't know where you are yet",
     detail: "Allow location, or check in with a venue code, so a signal can match.",
   };
 }
@@ -103,9 +103,9 @@ export function serverLocationText(encounter: EncounterStatus): string | null {
     case "fresh":
       return acc === null ? "Location on" : `Location on, accurate to about ${acc} m`;
     case "inaccurate":
-      return `Location too rough to use: about ${acc ?? "?"} m. Cue needs ${LOCATION_MAX_ACCURACY_M} m or better.`;
+      return `Location too rough to use: about ${acc ?? "?"} m. SocialEyes needs ${LOCATION_MAX_ACCURACY_M} m or better.`;
     case "stale":
-      return "Location out of date. Keep Cue open so your phone can update it.";
+      return "Location out of date. Keep SocialEyes open so your phone can update it.";
     case "none":
       return null;
   }
@@ -214,7 +214,7 @@ export function rejectionCopy(reason: InterestRejectReason | null): RejectionCop
       };
     case "no_place":
       return {
-        text: "Cue doesn't know where you are yet. Allow location, or check in with a venue code, then try again.",
+        text: "SocialEyes doesn't know where you are yet. Allow location, or check in with a venue code, then try again.",
         refresh: true,
       };
     default:

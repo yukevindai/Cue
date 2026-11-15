@@ -59,7 +59,7 @@ export function listenProblemText(problem: RecognitionProblem): string {
     case "unsupported":
       return "Voice entry isn't available in this browser. Type your name below instead.";
     case "denied":
-      return "Cue can't use the microphone. Allow it for this site in your browser settings and try again, or type your name below.";
+      return "SocialEyes can't use the microphone. Allow it for this site in your browser settings and try again, or type your name below.";
     case "no_microphone":
       return "No microphone was found. Connect one and try again, or type your name below.";
     case "no_speech":
@@ -76,13 +76,13 @@ export function listenProblemText(problem: RecognitionProblem): string {
 export function requestProblemText(problem: GuestRequestProblem): string {
   switch (problem) {
     case "no_name":
-      return "Cue couldn't pick a name out of that. Try 'Hi, my name is Sam', or just your first name.";
+      return "SocialEyes couldn't pick a name out of that. Try 'Hi, my name is Sam', or just your first name.";
     case "rate_limited":
       return "Too many guest accounts from here just now. Wait a minute and try again, or create an account with an email.";
     case "off":
       return "Guest entry is switched off right now. Sign in or create an account with an email below.";
     case "network":
-      return "Can't reach Cue right now. Check your connection and try again.";
+      return "Can't reach SocialEyes right now. Check your connection and try again.";
     default:
       return "Couldn't create your guest account. Try again in a moment.";
   }

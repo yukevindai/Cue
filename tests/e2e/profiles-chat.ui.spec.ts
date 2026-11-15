@@ -6,7 +6,7 @@ import { expect, test } from "./helpers/fixtures";
 import { adminClient } from "./helpers/users";
 import { matchedPair, signal, type Person } from "./helpers/scenario";
 
-/** A phone-sized window, like the people using Cue. */
+/** A phone-sized window, like the people using SocialEyes. */
 const PHONE = { viewport: { width: 390, height: 844 } } as const;
 const VENUE = "E2E Test Cafe";
 /** A message typed on one phone must show on the other within this long, with no reload. */
@@ -87,7 +87,7 @@ test.describe("UI: profile editor", () => {
     await page.getByLabel("Age", { exact: true }).fill("16");
     await page.getByRole("button", { name: "Save changes" }).click();
     await expect(
-      page.getByText("Cue is only for adults, 18 and over. Leave this empty if you'd rather not say."),
+      page.getByText("SocialEyes is only for adults, 18 and over. Leave this empty if you'd rather not say."),
     ).toBeVisible();
     await expect(page.getByText(/Saved\./)).toHaveCount(0);
     expect(must(await p.api.getProfile()).age, "nothing was stored").toBeNull();
@@ -260,7 +260,7 @@ test.describe("UI: chat", () => {
     await expect(a).toHaveURL(new RegExp(`/matches/${matchId}/chat$`));
     await expect(
       // The apostrophe in the product copy is typographic (U+2019).
-      a.getByText(/You.re talking inside Cue\. Your phone number and socials stay private unless you choose to share them\./),
+      a.getByText(/You.re talking inside SocialEyes\. Your phone number and socials stay private unless you choose to share them\./),
     ).toBeVisible();
     await expect(composer(a, bName)).toHaveAttribute("placeholder", `Write to ${bName}`);
     await expect(composer(b, aName)).toBeVisible();

@@ -28,7 +28,7 @@ export function adminClient(): SupabaseClient {
 /** Creates a confirmed user through the Supabase admin API. */
 export async function createTestUser(): Promise<TestUser> {
   const marker = randomBytes(4).toString("hex");
-  const email = `e2e-${randomUUID()}@cue.test`;
+  const email = `e2e-${randomUUID()}@socialeyes.test`;
   const password = `pw-${randomBytes(12).toString("hex")}`;
   const { data, error } = await adminClient().auth.admin.createUser({
     email,

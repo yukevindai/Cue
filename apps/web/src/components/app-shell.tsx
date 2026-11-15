@@ -49,7 +49,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <header className="sticky top-0 z-30 border-b border-line bg-paper/90 backdrop-blur">
         <div className="mx-auto flex h-14 w-full max-w-3xl items-center justify-between px-5">
-          <Link href="/encounter" aria-label="Cue, go to Encounter" className="rounded-md">
+          <Link href="/encounter" aria-label="SocialEyes, go to Encounter" className="rounded-md">
             <Wordmark />
           </Link>
           <nav aria-label="Main" className="hidden sm:block">
@@ -86,7 +86,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             role="status"
             className="hidden border-t border-line bg-sunk px-5 py-1 text-center text-sm text-ink-soft sm:block"
           >
-            Reconnecting to live updates. Cue keeps checking in the meantime.
+            Reconnecting to live updates. SocialEyes keeps checking in the meantime.
           </p>
         ) : null}
       </header>

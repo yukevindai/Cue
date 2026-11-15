@@ -77,10 +77,10 @@ test.describe("UI: guest entry", () => {
     await expect(entry(page).getByText("Type your name, or 'Hi, my name is …'.")).toBeVisible();
     await typedField(page).fill("hello there");
     await continueAsGuest(page).click();
-    await expect(entry(page).getByText("Cue couldn't pick a name out of that. Try 'Hi, my name is Sam', or just your first name.")).toBeVisible();
+    await expect(entry(page).getByText("SocialEyes couldn't pick a name out of that. Try 'Hi, my name is Sam', or just your first name.")).toBeVisible();
     await typedField(page).fill("my name is");
     await continueAsGuest(page).click();
-    await expect(entry(page).getByText("Cue couldn't pick a name out of that.")).toBeVisible();
+    await expect(entry(page).getByText("SocialEyes couldn't pick a name out of that.")).toBeVisible();
     await expect(page).toHaveURL(/\/sign-in$/);
     expect(await countGuestUsers()).toBe(before);
 
@@ -156,7 +156,7 @@ test.describe("UI: guest entry", () => {
     await sayHi(page).click();
     await failListening(page, "not-allowed");
     await expect(status(page)).toContainText(
-      "Cue can't use the microphone. Allow it for this site in your browser settings and try again, or type your name below.",
+      "SocialEyes can't use the microphone. Allow it for this site in your browser settings and try again, or type your name below.",
     );
     await expect(typedField(page)).toBeVisible();
 
@@ -330,7 +330,7 @@ test.describe("UI: the wingman's spoken line on a match", () => {
     await expect(voiceSwitch(a.page)).toHaveAttribute("aria-checked", "true"); // on by default
     await voiceSwitch(a.page).click();
     await expect(voiceSwitch(a.page)).toHaveAttribute("aria-checked", "false");
-    expect(await a.page.evaluate(() => localStorage.getItem("cue.wingman-voice"))).toBe("off");
+    expect(await a.page.evaluate(() => localStorage.getItem("socialeyes.wingman-voice"))).toBe("off");
     await a.page.reload();
     await expect(voiceSwitch(a.page)).toHaveAttribute("aria-checked", "false");
     // Encounter mode is stored on the server, so it is still on after the reload.
@@ -348,7 +348,7 @@ test.describe("UI: the wingman's spoken line on a match", () => {
     await voiceSwitch(a.page).click();
     await a.page.reload();
     await expect(voiceSwitch(a.page)).toHaveAttribute("aria-checked", "true");
-    expect(await a.page.evaluate(() => localStorage.getItem("cue.wingman-voice"))).toBe("on");
+    expect(await a.page.evaluate(() => localStorage.getItem("socialeyes.wingman-voice"))).toBe("on");
   });
 
   test("the wingman request failing (500): the match moment is fully usable, no block, nothing spoken", async ({ world, browser, fake }) => {

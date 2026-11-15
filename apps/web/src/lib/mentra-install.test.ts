@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { mentraInstallLink, mentraReleaseBase, readMentraManifest } from "./mentra-install";
 
-const manifest = { packageName: "demo.cue.mentra", version: "0.2.0", name: "Cue" };
+const manifest = { packageName: "demo.cue.mentra", version: "0.2.0", name: "SocialEyes" };
 
 describe("readMentraManifest", () => {
   it("keeps the fields the install link needs", () => {
@@ -20,20 +20,20 @@ describe("readMentraManifest", () => {
 
 describe("mentraInstallLink", () => {
   it("points the Mentra app at <origin>/mentra", () => {
-    expect(mentraReleaseBase("https://cue.example/")).toBe("https://cue.example/mentra");
-    const link = mentraInstallLink("https://cue.example", manifest);
+    expect(mentraReleaseBase("https://socialeyes.example/")).toBe("https://socialeyes.example/mentra");
+    const link = mentraInstallLink("https://socialeyes.example", manifest);
     expect(link.startsWith("miniapp://release?")).toBe(true);
     const params = new URLSearchParams(link.slice(link.indexOf("?") + 1));
     expect(Object.fromEntries(params)).toEqual({
-      url: "https://cue.example/mentra",
+      url: "https://socialeyes.example/mentra",
       package: "demo.cue.mentra",
       version: "0.2.0",
-      name: "Cue",
+      name: "SocialEyes",
     });
   });
   it("escapes values", () => {
-    const link = mentraInstallLink("https://cue.example", { ...manifest, name: "Cue & co" });
-    expect(link).toContain("name=Cue%20%26%20co");
-    expect(link).toContain("url=https%3A%2F%2Fcue.example%2Fmentra");
+    const link = mentraInstallLink("https://socialeyes.example", { ...manifest, name: "SocialEyes & co" });
+    expect(link).toContain("name=SocialEyes%20%26%20co");
+    expect(link).toContain("url=https%3A%2F%2Fsocialeyes.example%2Fmentra");
   });
 });

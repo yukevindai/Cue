@@ -4,8 +4,8 @@
  * every access is guarded because storage can be unavailable.
  */
 
-const draftKey = (matchId: string) => `cue.chat-draft.${matchId}`;
-const openerKey = (matchId: string) => `cue.chat-opener.${matchId}`;
+const draftKey = (matchId: string) => `socialeyes.chat-draft.${matchId}`;
+const openerKey = (matchId: string) => `socialeyes.chat-opener.${matchId}`;
 
 function read(key: string): string | null {
   try {

@@ -9,7 +9,7 @@ works, and what Claude does and does not receive. Source of truth: the schemas i
 `apps/web/src/server/{profiles,chat,matches}.ts` and `server/ai/*`.
 
 Two departures from `docs/spec.md`, which stays as written: the spec deferred
-chat, and it listed shared social links as a way to reconnect. Cue now has
+chat, and it listed shared social links as a way to reconnect. SocialEyes now has
 in-app chat and no external links. See "Departures from the spec" in
 `docs/architecture.md`.
 
@@ -96,7 +96,7 @@ Storyteller, Explorer, Homebody, Maverick, Muse, Sage.
 
 ## Chat
 
-Text messages between the two people of an active match, inside Cue.
+Text messages between the two people of an active match, inside SocialEyes.
 
 | Property | Behavior |
 |---|---|
@@ -151,7 +151,7 @@ What Claude returns, and what the server does with it:
 
 ### The spoken line (added 2026-11-15)
 
-When two people match, Cue also gives each of them one or two short sentences in
+When two people match, SocialEyes also gives each of them one or two short sentences in
 a casual friend's voice, shown on the match screen as "Your wingman" and spoken
 aloud (through the glasses when they are connected to the phone, otherwise the
 phone's speaker; the glasses' own app speaks it for Mentra wearers). Unlike
