@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canJoinSession, expiresAt, gestureMatchesSource, isExpired, orderPair, sourceAllowedForAuth } from "./index";
+import { expiresAt, gestureMatchesSource, isExpired, orderPair, sourceAllowedForAuth } from "./index";
 
 describe("window", () => {
   const t = new Date("2026-11-14T12:00:00.000Z");
@@ -44,15 +44,6 @@ describe("sourceAllowedForAuth", () => {
   it("session may send headset_remote; a device token may not", () => {
     expect(sourceAllowedForAuth("session", "headset_remote")).toBe(true);
     expect(sourceAllowedForAuth("device", "headset_remote")).toBe(false);
-  });
-});
-
-describe("canJoinSession", () => {
-  it("allows up to capacity 2", () => {
-    expect(canJoinSession(0)).toBe(true);
-    expect(canJoinSession(1)).toBe(true);
-    expect(canJoinSession(2)).toBe(false);
-    expect(canJoinSession(3)).toBe(false);
   });
 });
 

@@ -1,4 +1,4 @@
-import { DEMO_SESSION_CAPACITY, GESTURES_BY_SOURCE } from "@cue/contracts";
+import { GESTURES_BY_SOURCE } from "@cue/contracts";
 import type { InterestGesture, InterestSource } from "@cue/contracts";
 
 export function gestureMatchesSource(source: InterestSource, gesture: InterestGesture): boolean {
@@ -12,10 +12,6 @@ export function gestureMatchesSource(source: InterestSource, gesture: InterestGe
  */
 export function sourceAllowedForAuth(auth: "session" | "device", source: InterestSource): boolean {
   return auth === "device" ? source === "mentra_touch" : source === "web_demo" || source === "headset_remote";
-}
-
-export function canJoinSession(activeMemberCount: number): boolean {
-  return activeMemberCount < DEMO_SESSION_CAPACITY;
 }
 
 /**
