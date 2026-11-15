@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/@mentra/miniapp-cli/schema/miniapp.schema.json",
   "packageName": "demo.cue.mentra",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "name": "Cue",
   "description": "Signal interest with a backward swipe on the temple touch strip.",
   "icon": "icon.png",
