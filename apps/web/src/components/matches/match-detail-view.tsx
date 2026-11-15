@@ -10,6 +10,7 @@ import { CommonGround } from "./common-ground";
 import { BackLink, MatchFallback, StepAway, useMatch } from "./match-common";
 import { unreadText } from "./match-card";
 import { hasDetails, ProfileDetails } from "./profile-details";
+import { WingmanTip } from "./wingman-line";
 
 export function MatchDetailView({ id }: { id: string }) {
   const m = useMatch(id);
@@ -114,6 +115,8 @@ function Detail({
           {name} hasn&apos;t shared {joinList(missing)}.
         </p>
       ) : null}
+
+      <WingmanTip matchId={match.id} />
 
       <CommonGround
         matchId={match.id}

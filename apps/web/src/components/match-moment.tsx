@@ -8,6 +8,7 @@ import { api, describeError, isApiError } from "@/lib/api";
 import { formatEncounterTime, matchPlace } from "@/lib/format";
 import { speak } from "@/lib/speech";
 import { markAnnounced, readVoicePref, shouldSpeakHype, wasAnnounced } from "@/lib/wingman-voice";
+import { WingmanLine } from "@/components/matches/wingman-line";
 import { Avatar, ConfirmDialog } from "@/components/ui";
 
 /**
@@ -152,17 +153,9 @@ export function MatchMoment({ match, onDismiss }: { match: MatchCard; onDismiss:
 
           <div aria-live="polite" className="w-full">
             {hype ? (
-              <figure
-                data-testid="wingman-line"
-                className="mx-auto mt-6 max-w-sm animate-rise rounded-2xl bg-dusk-soft px-5 py-4 text-left"
-              >
-                <figcaption className="text-xs font-medium uppercase tracking-[0.2em] text-cream/70">
-                  Your wingman
-                </figcaption>
-                <blockquote className="mt-1 font-display text-lg italic leading-snug text-cream">
-                  &ldquo;{hype}&rdquo;
-                </blockquote>
-              </figure>
+              <div className="mx-auto mt-6 max-w-sm animate-rise">
+                <WingmanLine text={hype} tone="dusk" />
+              </div>
             ) : null}
           </div>
 

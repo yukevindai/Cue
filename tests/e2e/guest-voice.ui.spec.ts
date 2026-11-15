@@ -398,6 +398,82 @@ test.describe("UI: the wingman's spoken line on a match", () => {
     await expect.poll(() => spokenAloud(b.page)).toEqual([{ text: WINGMAN_LINE, volume: 1 }]);
     expect(await spokenAloud(a.page), "the glasses' own app speaks it, not this page").toEqual([]);
   });
+
+  test("'Hear it again' on the match screen says the shown line on each tap, also with Wingman voice off", async ({ world, browser, fake }) => {
+    await fake.respondWith(GOOD_WINGMAN);
+    await fake.hypeSays(WINGMAN_LINE);
+    const { a, b } = await readyGuests(world, browser);
+    await voiceSwitch(b.page).click(); // B: unprompted speech off
+    await expect(voiceSwitch(b.page)).toHaveAttribute("aria-checked", "false");
+    await matchThem(a, b);
+    const line = { text: WINGMAN_LINE, volume: 1 };
+
+    // A heard it once automatically; each tap says it again.
+    await expect.poll(() => spokenAloud(a.page)).toEqual([line]);
+    const again = wingmanLine(a.page).getByRole("button", { name: "Hear it again" });
+    await again.click();
+    await expect.poll(() => spokenAloud(a.page)).toEqual([line, line]);
+    await again.click();
+    await expect.poll(() => spokenAloud(a.page)).toEqual([line, line, line]);
+
+    // B was silent, but a tap is a request and is spoken.
+    await expect(wingmanLine(b.page)).toBeVisible();
+    expect(await spokenAloud(b.page)).toEqual([]);
+    await wingmanLine(b.page).getByRole("button", { name: "Hear it again" }).click();
+    await expect.poll(() => spokenAloud(b.page)).toEqual([line]);
+
+    // Tapping does not ask the server or the model for anything new.
+    expect((await fake.requests("hype")).length).toBe(2);
+    await expectNoHorizontalScroll(a.page);
+  });
+
+  test("the match page asks for the tip only on a tap, then shows and says it; a failure says so", async ({ world, browser, fake }) => {
+    await fake.respondWith(GOOD_WINGMAN);
+    await fake.hypeSays(WINGMAN_LINE);
+    const { a, b } = await readyGuests(world, browser);
+    await matchThem(a, b);
+    const line = { text: WINGMAN_LINE, volume: 1 };
+    await expect.poll(() => spokenAloud(a.page)).toEqual([line]);
+    await expect(wingmanLine(b.page)).toBeVisible();
+    const modelCalls = (await fake.requests("hype")).length;
+
+    let asked = 0;
+    a.page.on("request", (req) => {
+      if (/\/api\/matches\/[^/]+\/hype$/.test(req.url())) asked += 1;
+    });
+    await a.page.getByRole("button", { name: /See Remy/ }).click();
+    await expect(a.page.getByRole("heading", { level: 1, name: "Remy" })).toBeVisible();
+    const tip = a.page.getByTestId("wingman-tip");
+    await expect(tip).toContainText("Your wingman");
+    await a.page.waitForLoadState("networkidle");
+    expect(asked, "nothing is fetched until the person asks").toBe(0);
+    await expect(wingmanLine(a.page)).toHaveCount(0);
+
+    await tip.getByRole("button", { name: "Hear your wingman" }).click();
+    await expect(wingmanLine(a.page).locator("blockquote")).toHaveText(`“${WINGMAN_LINE}”`);
+    await expect.poll(() => spokenAloud(a.page)).toEqual([line, line]);
+    expect(asked).toBe(1);
+    await wingmanLine(a.page).getByRole("button", { name: "Hear it again" }).click();
+    await expect.poll(() => spokenAloud(a.page)).toEqual([line, line, line]);
+    expect(asked, "replaying does not ask again").toBe(1);
+    expect((await fake.requests("hype")).length, "served from the cache, no new model call").toBe(modelCalls);
+    await expectNoHorizontalScroll(a.page);
+
+    // A reload goes back to asking only on a tap; a failing request is explained and says nothing.
+    await a.page.route("**/api/matches/*/hype", (route) =>
+      route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: { code: "internal", message: "boom" } }) }),
+    );
+    await a.page.reload();
+    await expect(a.page.getByTestId("wingman-tip")).toBeVisible();
+    await expect(wingmanLine(a.page)).toHaveCount(0);
+    const before = (await spokenAloud(a.page)).length;
+    await a.page.getByTestId("wingman-tip").getByRole("button", { name: "Hear your wingman" }).click();
+    await expect(a.page.getByText("Couldn't get a tip right now. Try again in a moment.")).toBeVisible();
+    expect((await spokenAloud(a.page)).length).toBe(before);
+    await a.page.unroute("**/api/matches/*/hype");
+    await a.page.getByTestId("wingman-tip").getByRole("button", { name: "Hear your wingman" }).click();
+    await expect(wingmanLine(a.page).locator("blockquote")).toHaveText(`“${WINGMAN_LINE}”`);
+  });
 });
 
 test.describe("UI: signing out", () => {
