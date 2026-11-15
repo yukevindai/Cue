@@ -168,6 +168,7 @@ export class CueLens extends BaseScriptComponent {
       mat.mainPass.depthWrite = true;
       mat.mainPass.twoSided = true;
       mat.mainPass.baseColor = new vec4(0.55, 0.85, 1, 1);
+      mat.mainPass.baseTex = whiteTexture(); // the base material may carry a picture; the gem is plain colour
       visual.mainMaterial = mat;
       this.diamond = obj;
     }
@@ -198,9 +199,9 @@ export class CueLens extends BaseScriptComponent {
   private ensureAudioListener(): void {
     if (!this.cameraObject) return;
     try {
-      if (this.cameraObject.getComponent("Component.AudioListenerComponent") === null) {
-        this.cameraObject.createComponent("Component.AudioListenerComponent");
-      }
+      // Typed loosely: older Lens Studio typings may not list this component.
+      const name = "Component.AudioListenerComponent" as unknown as keyof ComponentNameMap;
+      if (this.cameraObject.getComponent(name) === null) this.cameraObject.createComponent(name);
     } catch (e) {
       print(`Cue: could not add an audio listener: ${e}`);
     }
@@ -378,6 +379,13 @@ function findWorldCamera(): SceneObject | null {
     for (let i = 0; i < obj.getChildrenCount(); i++) queue.push(obj.getChild(i));
   }
   return fallback;
+}
+
+/** A 1 x 1 white texture, so a cloned material shows only its baseColor. */
+function whiteTexture(): Texture {
+  const texture = ProceduralTextureProvider.create(1, 1, Colorspace.RGBA);
+  (texture.control as ProceduralTextureProvider).setPixels(0, 0, 1, 1, new Uint8Array([255, 255, 255, 255]));
+  return texture;
 }
 
 /** requireAsset that returns null instead of throwing when the file is missing. */
