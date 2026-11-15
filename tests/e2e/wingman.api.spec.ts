@@ -170,7 +170,7 @@ test.describe("wingman (Claude) suggestions", () => {
   test("fields the owner did not share are never sent to the model", async ({ world, fake }) => {
     const { pair, matchId } = await matched(world, {
       interests: ["SECRET-INTEREST-A", "Hiking"],
-      sharing: { photo: true, bio: true, interests: false, socialLinks: false, aiAssist: true },
+      sharing: { photo: true, bio: true, interests: false, aiAssist: true },
     });
     await fake.respondWith({ shared_interests: [], suggested_question: null, opener_basis: "encounter_context" });
 
@@ -184,19 +184,19 @@ test.describe("wingman (Claude) suggestions", () => {
   const noModelCases: Array<{ name: string; a?: ProfileOverrides; b?: ProfileOverrides }> = [
     {
       name: "the other person shares no bio or interests",
-      b: { sharing: { photo: true, bio: false, interests: false, socialLinks: false, aiAssist: true } },
+      b: { sharing: { photo: true, bio: false, interests: false, aiAssist: true } },
     },
     {
       name: "the requester shares no bio or interests",
-      a: { sharing: { photo: true, bio: false, interests: false, socialLinks: false, aiAssist: true } },
+      a: { sharing: { photo: true, bio: false, interests: false, aiAssist: true } },
     },
     {
       name: "the other person turned AI assist off",
-      b: { sharing: { photo: true, bio: true, interests: true, socialLinks: false, aiAssist: false } },
+      b: { sharing: { photo: true, bio: true, interests: true, aiAssist: false } },
     },
     {
       name: "the requester turned AI assist off",
-      a: { sharing: { photo: true, bio: true, interests: true, socialLinks: false, aiAssist: false } },
+      a: { sharing: { photo: true, bio: true, interests: true, aiAssist: false } },
     },
     { name: "the other person wrote no bio or interests", b: { bio: "", interests: [] } },
   ];

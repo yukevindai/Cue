@@ -2,13 +2,27 @@ import { z } from "zod";
 import { IsoDateTime, Uuid } from "./common";
 
 /** Profile fields the wingman may cite as evidence. */
-export const WingmanProfileField = z.enum(["interests", "bio"]);
+export const WingmanProfileField = z.enum([
+  "interests",
+  "bio",
+  /** A personality card label, e.g. "On a trail". */
+  "cards",
+  /** The character name, e.g. "The Night Owl". */
+  "archetype",
+  "mbti",
+  /** The label of what they are looking for, e.g. "Open to exploring". */
+  "lookingFor",
+  "location",
+  "workOrSchool",
+  /** The education label, e.g. "Bachelor's degree". */
+  "education",
+]);
 export type WingmanProfileField = z.infer<typeof WingmanProfileField>;
 
 /** A verbatim snippet from one profile that supports a claim. */
 export const WingmanEvidence = z.object({
   field: WingmanProfileField,
-  /** Exact text copied from the profile field (an interest entry or a bio excerpt). */
+  /** Exact text copied from the profile field (an interest entry, a bio excerpt, a card label, and so on). */
   quote: z.string().min(1).max(200),
 });
 export type WingmanEvidence = z.infer<typeof WingmanEvidence>;

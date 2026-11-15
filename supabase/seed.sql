@@ -72,9 +72,19 @@ select
 from auth.users u
 where u.email in ('alex@cue.demo', 'sam@cue.demo', 'riley@cue.demo');
 
--- 4. Profiles.
+-- 4. Profiles. Every value is synthetic. Alex and Sam overlap for real (both
+--    in San Francisco, both on trails and in cafés, both into indie, both open
+--    to something lasting) and differ elsewhere; Riley overlaps little with
+--    either. Alex alone fills the sensitive fields (ethnicity, drinking,
+--    smoking, drugs) and shares none of them, to show that hidden means hidden.
+--    `archetype` equals computeArchetype(cards, mbti) from
+--    packages/contracts/src/archetype.ts (asserted by a stack test).
+--    `sharing` lists every key explicitly. `social_links` stays empty: external
+--    links are no longer collected or shown.
 insert into public.profiles (
-  user_id, display_name, photo_url, bio, interests, social_links, sharing
+  user_id, display_name, photo_url, bio, interests, social_links,
+  age, gender, gender_self_described, location, looking_for, work_or_school,
+  education, mbti, ethnicity, drinking, smoking, drugs, cards, archetype, sharing
 )
 values
   (
@@ -83,8 +93,16 @@ values
     null,
     'Weekend trail hikes and a long-running hunt for the best pour-over coffee in town. Always up for a roll of film.',
     array['hiking', 'coffee', 'film photography', 'board games'],
-    '[{"label":"Instagram","url":"https://example.com/alex"}]'::jsonb,
-    '{"photo": true, "bio": true, "interests": true, "socialLinks": true, "aiAssist": true}'::jsonb
+    '[]'::jsonb,
+    29, 'man', null, 'San Francisco', 'long_term', 'Designer at Example Studio (demo)',
+    'bachelors', 'INFP', 'Synthetic demo value', 'sometimes', 'never', 'never',
+    array['music.indie', 'music.jazz', 'weekend.trails', 'weekend.cafes',
+          'energy.early-bird', 'energy.deep-talks', 'loves.outdoors', 'loves.film'],
+    'explorer',
+    '{"photo": true, "bio": true, "interests": true, "age": true, "gender": true,
+      "location": true, "lookingFor": true, "mbti": true, "cards": true,
+      "workOrSchool": true, "education": true, "ethnicity": false,
+      "drinking": false, "smoking": false, "drugs": false, "aiAssist": true}'::jsonb
   ),
   (
     '00000000-0000-4000-8000-0000000005a0',
@@ -93,7 +111,15 @@ values
     'Exploring cafés one latte at a time, practicing latte art with mixed results. Day hikes on the weekend and live music when possible.',
     array['day hikes', 'latte art', 'live music', 'climbing'],
     '[]'::jsonb,
-    '{"photo": true, "bio": true, "interests": true, "socialLinks": false, "aiAssist": true}'::jsonb
+    27, 'woman', null, 'San Francisco', 'open', 'Barista trainer at Example Coffee Co. (demo)',
+    'some_college', 'ENFJ', null, null, null, null,
+    array['music.indie', 'music.rnb', 'weekend.trails', 'weekend.cafes', 'weekend.live-shows',
+          'energy.big-groups', 'energy.talker', 'loves.food', 'loves.outdoors'],
+    'spark',
+    '{"photo": true, "bio": true, "interests": true, "age": true, "gender": true,
+      "location": true, "lookingFor": true, "mbti": true, "cards": true,
+      "workOrSchool": true, "education": false, "ethnicity": false,
+      "drinking": false, "smoking": false, "drugs": false, "aiAssist": true}'::jsonb
   ),
   (
     '00000000-0000-4000-8000-000000000b1e',
@@ -102,7 +128,15 @@ values
     'Throwing pots on weeknights and riding bikes on weekends. Currently working through a backlog of sci-fi novels.',
     array['pottery', 'cycling', 'sci-fi novels'],
     '[]'::jsonb,
-    '{"photo": true, "bio": false, "interests": true, "socialLinks": false, "aiAssist": false}'::jsonb
+    34, 'non_binary', null, 'Oakland', 'friendship', 'Ceramics teacher at Example Arts Center (demo)',
+    'masters', 'ISTJ', null, null, null, null,
+    array['music.lo-fi', 'music.classical', 'weekend.reading', 'weekend.staying-in',
+          'energy.planner', 'energy.one-on-one', 'loves.cats', 'loves.books'],
+    'homebody',
+    '{"photo": true, "bio": false, "interests": true, "age": true, "gender": true,
+      "location": true, "lookingFor": true, "mbti": true, "cards": true,
+      "workOrSchool": false, "education": false, "ethnicity": false,
+      "drinking": false, "smoking": false, "drugs": false, "aiAssist": false}'::jsonb
   );
 
 commit;

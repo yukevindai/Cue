@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { SharedInterest, WingmanSuggestion } from "@cue/contracts";
+import type { SharedInterest, WingmanProfileField, WingmanSuggestion } from "@cue/contracts";
 import { api, describeError, isApiError } from "@/lib/api";
 import { Button, Card, Mark, SectionTitle, Spinner } from "@/components/ui";
 
@@ -40,10 +40,13 @@ export function CommonGround({
   matchId,
   name,
   onGone,
+  onUseOpener,
 }: {
   matchId: string;
   name: string;
   onGone: () => void;
+  /** Put the suggested question into the message box (never sends it). */
+  onUseOpener?: (text: string) => void;
 }) {
   const [state, setState] = useState<State>({ status: "idle" });
   const [slow, setSlow] = useState(false);
@@ -115,7 +118,7 @@ export function CommonGround({
         </div>
       ) : null}
 
-      {state.status === "done" ? <Result data={state.data} name={name} /> : null}
+      {state.status === "done" ? <Result data={state.data} name={name} onUseOpener={onUseOpener} /> : null}
 
       {state.status === "idle" ? (
         <Button variant="secondary" full className="sm:w-auto" onClick={() => void request()}>
@@ -150,7 +153,15 @@ export function CommonGround({
   );
 }
 
-function Result({ data, name }: { data: WingmanSuggestion; name: string }) {
+function Result({
+  data,
+  name,
+  onUseOpener,
+}: {
+  data: WingmanSuggestion;
+  name: string;
+  onUseOpener?: (text: string) => void;
+}) {
   const hasOverlap = !data.noOverlap && data.sharedInterests.length > 0;
   const basedOnEncounter = data.openerBasis === "encounter_context";
 
@@ -174,6 +185,7 @@ function Result({ data, name }: { data: WingmanSuggestion; name: string }) {
           question={data.suggestedQuestion}
           label={basedOnEncounter ? "A way to start, based on where you met" : "A way to start"}
           name={name}
+          onUse={onUseOpener}
         />
       ) : hasOverlap ? null : (
         <p className="text-ink-soft">No suggestion this time. Starting with hello works.</p>
@@ -182,9 +194,27 @@ function Result({ data, name }: { data: WingmanSuggestion; name: string }) {
   );
 }
 
-function fieldPhrase(field: "interests" | "bio", who: "your" | "their", name: string) {
-  const owner = who === "your" ? "your" : `${name}'s`;
-  return `in ${owner} ${field}`;
+/** Where a quote came from, in plain words: "in your cards", "Sam's character". */
+export function fieldPhrase(field: WingmanProfileField, who: "your" | "their", name: string): string {
+  const o = who === "your" ? "your" : `${name}'s`;
+  switch (field) {
+    case "interests":
+    case "bio":
+    case "cards":
+      return `in ${o} ${field}`;
+    case "archetype":
+      return `${o} character`;
+    case "mbti":
+      return `${o} MBTI`;
+    case "lookingFor":
+      return who === "your" ? "what you're looking for" : `what ${name} is looking for`;
+    case "location":
+      return `${o} city`;
+    case "workOrSchool":
+      return `${o} work or school`;
+    case "education":
+      return `${o} education`;
+  }
 }
 
 function SharedItem({ item, name }: { item: SharedInterest; name: string }) {
@@ -218,7 +248,17 @@ function Evidence({ heading, quote, where }: { heading: string; quote: string; w
   );
 }
 
-function Opener({ question, label, name }: { question: string; label: string; name: string }) {
+function Opener({
+  question,
+  label,
+  name,
+  onUse,
+}: {
+  question: string;
+  label: string;
+  name: string;
+  onUse?: (text: string) => void;
+}) {
   const [copied, setCopied] = useState(false);
   const timer = useRef<number | null>(null);
 
@@ -242,12 +282,19 @@ function Opener({ question, label, name }: { question: string; label: string; na
 
   return (
     <div className="rounded-card border border-ember/30 bg-ember-soft px-5 py-5">
-      <p className="text-sm font-medium uppercase tracking-[0.12em] text-ink-soft">{label}</p>
-      <p className="mt-2 font-display text-2xl italic leading-snug sm:text-3xl">{question}</p>
+      <p className="text-sm font-semibold text-ink-soft">{label}</p>
+      <p className="mt-2 whitespace-pre-line break-words font-display text-2xl italic leading-snug sm:text-3xl">
+        {question}
+      </p>
       <p className="mt-3 text-sm text-ink-soft">
         A suggestion for you only. Nothing is sent to {name}. Use it, change it, or ignore it.
       </p>
-      <div className="mt-2 flex items-center gap-3">
+      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+        {onUse ? (
+          <Button variant="secondary" onClick={() => onUse(question)}>
+            Use this opener
+          </Button>
+        ) : null}
         <Button variant="quiet" onClick={() => void copy()}>
           Copy
         </Button>

@@ -53,7 +53,7 @@ test.describe("two-account matching (spec section 3)", () => {
       b: {
         bio: "PRIVATE-BIO-MARKER",
         interests: ["PRIVATE-INTEREST-MARKER"],
-        sharing: { photo: false, bio: false, interests: false, socialLinks: false, aiAssist: true },
+        sharing: { photo: false, bio: false, interests: false, aiAssist: true },
       },
     });
     must(await signal(pair, pair.a));
@@ -62,7 +62,7 @@ test.describe("two-account matching (spec section 3)", () => {
     expect(forA.other.displayName).toBe(pair.b.displayName); // display name is always shared
     expect(forA.other.bio).toBeNull();
     expect(forA.other.interests).toEqual([]);
-    expect(forA.other.socialLinks).toEqual([]);
+    expect(forA.other).not.toHaveProperty("socialLinks");
     expect(forA.other.photoUrl).toBeNull();
     const raw = (await pair.a.api.listMatches()).text;
     expect(raw).not.toContain("PRIVATE-BIO-MARKER");

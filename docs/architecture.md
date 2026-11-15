@@ -55,7 +55,9 @@ Docker Hub (`SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io`). DB is at
 The full route list with auth and schemas is `packages/contracts/src/routes.ts`.
 Every request and response body is a zod schema in `packages/contracts`.
 Routes validate input with those schemas and must return bodies that parse
-with them.
+with them. Chat is `GET`/`POST /api/matches/[id]/messages` (schemas in
+`packages/contracts/src/chat.ts`); it takes a web session only, never a device
+token.
 
 ## Database (schema `public`)
 
@@ -64,7 +66,7 @@ can rely on them. Add columns freely; do not rename.
 
 | Table | Key columns |
 |---|---|
-| `profiles` | `user_id` pk → `auth.users`, `display_name`, `photo_url`, `bio`, `interests text[]`, `social_links jsonb`, `sharing jsonb` (`SharingSettings`), `version int`, `updated_at` |
+| `profiles` | `user_id` pk → `auth.users`, `display_name`, `photo_url`, `bio`, `interests text[]`, `social_links jsonb` (legacy, emptied, never returned), `sharing jsonb` (`SharingSettings`), `age`, `gender`, `gender_self_described`, `location`, `looking_for`, `work_or_school`, `education`, `mbti`, `ethnicity`, `drinking`, `smoking`, `drugs`, `cards text[]`, `archetype`, `version int`, `updated_at`. The new columns are nullable (`cards` defaults to empty) and the enumerated ones have CHECK constraints. |
 | `device_associations` | `id`, `user_id`, `device_label`, `mentra_user_id`, `token_hash`, `pairing_code_hash`, `pairing_expires_at`, `linked_at`, `last_seen_at`, `revoked_at`. One active device per user. Tokens and codes stored hashed (SHA-256). |
 | `demo_sessions` | `id`, `join_code` unique, `venue_label`, `venue_label_source` (`manual`), `status` (`active`/`ended`), `created_by`, `created_at` |
 | `demo_session_members` | `session_id`, `user_id`, `encounter_mode bool`, `joined_at`. At most 2 members per session and one active session per user, enforced in the database. |
@@ -72,6 +74,15 @@ can rely on them. Add columns freely; do not rename.
 | `matches` | `id`, `session_id`, `user_a`, `user_b` (`user_a < user_b`), `first_signal_at`, `venue_label`, `venue_label_source`, `status` (`active`/`ended`), `ended_by`, `ended_at`, `created_at`. One active match per pair. |
 | `blocks` | `blocker_id`, `blocked_id`, `created_at` |
 | `wingman_suggestions` | `match_id`, `requester_id`, `cache_key` (both profile versions + sharing), `payload jsonb`, `created_at`. Deleted when the match ends. |
+| `chat_messages` | `id`, `match_id`, `sender_id`, `client_id` (idempotency key, unique with `sender_id`), `body` (1 to 1000 chars), `created_at`. Insert only for a participant of an `active` match (trigger `chat_require_active_match`, SQLSTATE `CUE03`). Deleted when the match ends. |
+| `chat_reads` | `match_id`, `user_id`, `last_read_at`; primary key (`match_id`, `user_id`). Drives unread counts. Same active-match trigger. Deleted when the match ends. |
+
+The profile, character and chat columns and tables come from
+`supabase/migrations/20261115010000_rich_profiles_and_chat.sql`. It also widens
+the default `sharing` JSON (sensitive fields off), extends the `profiles` version
+trigger to the new columns, and replaces `matches_cleanup_on_end` so that ending
+a match (unmatch, block, demo reset) deletes its suggestions, messages and read
+markers. Behavior and field rules are in `docs/profiles-and-chat.md`.
 
 ### Matching
 
@@ -139,9 +150,11 @@ Clients subscribe to Postgres changes and then refetch through the API:
 - `matches`: RLS `select` for `auth.uid() in (user_a, user_b)`. Any event → refetch `GET /api/matches`.
 - `interest_events`: RLS `select` for `user_id = auth.uid()` only (own pending signal; never the other person's).
 - `demo_session_members`: RLS `select` for own row.
+- `chat_messages`: RLS `select` for participants of the **active** match only. Any event → refetch `GET /api/matches/[id]/messages` (and `GET /api/matches` for unread counts). Row contents from realtime are never rendered. Browsers cannot insert, update or delete; all writes go through the API.
 
-All three tables are in the `supabase_realtime` publication. No profile data
-travels over realtime.
+All four tables are in the `supabase_realtime` publication. No profile data
+travels over realtime. Chat message rows do, but only to the two participants,
+and the client ignores their contents.
 
 ## Privacy rules that are easy to break
 
@@ -155,6 +168,36 @@ travels over realtime.
 - Wingman input is limited to fields that are shared **and** `aiAssist` is on
   for that owner, plus the coarse venue label. Profile text is data, never
   instructions.
+- Sharing is per field. Work or school, education, ethnicity, drinking, smoking
+  and drugs default to off. A field the owner did not share is `null` or empty in
+  `SharedProfile`; it is dropped on the server (`toSharedProfile`), not hidden by
+  the client.
+- Never sent to Claude, whatever the sharing settings: age, gender (and its own
+  words), ethnicity, drinking, smoking, drugs (`NEVER_SENT_TO_AI` in
+  `packages/contracts/src/profile.ts`, plus age, which the input builder simply
+  never reads), display name, photo, ids. A test asserts none of them appears in
+  the request. The input builder reads an allow-list of properties by name.
+- Chat messages are never sent to Claude. Claude gives one opener and sends
+  nothing; "Use this opener" only fills the message box.
+- Chat is readable only by the two participants of an active match, is deleted
+  when the match ends, and is plain text on screen. The send rate limit
+  (20 per 10 s per sender) is in memory per server instance.
+- External social links are not collected, saved or returned. Chat cannot stop a
+  person typing their own contact details; this lowers exposure, it does not
+  enforce anything.
+
+## Departures from the spec
+
+Made on the owner's instruction on 2026-11-15; `docs/spec.md` is left as
+written:
+
+- The spec deferred chat. Cue now has in-app text chat for an active match.
+- The spec listed shared social links as a way to reconnect. They are removed.
+- The profile gained optional fields (age, gender, location, looking for, work or
+  school, education, MBTI, ethnicity, drinking, smoking, drugs), personality
+  cards and a derived character, each with its own share toggle.
+- The Claude input grew from interests and bio to the fields in the table in
+  `docs/profiles-and-chat.md`. The prompt version is `w3`.
 
 ## Ownership
 
@@ -163,7 +206,7 @@ travels over realtime.
 | Hardware | `apps/mentra/**`, `docs/hardware-check.md`, `docs/meta-glasses-check.md` |
 | Backend | `supabase/**`, `packages/matching/**`, `apps/web/src/server/**` except `server/ai/**`, `apps/web/src/app/api/**` except `api/matches/[id]/suggestions/**` |
 | Frontend | `apps/web/src/app/**` except `api/**`, `apps/web/src/components/**`, `apps/web/src/lib/**` except `lib/supabase/**` and `lib/env.ts`, `apps/web/public/**` |
-| AI / integration | `apps/web/src/server/ai/**`, `apps/web/src/app/api/matches/[id]/suggestions/**`, `tests/e2e/**`, `playwright.config.ts`, `docs/demo.md`, `README.md` |
+| AI / integration | `apps/web/src/server/ai/**`, `apps/web/src/app/api/matches/[id]/suggestions/**`, `tests/e2e/**`, `playwright.config.ts`, `docs/demo.md`, `docs/profiles-and-chat.md`, `README.md` |
 | Lead (orchestrator) | root config, `packages/contracts/**`, `docs/architecture.md`, `AGENTS.md`, CI, `apps/web` config files and `package.json` |
 
 Need a change outside your area (a new dependency in `apps/web/package.json`, a

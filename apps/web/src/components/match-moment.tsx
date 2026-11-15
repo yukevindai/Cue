@@ -1,6 +1,6 @@
 "use client";
 
-import type { MatchCard } from "@cue/contracts";
+import { ARCHETYPES, type MatchCard } from "@cue/contracts";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { formatEncounterTime } from "@/lib/format";
@@ -26,6 +26,7 @@ export function MatchMoment({ match, onDismiss }: { match: MatchCard; onDismiss:
   };
 
   const name = match.other.displayName;
+  const character = match.other.archetype ? ARCHETYPES[match.other.archetype] : null;
 
   return (
     <dialog
@@ -51,11 +52,22 @@ export function MatchMoment({ match, onDismiss }: { match: MatchCard; onDismiss:
         >
           It&rsquo;s mutual.
         </h2>
+        <p
+          lang="zh-Hans"
+          className="mt-5 animate-rise text-xl leading-relaxed tracking-[0.08em] text-cream [animation-delay:200ms] sm:text-2xl"
+          style={{ fontFamily: '"Songti SC", STSong, "Noto Serif SC", "Source Han Serif SC", "Noto Serif CJK SC", serif' }}
+        >
+          在茫茫人海中，你我一见钟情
+        </p>
+        <p className="mt-1 animate-rise font-display text-lg italic text-cream/80 [animation-delay:200ms]">
+          In a sea of people, you noticed each other.
+        </p>
 
         <div className="mt-8 flex animate-rise items-center gap-4 rounded-full bg-dusk-soft py-2 pl-2 pr-6 [animation-delay:350ms]">
           <Avatar name={name} src={match.other.photoUrl} size={56} />
           <div className="text-left">
             <p className="text-xl font-semibold leading-tight">{name}</p>
+            {character ? <p className="font-display italic leading-tight text-cream/90">{character.name}</p> : null}
             <p id="match-moment-detail" className="text-sm text-cream/75">
               {match.venueLabel} · {formatEncounterTime(match.encounterAt)}
             </p>

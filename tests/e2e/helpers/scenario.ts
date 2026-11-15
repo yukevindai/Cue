@@ -27,8 +27,7 @@ export function syntheticProfile(marker: string, overrides: ProfileOverrides = {
     photoUrl: null,
     bio: "Weekend hiker who likes pour-over coffee and board games.",
     interests: ["Hiking", "Coffee", "Board games"],
-    socialLinks: [{ label: "Site", url: `https://example.com/${marker}` }],
-    sharing: { photo: true, bio: true, interests: true, socialLinks: true, aiAssist: true },
+    sharing: { photo: true, bio: true, interests: true, aiAssist: true },
     ...overrides,
   };
 }
@@ -103,4 +102,17 @@ export async function matchPair(pair: Pair) {
   const first = must(await signal(pair, pair.a), "A signal");
   const second = must(await signal(pair, pair.b), "B signal");
   return { first, second };
+}
+
+/** A -> B -> match in the common order; returns the match id (as A sees it). */
+export async function matchedPair(
+  world: World,
+  opts: Parameters<World["pair"]>[0] = {},
+): Promise<{ pair: Pair; matchId: string }> {
+  const pair = await world.pair(opts);
+  must(await signal(pair, pair.a), "A signal");
+  must(await signal(pair, pair.b), "B signal");
+  const list = must(await pair.a.api.listMatches(), "A listMatches").matches;
+  if (list.length !== 1) throw new Error(`expected exactly one match, got ${list.length}`);
+  return { pair, matchId: list[0].id };
 }

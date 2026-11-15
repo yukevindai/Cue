@@ -142,7 +142,7 @@ async function expectMatchDetailShowsOther(me: Browsing, other: Person): Promise
     await expect(page.getByRole("listitem").filter({ hasText: interest }).first()).toBeVisible();
   }
   await expect(page.getByText(`at ${VENUE}`)).toBeVisible();
-  await expect(page.getByRole("link", { name: /Site/ })).toHaveAttribute("href", `https://example.com/${other.user.marker}`);
+  await expect(page.getByRole("link", { name: /Site/ })).toHaveCount(0); // social links no longer exist
 }
 
 test.describe("UI: two browsers, two signed-in people", () => {

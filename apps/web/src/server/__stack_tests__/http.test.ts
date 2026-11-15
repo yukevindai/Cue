@@ -18,6 +18,7 @@ import {
   routes,
   type ProfileInput,
 } from "@cue/contracts";
+import type { z } from "zod";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   admin,
@@ -55,15 +56,35 @@ function err(res: Reply, status: number, code?: string) {
   return parsed;
 }
 
-const profileInput = (over: Partial<ProfileInput> = {}): ProfileInput => ({
+/** A PUT /api/profile body (input shape: omitted optional fields take their defaults). */
+type ProfileBody = z.input<typeof ProfileInput>;
+
+const profileInput = (over: Partial<ProfileBody> = {}): ProfileBody => ({
   displayName: "Tester",
   photoUrl: "https://example.com/p.png",
   bio: "I like coffee",
   interests: ["coffee", "hiking"],
-  socialLinks: [{ label: "site", url: "https://example.com/me" }],
-  sharing: { photo: true, bio: true, interests: true, socialLinks: true, aiAssist: true },
+  sharing: { photo: true, bio: true, interests: true, aiAssist: true },
   ...over,
 });
+
+/** The new optional SharedProfile fields of a profile that filled none of them. */
+const EMPTY_EXTRAS = {
+  age: null,
+  gender: null,
+  genderSelfDescribed: null,
+  location: null,
+  lookingFor: null,
+  workOrSchool: null,
+  education: null,
+  mbti: null,
+  ethnicity: null,
+  drinking: null,
+  smoking: null,
+  drugs: null,
+  cards: [],
+  archetype: null,
+};
 
 describe.skipIf(!stackUp || !webUp)("HTTP API (real web server + real stack)", () => {
   afterAll(cleanupUsers);
@@ -145,18 +166,17 @@ describe.skipIf(!stackUp || !webUp)("HTTP API (real web server + real stack)", (
       const [a, b, c] = await Promise.all([createUser({ profile: false }), createUser({ profile: false }), createUser({ profile: false })]);
       const [ca, cb, cc] = await Promise.all([cookieFor(a), cookieFor(b), cookieFor(c)]);
 
-      // Profiles: A shares everything but social links; B hides bio and photo but shares interests + links.
+      // Profiles: A shares photo, bio and interests; B hides bio and photo but shares interests.
       const pa = profileInput({
         displayName: "Alice Test",
         bio: "Alice bio",
-        sharing: { photo: true, bio: true, interests: true, socialLinks: false, aiAssist: true },
+        sharing: { photo: true, bio: true, interests: true, aiAssist: true },
       });
       const pb = profileInput({
         displayName: "Bob Test",
         bio: "Bob secret bio",
         interests: ["chess"],
-        socialLinks: [{ label: "bob", url: "https://example.com/bob" }],
-        sharing: { photo: false, bio: false, interests: true, socialLinks: true, aiAssist: false },
+        sharing: { photo: false, bio: false, interests: true, aiAssist: false },
       });
       ok(await api("PUT", routes.profile, { cookie: ca }, pa), OwnProfile);
       ok(await api("PUT", routes.profile, { cookie: cb }, pb), OwnProfile);
@@ -218,7 +238,7 @@ describe.skipIf(!stackUp || !webUp)("HTTP API (real web server + real stack)", (
         photoUrl: null, // B: photo sharing off
         bio: null, // B: bio sharing off
         interests: ["chess"],
-        socialLinks: [{ label: "bob", url: "https://example.com/bob" }],
+        ...EMPTY_EXTRAS,
       });
       expect(JSON.stringify(listA)).not.toContain("Bob secret bio");
       expect(listB[0].other).toEqual({
@@ -227,7 +247,7 @@ describe.skipIf(!stackUp || !webUp)("HTTP API (real web server + real stack)", (
         photoUrl: "https://example.com/p.png",
         bio: "Alice bio",
         interests: ["coffee", "hiking"],
-        socialLinks: [], // A: social link sharing off
+        ...EMPTY_EXTRAS,
       });
       const card = ok(await api("GET", routes.match(dbMatches[0].id), { cookie: ca }), MatchCard);
       expect(card).toEqual(listA[0]);

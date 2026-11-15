@@ -24,10 +24,27 @@ export interface WingmanMatchContext {
   cacheKey: string;
 }
 
-/** The only profile text that may reach the model for one party. */
+/**
+ * The only profile text that may reach the model for one party. Human-readable
+ * text only (card labels, the character name, option labels), never ids or
+ * enum codes. Empty / null means "not shared" or "not filled in"; the model
+ * cannot tell which. Age, ethnicity, drinking, smoking, drugs and gender have
+ * no place here by design.
+ */
 export interface PartyText {
   interests: string[];
   bio: string | null;
+  /** Personality card labels, e.g. "On a trail". */
+  cards: string[];
+  /** Character name, e.g. "The Night Owl". */
+  archetype: string | null;
+  mbti: string | null;
+  /** Option label, e.g. "Friendship first". */
+  lookingFor: string | null;
+  location: string | null;
+  workOrSchool: string | null;
+  /** Option label, e.g. "Bachelor's degree". */
+  education: string | null;
 }
 
 /** Everything the model is allowed to see. */

@@ -13,6 +13,10 @@ export const MatchCard = z.object({
   venueLabel: z.string(),
   venueLabelSource: VenueLabelSource,
   createdAt: IsoDateTime,
+  /** Messages from the other person that arrived after the viewer last opened the chat. */
+  unreadCount: z.number().int().nonnegative().default(0),
+  /** When the newest chat message was sent, by either person; null when there are none. */
+  lastMessageAt: IsoDateTime.nullable().default(null),
 });
 export type MatchCard = z.infer<typeof MatchCard>;
 

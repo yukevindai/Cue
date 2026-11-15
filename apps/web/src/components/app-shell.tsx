@@ -15,12 +15,19 @@ const NAV = [
 
 /**
  * Signed-in frame: wordmark, three destinations (top bar on wide screens, a
- * thumb-reach tab bar on phones), and the main column. No counts or badges.
+ * thumb-reach tab bar on phones), and the main column. The only badge is
+ * unread messages on Matches. In a conversation the phone tab bar steps aside
+ * so the message box sits at the bottom of the screen.
  */
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { profile, realtime } = useLive();
+  const { profile, realtime, matches } = useLive();
+
+  // A conversation that is open right now counts as read.
+  const openChat = /^\/matches\/([^/]+)\/chat/.exec(pathname)?.[1] ?? null;
+  const unread = (matches ?? []).reduce((n, m) => (m.id === openChat ? n : n + m.unreadCount), 0);
+  const inChat = openChat !== null;
 
   // New accounts land on profile setup before anything else.
   const needsSetup = profile === null;
@@ -30,6 +37,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-dvh flex-col">
+      <span id="unread-summary" hidden>
+        {unread === 1 ? "1 unread message" : `${unread} unread messages`}
+      </span>
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-50 focus:rounded-full focus:bg-ink focus:px-4 focus:py-2 focus:text-paper"
@@ -51,12 +61,14 @@ export function AppShell({ children }: { children: ReactNode }) {
                     <Link
                       href={item.href}
                       aria-current={active ? "page" : undefined}
+                      aria-describedby={item.href === "/matches" && unread > 0 ? "unread-summary" : undefined}
                       className={cx(
-                        "rounded-full px-4 py-2 font-medium transition-colors",
+                        "inline-flex items-center gap-1.5 rounded-full px-4 py-2 font-medium transition-colors",
                         active ? "bg-ink text-paper" : "text-ink-soft hover:bg-sunk hover:text-ink",
                       )}
                     >
                       {item.label}
+                      {item.href === "/matches" ? <UnreadBadge count={unread} /> : null}
                     </Link>
                   </li>
                 );
@@ -79,13 +91,22 @@ export function AppShell({ children }: { children: ReactNode }) {
         ) : null}
       </header>
 
-      <main id="main" className="mx-auto w-full max-w-3xl flex-1 px-5 pb-32 pt-8 sm:pb-16 sm:pt-10">
+      <main
+        id="main"
+        className={cx(
+          "mx-auto w-full max-w-3xl flex-1 px-5 pt-8 sm:pt-10",
+          inChat ? "pb-0 sm:pb-6" : "pb-32 sm:pb-16",
+        )}
+      >
         {children}
       </main>
 
       <nav
         aria-label="Main"
-        className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden"
+        className={cx(
+          "fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden",
+          inChat && "hidden",
+        )}
       >
         <ul className="mx-auto flex max-w-md">
           {NAV.map((item) => {
@@ -96,12 +117,16 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <Link
                   href={item.href}
                   aria-current={active ? "page" : undefined}
+                  aria-describedby={item.href === "/matches" && unread > 0 ? "unread-summary" : undefined}
                   className={cx(
                     "flex min-h-16 flex-col items-center justify-center gap-0.5 text-sm font-medium",
                     active ? "text-ember-deep" : "text-ink-soft",
                   )}
                 >
-                  <Icon active={active} />
+                  <span className="relative">
+                    <Icon active={active} />
+                    {item.href === "/matches" ? <UnreadBadge count={unread} floating /> : null}
+                  </span>
                   {item.label}
                 </Link>
               </li>
@@ -110,6 +135,27 @@ export function AppShell({ children }: { children: ReactNode }) {
         </ul>
       </nav>
     </div>
+  );
+}
+
+/**
+ * Unread messages across all matches. The count is announced as a description,
+ * so the link's name stays "Matches".
+ */
+function UnreadBadge({ count, floating = false }: { count: number; floating?: boolean }) {
+  if (count <= 0) return null;
+  return (
+    <>
+      <span
+        aria-hidden
+        className={cx(
+          "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-ember px-1.5 text-xs font-semibold tabular-nums leading-none text-white",
+          floating && "absolute -right-2.5 -top-1 ring-2 ring-surface",
+        )}
+      >
+        {count > 99 ? "99+" : count}
+      </span>
+    </>
   );
 }
 

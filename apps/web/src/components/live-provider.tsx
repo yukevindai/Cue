@@ -21,8 +21,9 @@ import { MatchMoment } from "@/components/match-moment";
  * the encounter status, the match list, and the realtime connection.
  *
  * Realtime (docs/architecture.md): we subscribe to Postgres changes on
- * `matches`, `interest_events` (own rows only) and `demo_session_members`
- * (own row only), and treat every event purely as "something changed, refetch
+ * `matches`, `interest_events` (own rows only), `demo_session_members`
+ * (own row only) and `chat_messages` (RLS: only active matches we are in, for
+ * unread counts), and treat every event purely as "something changed, refetch
  * through the API". No row data from realtime is ever rendered.
  *
  * A missed event must still show up, so the same refetch also runs when the
@@ -248,6 +249,10 @@ export function LiveProvider({
           // A match appearing or ending also changes the pending signal.
           refreshAll();
         })
+        .on("postgres_changes", { event: "*", schema: "public", table: "chat_messages" }, () => {
+          // A new message changes unread counts and ordering in the match list.
+          void refreshMatches();
+        })
         .on(
           "postgres_changes",
           { event: "*", schema: "public", table: "interest_events", filter: `user_id=eq.${userId}` },
@@ -285,7 +290,7 @@ export function LiveProvider({
       authSub.subscription.unsubscribe();
       if (channel) void supabase.removeChannel(channel);
     };
-  }, [userId, refreshAll, refreshEncounter, onUnauthenticated]);
+  }, [userId, refreshAll, refreshEncounter, refreshMatches, onUnauthenticated]);
 
   // A backgrounded tab or a phone waking up: catch up immediately.
   useEffect(() => {
