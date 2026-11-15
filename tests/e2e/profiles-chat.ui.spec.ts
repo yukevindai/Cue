@@ -12,11 +12,23 @@ const VENUE = "E2E Test Cafe";
 /** A message typed on one phone must show on the other within this long, with no reload. */
 const LIVE_BUDGET_MS = 3000;
 
-async function openAs(browser: Browser, person: Person, path: string): Promise<Page> {
+/**
+ * Opens `path` as `person`. A match made shortly before opening shows the
+ * full-screen match moment on whatever page loads; `matched` dismisses it
+ * ("Not now"), the way a person would, so the page underneath can be used.
+ */
+async function openAs(browser: Browser, person: Person, path: string, opts: { matched?: boolean } = {}): Promise<Page> {
   const context = await person.browserContext(browser, PHONE);
   const page = await context.newPage();
   await page.goto(path);
+  if (opts.matched) await dismissMoment(page);
   return page;
+}
+
+async function dismissMoment(page: Page): Promise<void> {
+  await page.getByRole("dialog", { name: /mutual/i }).waitFor({ state: "visible", timeout: 8000 });
+  await page.getByRole("button", { name: "Not now" }).click();
+  await expect(page.getByRole("dialog", { name: /mutual/i })).toHaveCount(0);
 }
 
 const chatPath = (matchId: string) => `/matches/${matchId}/chat`;
@@ -43,7 +55,7 @@ test.describe("UI: profile editor", () => {
     const page = await openAs(browser, p, "/profile");
     await expect(page.getByRole("heading", { name: "Basics" })).toBeVisible();
     for (const title of ["About you", "Personality cards", "Interests", "Private details", "What a match sees"]) {
-      await expect(page.getByRole("heading", { name: title })).toBeVisible();
+      await expect(page.getByRole("heading", { name: title, level: 2 })).toBeVisible();
     }
 
     await expect(page.getByText("Pick a few cards and your character appears.")).toBeVisible();
@@ -184,8 +196,9 @@ test.describe("UI: privacy through the UI", () => {
     must(await signal(pair, pair.a));
     expect(must(await signal(pair, pair.b)).matched).toBe(true);
     const id = must(await pair.b.api.listMatches()).matches[0].id;
+    await dismissMoment(aPage); // A's open profile page shows the match moment too
 
-    const bPage = await openAs(browser, pair.b, `/matches/${id}`);
+    const bPage = await openAs(browser, pair.b, `/matches/${id}`, { matched: true });
     await expect(bPage.getByRole("heading", { level: 1, name: pair.a.displayName })).toBeVisible();
     await expect(bPage.getByText("Sharedwork Inc")).toBeVisible();
     for (const hidden of ["Hiddenville", "ETHNICITY-HIDDEN", "Master's degree"]) {
@@ -238,14 +251,15 @@ test.describe("UI: chat", () => {
     const { pair, matchId } = await matchedPair(world, { venue: VENUE });
     const aName = pair.a.displayName;
     const bName = pair.b.displayName;
-    const a = await openAs(browser, pair.a, `/matches/${matchId}`);
-    const b = await openAs(browser, pair.b, chatPath(matchId));
+    const a = await openAs(browser, pair.a, `/matches/${matchId}`, { matched: true });
+    const b = await openAs(browser, pair.b, chatPath(matchId), { matched: true });
 
     // A: match page -> "Message {name}" -> chat.
     await a.getByRole("link", { name: new RegExp(`^Message ${bName}`) }).click();
     await expect(a).toHaveURL(new RegExp(`/matches/${matchId}/chat$`));
     await expect(
-      a.getByText("You're talking inside Cue. Your phone number and socials stay private unless you choose to share them."),
+      // The apostrophe in the product copy is typographic (U+2019).
+      a.getByText(/You.re talking inside Cue\. Your phone number and socials stay private unless you choose to share them\./),
     ).toBeVisible();
     await expect(composer(a, bName)).toHaveAttribute("placeholder", `Write to ${bName}`);
     await expect(composer(b, aName)).toBeVisible();
@@ -290,8 +304,8 @@ test.describe("UI: chat", () => {
     const { pair, matchId } = await matchedPair(world, { venue: VENUE });
     const aName = pair.a.displayName;
     const bName = pair.b.displayName;
-    const a = await openAs(browser, pair.a, chatPath(matchId));
-    const b = await openAs(browser, pair.b, "/matches");
+    const a = await openAs(browser, pair.a, chatPath(matchId), { matched: true });
+    const b = await openAs(browser, pair.b, "/matches", { matched: true });
     const card = b.getByRole("link", { name: new RegExp(aName) });
     await expect(card).toBeVisible();
     await expect(b.getByText(/\bnew message\b/)).toHaveCount(0);
@@ -320,8 +334,8 @@ test.describe("UI: chat", () => {
   test("unmatching while the other person has the chat open switches their page to 'no longer available'", async ({ world, browser }) => {
     const { pair, matchId } = await matchedPair(world, { venue: VENUE });
     const bName = pair.b.displayName;
-    const a = await openAs(browser, pair.a, chatPath(matchId));
-    const b = await openAs(browser, pair.b, chatPath(matchId));
+    const a = await openAs(browser, pair.a, chatPath(matchId), { matched: true });
+    const b = await openAs(browser, pair.b, chatPath(matchId), { matched: true });
     await typeAndSend(a, bName, "before unmatching");
     await expect(messageLog(b)).toContainText("before unmatching", { timeout: LIVE_BUDGET_MS });
 
@@ -337,7 +351,7 @@ test.describe("UI: chat", () => {
   test("a message that fails to send says so and can be retried", async ({ world, browser }) => {
     const { pair, matchId } = await matchedPair(world, { venue: VENUE });
     const bName = pair.b.displayName;
-    const a = await openAs(browser, pair.a, chatPath(matchId));
+    const a = await openAs(browser, pair.a, chatPath(matchId), { matched: true });
     await expect(composer(a, bName)).toBeEnabled();
 
     await a.route(`**/api/matches/${matchId}/messages`, (route) =>
@@ -367,7 +381,7 @@ test.describe("UI: chat", () => {
     const { error } = await adminClient().from("chat_messages").insert(rows);
     expect(error).toBeNull();
 
-    const page = await openAs(browser, pair.a, chatPath(matchId));
+    const page = await openAs(browser, pair.a, chatPath(matchId), { matched: true });
     await expect(messageLog(page)).toContainText("old-54");
     await expect(messageLog(page)).not.toContainText("old-00");
     await page.getByRole("button", { name: "Load earlier" }).click();
@@ -399,7 +413,7 @@ test.describe("UI: opener from common ground", () => {
     });
     await fake.respondWith(OUTPUT);
     const bName = pair.b.displayName;
-    const page = await openAs(browser, pair.a, `/matches/${matchId}`);
+    const page = await openAs(browser, pair.a, `/matches/${matchId}`, { matched: true });
 
     await page.getByRole("button", { name: "Find common ground" }).click();
     await expect(page.getByText(OPENER).first()).toBeVisible();
