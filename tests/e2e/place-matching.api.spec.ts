@@ -260,17 +260,12 @@ test.describe("matching by venue", () => {
     await expectNoMatches(a.api, b.api);
   });
 
-  test("a venue does not match someone who is merely nearby: a venue never matches a located person outside it", async ({ world }) => {
-    // B is in the venue; C has a location and no venue: they share nothing, whatever the distance.
-    const pair = await world.pair();
-    const spot = freshSpot();
-    await locate(pair.b, spot, 5);
-    const c = await located(world, spot, 3);
+  test("a venue and a phone location are different places: a checked-in person and a located one do not match", async ({ world }) => {
+    const pair = await world.pair(); // B is checked in, no location
+    const c = await located(world, freshSpot(), 0); // C has a location, no venue
     must(await signal(null, pair.b));
-    expect(must(await signal(null, c)).matched, "B's venue is not C's place, and B has a location only as a second signal source").toBe(true);
-    // ...which is the location path: both have fresh locations a few metres apart.
-    const { forA: cardForB } = await expectExactlyOneSharedMatch(pair.b.api, c.api);
-    expect(cardForB.venueLabelSource).toBe("phone_location");
+    expect(must(await signal(null, c)).matched).toBe(false);
+    await expectNoMatches(pair.b.api, c.api);
   });
 
   test("checking out cancels the pending signal and the person can no longer match", async ({ world }) => {
@@ -501,8 +496,7 @@ test.describe("coordinates never leave the server", () => {
 
     const ackA = keep(await signal(null, a));
     const ackB = keep(await signal(null, b));
-    expect(ackA.data?.matched).toBe(false); // a is a candidate for b only through the venue... and b signalled next:
-    // (they share the venue and are in range, so B's signal completes the match)
+    // They share the venue and are in range, so B's signal completes the match.
     expect([ackA.data?.matched, ackB.data?.matched]).toEqual([false, true]);
     const cardsA = keep(await a.api.listMatches());
     const cardsB = keep(await b.api.listMatches());
@@ -570,7 +564,7 @@ test.describe("rate limits", () => {
   test("check-in attempts are limited to 10 a minute per user", async ({ world }) => {
     const p = await world.person();
     const statuses: number[] = [];
-    for (let i = 0; i < 11; i++) statuses.push((await p.api.checkIn(`ZZZZ${"23456789AB"[i]}Z`)).status);
+    for (let i = 0; i < 11; i++) statuses.push((await p.api.checkIn(`ZZZZ${"23456789ABC"[i]}Z`)).status);
     expect(statuses.slice(0, 10).every((s) => s === 404)).toBe(true);
     expect(statuses[10]).toBe(429);
     expect(must(await p.api.getEncounter()).checkIn).toBeNull();

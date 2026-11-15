@@ -5,6 +5,7 @@ import { expectExactlyOneSharedMatch, expectNoLeak, expectNoMatches, sleep } fro
 import { watchTable } from "./helpers/realtime";
 import { expect, test } from "./helpers/fixtures";
 import { signal } from "./helpers/scenario";
+import { linkDevice } from "./helpers/device";
 
 test.describe("authentication", () => {
   test("an unauthenticated request gets 401 on every session route", async () => {
@@ -50,6 +51,30 @@ test.describe("authentication", () => {
       }
     } finally {
       await anon.dispose();
+    }
+  });
+});
+
+test.describe("device token", () => {
+  test("is not a web session: every session-only route, including the new place routes, is 401", async ({ world }) => {
+    const a = await world.person();
+    const device = await linkDevice(a);
+    try {
+      const calls: Array<[string, () => Promise<{ status: number }>]> = [
+        ["POST /api/encounter/mode", () => device.api.setMode(true)],
+        ["POST /api/encounter/location", () => device.api.setLocation({ lat: 0.001, lng: 0.001, accuracyM: 5 })],
+        ["DELETE /api/encounter/location", () => device.api.clearLocation()],
+        ["POST /api/venues", () => device.api.createVenue("Nope")],
+        ["POST /api/venues/check-in", () => device.api.checkIn("ABCDEF")],
+        ["POST /api/venues/check-out", () => device.api.checkOut()],
+        ["POST /api/demo/reset", () => device.api.reset(true)],
+        ["GET /api/encounter", () => device.api.getEncounter()],
+      ];
+      for (const [name, run] of calls) expect((await run()).status, name).toBe(401);
+      // Nothing changed: the wearer is still off with no place.
+      expect(must(await a.api.getEncounter())).toMatchObject({ encounterMode: false, checkIn: null, location: { status: "none" } });
+    } finally {
+      await device.ctx.dispose();
     }
   });
 });
