@@ -101,7 +101,25 @@ export class CueLens extends BaseScriptComponent {
     void this.client.run();
     this.listenForPinches();
     if (this.matchCard) this.matchCard.enabled = false;
+    this.ensureAudioListener();
     this.setUpDiamond();
+  }
+
+  /**
+   * Adds an AudioListenerComponent to the camera if it has none (the Specs
+   * Base Template camera has none). Lens docs say it is needed only for
+   * spatial audio, but Spectacles developers report cues playing into silence
+   * without one, so this is cheap insurance.
+   */
+  private ensureAudioListener(): void {
+    if (!this.cameraObject) return;
+    try {
+      if (this.cameraObject.getComponent("Component.AudioListenerComponent") === null) {
+        this.cameraObject.createComponent("Component.AudioListenerComponent");
+      }
+    } catch (e) {
+      print(`Cue: could not add an audio listener: ${e}`);
+    }
   }
 
   /** Builds the gem mesh, places it 3 ft ahead, spins it, and makes it tappable (SIK Interactable). */
