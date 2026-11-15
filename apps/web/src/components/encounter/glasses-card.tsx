@@ -1,6 +1,7 @@
 "use client";
 
 import type { DeviceStatus, PairingCode } from "@cue/contracts";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useLive } from "@/components/live-provider";
 import { Button, Card, ConfirmDialog, Notice, StatusPill } from "@/components/ui";
@@ -157,6 +158,13 @@ export function GlassesCard({ device }: { device: DeviceStatus }) {
           <Button variant="secondary" className="mt-4 max-sm:w-full" onClick={getCode} busy={pairBusy}>
             Link glasses
           </Button>
+          <p className="mt-4 text-sm text-ink-soft">
+            First time, or after an update?{" "}
+            <Link href="/mentra" className="font-semibold text-ink underline underline-offset-4">
+              Install the Cue mini app
+            </Link>{" "}
+            in the Mentra app. No laptop needed.
+          </p>
         </div>
       )}
 
