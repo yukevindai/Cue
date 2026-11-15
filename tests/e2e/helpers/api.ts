@@ -4,6 +4,7 @@ import { z } from "zod";
 import {
   ApiError,
   BlockInput,
+  ChatMessage,
   CreateSessionInput,
   DemoResetInput,
   DeviceClaimInput,
@@ -16,6 +17,7 @@ import {
   JoinSessionInput,
   MatchCard,
   MatchList,
+  MessageList,
   OwnProfile,
   PairingCode,
   ProfileInput,
@@ -129,6 +131,14 @@ export function apiFor(ctx: APIRequestContext) {
     unmatch: (id: string) => call<void>(ctx, "POST", routes.unmatch(id)),
     suggestions: (id: string) =>
       call(ctx, "POST", routes.suggestions(id), { body: {}, schema: WingmanSuggestion }),
+    /** Newest page, or the page before `before`. `before` is sent as given (tests tamper with it). */
+    listMessages: (id: string, before?: string) =>
+      call(ctx, "GET", `${routes.messages(id)}${before === undefined ? "" : `?before=${encodeURIComponent(before)}`}`, {
+        schema: MessageList,
+      }),
+    /** Body is sent as given, so tests can send invalid or extra keys. */
+    sendMessage: (id: string, body: Record<string, unknown>) =>
+      call(ctx, "POST", routes.messages(id), { body, schema: ChatMessage }),
     block: (userId: string) =>
       call<void>(ctx, "POST", routes.blocks, { body: { userId } satisfies Input<typeof BlockInput> }),
     devicePair: () => call(ctx, "POST", routes.devicePair, { body: {}, schema: PairingCode }),
