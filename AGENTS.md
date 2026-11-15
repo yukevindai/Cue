@@ -60,7 +60,7 @@ See "Status log" below. Update it when a milestone lands or a decision changes.
   explainer lines removed) merged to `main` by the owner; production
   deployment of the PR #5 merge was READY. Phones with the Mentra mini app
   installed before PR #5 must reinstall it (old builds send a session id and
-  are rejected). Website install for the Mentra mini app added (PR #7): every
+  are rejected). Website install for the Mentra mini app added (PR #8): every
   web build runs `apps/web/scripts/build-mentra-bundle.mjs`, which builds
   `apps/mentra` and writes `miniapp.json`, `icon.png`, `bundle.zip` to
   `apps/web/public/mentra/` (generated, git-ignored; zip written with
