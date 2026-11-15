@@ -5,7 +5,7 @@ import { STORAGE_KEYS } from "./config";
 import { recordingFeedback } from "./feedback";
 import { createLogger } from "./logger";
 import type { BridgeStatus } from "./status";
-import { DEVICE_ID, SESSION_ID, ack } from "./testing";
+import { DEVICE_ID, ack } from "./testing";
 
 const SERVER = "https://cue.example.test";
 const TOKEN = "T0kenSecretValue_".padEnd(48, "x");
@@ -21,7 +21,7 @@ interface Recorded {
 
 function setup(initial: Record<string, string> = {}) {
   const storage = new Map<string, string>(Object.entries(initial));
-  const world = { encounterMode: true, down: false, revoked: false, now: T0 };
+  const world = { encounterMode: true, hasPlace: true, down: false, revoked: false, now: T0 };
   const requests: Recorded[] = [];
   const logs: string[] = [];
   const statuses: BridgeStatus[] = [];
@@ -41,7 +41,7 @@ function setup(initial: Record<string, string> = {}) {
       return reply({
         deviceId: DEVICE_ID,
         encounterMode: world.encounterMode,
-        encounterSessionId: world.encounterMode ? SESSION_ID : null,
+        ready: world.encounterMode && world.hasPlace,
         serverTime: new Date(world.now).toISOString(),
       });
     }
@@ -116,7 +116,7 @@ describe("CueBridge", () => {
     expect(posts).toHaveLength(1);
     expect(posts[0]!.headers.Authorization).toBe(`Bearer ${TOKEN}`);
     const parsed = InterestEvent.parse(posts[0]!.body);
-    expect(parsed.encounterSessionId).toBe(SESSION_ID);
+    expect(Object.keys(posts[0]!.body as object).sort()).toEqual(["eventId", "gesture", "occurredAt", "source"]);
     expect(parsed).toMatchObject({ source: "mentra_touch", gesture: "backward_swipe" });
     expect(h.feedback.cues).toEqual(["signal_sent"]);
   });
@@ -200,6 +200,18 @@ describe("CueBridge", () => {
       const out = await h.bridge.handleTouch(touch("backward_swipe"));
       expect(out).toMatchObject({ kind: "ignored", reason: "encounter_mode_off" });
       expect(h.interestPosts()).toHaveLength(0);
+    });
+
+    it("mode on but no place: no POST, no_place cue", async () => {
+      const h = setup();
+      await ready(h);
+      h.world.hasPlace = false;
+      await h.bridge.refresh();
+      expect(h.bridge.status().context).toBe("no_place");
+      const out = await h.bridge.handleTouch(touch("backward_swipe"));
+      expect(out).toMatchObject({ kind: "ignored", reason: "no_place" });
+      expect(h.interestPosts()).toHaveLength(0);
+      expect(h.feedback.cues).toEqual(["no_place"]);
     });
 
     it("server unreachable: offline, swipe dropped, and never replayed after recovery", async () => {

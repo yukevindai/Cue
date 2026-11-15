@@ -2,9 +2,10 @@ import type { FeedbackCue } from "./feedback";
 
 /**
  * Short audio cues, synthesized as tiny WAV files so the miniapp needs no
- * network request or bundled asset to acknowledge a swipe. Three clearly
- * different shapes: one soft beep (sent), two rising beeps (match), one low
- * beep (not sent).
+ * network request or bundled asset to acknowledge a swipe. Five distinct
+ * shapes: one soft beep (sent), two rising beeps (match), one low beep (not
+ * sent), two equal low beeps (encounter mode off), three falling beeps (no
+ * place: open Cue on the phone).
  */
 interface Note {
   hz: number;
@@ -21,6 +22,15 @@ export const CUE_NOTES: Record<FeedbackCue, Note[]> = {
     { hz: 990, ms: 220 },
   ],
   not_sent: [{ hz: 220, ms: 260 }],
+  encounter_off: [
+    { hz: 330, ms: 110 },
+    { hz: 330, ms: 110 },
+  ],
+  no_place: [
+    { hz: 440, ms: 130 },
+    { hz: 330, ms: 130 },
+    { hz: 247, ms: 200 },
+  ],
 };
 
 export function synthesizeWav(notes: Note[]): Uint8Array {
@@ -81,4 +91,6 @@ export const CUE_SPEECH: Record<FeedbackCue, string> = {
   signal_sent: "Sent",
   match: "It's a match",
   not_sent: "Not sent",
+  encounter_off: "Encounter mode is off",
+  no_place: "Open Cue on your phone",
 };

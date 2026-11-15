@@ -8,7 +8,7 @@ import { createLogger } from "./logger";
 import { GesturePipeline } from "./pipeline";
 import { recordingFeedback } from "./feedback";
 import { fileTokenStore } from "./token-store-node";
-import { DEVICE_ID, SESSION_ID, ack, fakeFetch, json } from "./testing";
+import { DEVICE_ID, ack, fakeFetch, json } from "./testing";
 
 const NEW_TOKEN = "n".repeat(40);
 const OLD_TOKEN = "o".repeat(40);
@@ -127,7 +127,7 @@ describe("token and pairing code never reach logs", () => {
     // A server that fails in every interesting way, echoing nothing secret.
     const fetchSteps = [
       json({ deviceId: DEVICE_ID, deviceToken: TOKEN }), // claim ok
-      json({ deviceId: DEVICE_ID, encounterMode: true, encounterSessionId: SESSION_ID, serverTime: "2026-11-14T10:00:00.000Z" }),
+      json({ deviceId: DEVICE_ID, encounterMode: true, ready: true, serverTime: "2026-11-14T10:00:00.000Z" }),
       new TypeError(`connect failed Bearer ${TOKEN}`), // submit attempt 1 fails
       json({}, 503),
       json(ack({ matched: true, expiresAt: null })),
@@ -156,7 +156,7 @@ describe("token and pairing code never reach logs", () => {
     const pipeline = new GesturePipeline({
       mapping: { backwardSwipeGestureName: "swipe_backward" },
       calibration: false,
-      context: () => ({ state: "ready", encounterSessionId: SESSION_ID }),
+      context: () => ({ state: "ready" }),
       submit: (e) => client.submitInterest(e),
       feedback,
       now: () => now,

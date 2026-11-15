@@ -43,6 +43,8 @@ export function statusText(link: LinkState, context: ContextSnapshot): string {
   switch (context.state) {
     case "ready":
       return "Encounter on. Tap the diamond to signal";
+    case "no_place":
+      return "Encounter on. Open Cue on your phone or check in to a venue";
     case "encounter_mode_off":
       return "Linked. Turn on encounter mode in Cue";
     case "offline":

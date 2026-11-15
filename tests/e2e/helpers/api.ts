@@ -5,7 +5,8 @@ import {
   ApiError,
   BlockInput,
   ChatMessage,
-  CreateSessionInput,
+  CheckInInput,
+  CreateVenueInput,
   DemoResetInput,
   DeviceClaimInput,
   DeviceClaimResult,
@@ -14,7 +15,7 @@ import {
   EncounterStatus,
   InterestAck,
   InterestEvent,
-  JoinSessionInput,
+  LocationInput,
   MatchCard,
   MatchList,
   MessageList,
@@ -108,16 +109,22 @@ export function apiFor(ctx: APIRequestContext) {
         body: { enabled } satisfies Input<typeof EncounterModeInput>,
         schema: EncounterStatus,
       }),
-    createSession: (venueLabel: string) =>
-      call(ctx, "POST", routes.demoSession, {
-        body: { venueLabel } satisfies Input<typeof CreateSessionInput>,
+    /** Phone location report. Sent as given so tests can send invalid shapes. */
+    setLocation: (body: Input<typeof LocationInput> | Record<string, unknown>) =>
+      call(ctx, "POST", routes.encounterLocation, { body, schema: EncounterStatus }),
+    clearLocation: () => call(ctx, "DELETE", routes.encounterLocation, { schema: EncounterStatus }),
+    /** Creates a venue and checks the caller in. */
+    createVenue: (name: string) =>
+      call(ctx, "POST", routes.venues, {
+        body: { name } satisfies Input<typeof CreateVenueInput>,
         schema: EncounterStatus,
       }),
-    joinSession: (joinCode: string) =>
-      call(ctx, "POST", routes.demoSessionJoin, {
-        body: { joinCode } satisfies Input<typeof JoinSessionInput>,
+    checkIn: (code: string) =>
+      call(ctx, "POST", routes.venueCheckIn, {
+        body: { code } satisfies Input<typeof CheckInInput>,
         schema: EncounterStatus,
       }),
+    checkOut: () => call(ctx, "POST", routes.venueCheckOut, { body: {}, schema: EncounterStatus }),
     reset: (leave = false) =>
       call(ctx, "POST", routes.demoReset, {
         body: { leave } satisfies Input<typeof DemoResetInput>,
@@ -150,9 +157,8 @@ export function apiFor(ctx: APIRequestContext) {
 }
 export type Api = ReturnType<typeof apiFor>;
 
-/** Builds a valid InterestEvent. `source` defaults to the web confirm path. */
+/** Builds a valid InterestEvent. `source` defaults to the web confirm path. No place: the server reads the sender's presence. */
 export function interestEvent(
-  sessionId: string,
   opts: {
     source?: "web_demo" | "mentra_touch" | "headset_remote" | "spectacles_hand";
     /** Overrides the default gesture for the source (`media_next_track` for headset_remote). */
@@ -171,7 +177,6 @@ export function interestEvent(
           : "web_confirm";
   return {
     eventId: opts.eventId ?? randomUUID(),
-    encounterSessionId: sessionId,
     source,
     gesture: opts.gesture ?? defaultGesture,
     occurredAt: new Date().toISOString(),
@@ -182,10 +187,8 @@ type Ack = z.infer<typeof InterestAck>;
 
 /**
  * Interprets an interest response. The contract says every ack is HTTP 200
- * (`accepted | duplicate | rejected`), but ApiErrorCode also lists
- * not_in_session / encounter_mode_off / blocked, so the backend could answer a
- * rejection either way. Tests that only care about "this signal was refused"
- * use this to accept both encodings.
+ * (`accepted | duplicate | rejected`); a refusal could also arrive as an
+ * ApiError, so tests that only care about "refused" use this to see both.
  */
 export function interestOutcome(
   r: ApiResult<Ack>,
@@ -195,7 +198,7 @@ export function interestOutcome(
 }
 
 /** True if the signal was refused for `reason` (as an ack rejection or the matching ApiError code). */
-export function wasRejected(r: ApiResult<Ack>, reason: "not_in_session" | "encounter_mode_off" | "blocked" | "already_matched"): boolean {
+export function wasRejected(r: ApiResult<Ack>, reason: "no_place" | "encounter_mode_off" | "invalid_event"): boolean {
   const o = interestOutcome(r);
   if (o.kind === "ack") return o.ack.status === "rejected" && o.ack.reason === reason;
   return o.code === reason;

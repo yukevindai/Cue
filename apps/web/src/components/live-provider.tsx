@@ -15,20 +15,27 @@ import { api, ApiRequestError, isApiError } from "@/lib/api";
 import { armChime, playChime } from "@/lib/chime";
 import { getBrowserSupabase } from "@/lib/supabase/browser";
 import { MatchMoment } from "@/components/match-moment";
+import { useLocationReporter } from "@/components/use-location-reporter";
+import type { GeoState } from "@/lib/location";
 
 /**
  * One provider for everything that changes underneath the user:
  * the encounter status, the match list, and the realtime connection.
  *
  * Realtime (docs/architecture.md): we subscribe to Postgres changes on
- * `matches`, `interest_events` (own rows only), `demo_session_members`
- * (own row only) and `chat_messages` (RLS: only active matches we are in, for
- * unread counts), and treat every event purely as "something changed, refetch
- * through the API". No row data from realtime is ever rendered.
+ * `matches`, `interest_events` (own rows only) and `chat_messages` (RLS: only
+ * active matches we are in, for unread counts), and treat every event purely
+ * as "something changed, refetch through the API". No row data from realtime
+ * is ever rendered.
  *
  * A missed event must still show up, so the same refetch also runs when the
  * channel (re)subscribes, when the tab becomes visible or focused, when the
- * network comes back, and on a slow safety-net interval.
+ * network comes back, and on a slow safety-net interval. While encounter mode
+ * is on, the encounter status is also polled lightly so `ready` and the
+ * location status stay current.
+ *
+ * It also runs the phone-location reporter for the whole signed-in app, so a
+ * person on Matches or in a chat stays findable while encounter mode is on.
  */
 
 export type RealtimeState = "connecting" | "live" | "reconnecting";
@@ -58,6 +65,11 @@ interface LiveValue {
   forgetMatch: (id: string) => void;
 
   realtime: RealtimeState;
+
+  /** This page's own geolocation (permission, accuracy). Coordinates are never exposed. */
+  geo: GeoState;
+  /** Ask the browser for the location again, e.g. after the person changed a permission. */
+  retryLocation: () => void;
 }
 
 const LiveContext = createContext<LiveValue | null>(null);
@@ -72,6 +84,8 @@ export function useLive(): LiveValue {
 const MOMENT_MAX_AGE_MS = 10 * 60 * 1000;
 const POLL_LIVE_MS = 20_000;
 const POLL_DEGRADED_MS = 4_000;
+/** Encounter status refresh while encounter mode is on. */
+const POLL_ENCOUNTER_MS = 10_000;
 
 function seenKey(userId: string) {
   return `cue.seen-matches.${userId}`;
@@ -258,16 +272,6 @@ export function LiveProvider({
           { event: "*", schema: "public", table: "interest_events", filter: `user_id=eq.${userId}` },
           () => void refreshEncounter(),
         )
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "demo_session_members",
-            filter: `user_id=eq.${userId}`,
-          },
-          () => void refreshEncounter(),
-        )
         .subscribe((status) => {
           if (disposed) return;
           if (status === "SUBSCRIBED") {
@@ -318,17 +322,23 @@ export function LiveProvider({
     return () => window.clearInterval(id);
   }, [realtime, refreshAll]);
 
-  // The other person joining is not pushed to us (realtime only carries our own
-  // membership row), so while we are alone in a session, check often.
-  const waitingForSecond =
-    encounter?.session != null && encounter.session.memberCount < encounter.session.capacity;
+  // `ready` and the location status change with time (a location goes stale,
+  // a check-in expires) and are not pushed, so look again now and then.
+  const encounterMode = encounter?.encounterMode ?? false;
   useEffect(() => {
-    if (!waitingForSecond) return;
+    if (!encounterMode) return;
     const id = window.setInterval(() => {
       if (document.visibilityState === "visible") void refreshEncounter();
-    }, 2_500);
+    }, POLL_ENCOUNTER_MS);
     return () => window.clearInterval(id);
-  }, [waitingForSecond, refreshEncounter]);
+  }, [encounterMode, refreshEncounter]);
+
+  const { geo, retry: retryLocation } = useLocationReporter({
+    enabled: encounterMode,
+    onStatus: applyEncounter,
+    onUnauthenticated,
+    onOutOfDate: refreshEncounter,
+  });
 
   // Browsers need one user gesture before they will play the match sound.
   useEffect(() => {
@@ -374,6 +384,8 @@ export function LiveProvider({
       refreshMatches,
       forgetMatch,
       realtime,
+      geo,
+      retryLocation,
     }),
     [
       userId,
@@ -389,6 +401,8 @@ export function LiveProvider({
       refreshMatches,
       forgetMatch,
       realtime,
+      geo,
+      retryLocation,
     ],
   );
 

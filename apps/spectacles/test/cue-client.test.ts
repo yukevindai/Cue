@@ -11,13 +11,15 @@ interface ServerState {
   linked: boolean;
   encounterMode: boolean;
   activeMatchId: string | null;
+  /** The wearer's phone has given Cue a place (venue check-in or fresh location). */
+  hasPlace: boolean;
   /** What POST /api/interest answers, given the posted body. */
   interest: (body: { eventId: string }) => ReturnType<typeof json>;
 }
 
 function setup(opts: { token?: string | null; code?: string | null } = {}) {
   const clock = fakeClock();
-  const server: ServerState = { linked: true, encounterMode: true, activeMatchId: null, interest: (b) => json(200, ack(b.eventId)) };
+  const server: ServerState = { linked: true, encounterMode: true, hasPlace: true, activeMatchId: null, interest: (b) => json(200, ack(b.eventId)) };
   const transport = fakeTransport((req: HttpRequest) => {
     const path = new URL(req.url).pathname;
     if (path === "/api/devices/claim") {
@@ -26,8 +28,7 @@ function setup(opts: { token?: string | null; code?: string | null } = {}) {
     }
     if (req.headers.Authorization !== `Bearer ${TOKEN}` || !server.linked) return json(401, {});
     if (path === "/api/devices/me") {
-      const base = server.encounterMode ? {} : { encounterMode: false, encounterSessionId: null };
-      return json(200, deviceContext({ ...base, activeMatchId: server.activeMatchId }));
+      return json(200, deviceContext({ encounterMode: server.encounterMode, ready: server.encounterMode && server.hasPlace, activeMatchId: server.activeMatchId }));
     }
     if (path === "/api/interest") return server.interest(JSON.parse(req.body ?? "{}") as { eventId: string });
     return json(404, {});
@@ -128,7 +129,7 @@ describe("CueClient: signalling", () => {
     await s.client.refreshOnce();
     s.server.interest = (b) => json(200, ack(b.eventId, { matched: true, expiresAt: null }));
     await s.doublePinch();
-    s.server.interest = (b) => json(200, ack(b.eventId, { status: "rejected", reason: "blocked", expiresAt: null }));
+    s.server.interest = (b) => json(200, ack(b.eventId, { status: "rejected", reason: "no_place", expiresAt: null }));
     await s.client.refreshOnce();
     await s.doublePinch();
     expect(s.feedback.cues).toEqual(["match", "not_sent"]);
@@ -144,6 +145,16 @@ describe("CueClient: signalling", () => {
     await s.client.refreshOnce();
     expect(interestPosts(s.transport)).toHaveLength(0);
     expect(s.feedback.cues).toEqual([]);
+  });
+
+  it("encounter on but no place: the gesture is dropped and the status says why", async () => {
+    const s = setup({ token: TOKEN });
+    s.server.hasPlace = false;
+    s.client.start();
+    await s.client.refreshOnce();
+    expect(s.feedback.statuses.at(-1)).toBe("Encounter on. Open Cue on your phone or check in to a venue");
+    expect(await s.doublePinch()).toEqual({ kind: "ignored", reason: "no_place" });
+    expect(interestPosts(s.transport)).toHaveLength(0);
   });
 
   it("a stale context (no recent poll) drops the gesture", async () => {

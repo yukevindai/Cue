@@ -2,6 +2,7 @@
 import { randomUUID } from "node:crypto";
 import { anonymousApi, deviceApi } from "./helpers/auth";
 import { apiFor, interestEvent, must, wasRejected } from "./helpers/api";
+import { coordinateLeak, freshSpot, locate, metresNorth } from "./helpers/geo";
 import { expectExactlyOneSharedMatch, expectNoMatches } from "./helpers/assertions";
 import { expect, test } from "./helpers/fixtures";
 import { signal, type Person } from "./helpers/scenario";
@@ -30,11 +31,12 @@ test.describe("device-token path (glasses bridge, server side only)", () => {
     const pair = await world.pair();
     const device = await linkDevice(pair.a);
     try {
-      // The device sees the user's session and encounter mode.
+      // The device sees the wearer's encounter mode and whether a swipe can match right now.
       const me = must(await device.api.deviceMe(), "deviceMe");
       expect(me.deviceId).toBe(device.claim.deviceId);
       expect(me.encounterMode).toBe(true);
-      expect(me.encounterSessionId).toBe(pair.session.id);
+      expect(me.ready).toBe(true);
+      expect(Object.keys(me).sort()).toEqual(["deviceId", "encounterMode", "ready", "serverTime"]);
 
       // The user's web view reports the device as linked.
       const status = must(await pair.a.api.getEncounter()).device;
@@ -42,7 +44,7 @@ test.describe("device-token path (glasses bridge, server side only)", () => {
       expect(status.deviceId).toBe(device.claim.deviceId);
 
       // A's backward swipe arrives with the device token only (no cookies, no user id).
-      const swipe = interestEvent(pair.session.id, { source: "mentra_touch" });
+      const swipe = interestEvent({ source: "mentra_touch" });
       expect(swipe).toMatchObject({ source: "mentra_touch", gesture: "backward_swipe" });
       const ack = must(await device.api.interest(swipe), "device interest");
       expect(ack.status).toBe("accepted");
@@ -72,7 +74,7 @@ test.describe("device-token path (glasses bridge, server side only)", () => {
     const device = await linkDevice(pair.a);
     try {
       must(await signal(pair, pair.b));
-      const ack = must(await device.api.interest(interestEvent(pair.session.id, { source: "mentra_touch" })));
+      const ack = must(await device.api.interest(interestEvent({ source: "mentra_touch" })));
       expect(ack.matched).toBe(true);
       await expectExactlyOneSharedMatch(pair.a.api, pair.b.api);
     } finally {
@@ -85,11 +87,11 @@ test.describe("device-token path (glasses bridge, server side only)", () => {
     const device = await linkDevice(pair.a);
     try {
       // The device credential cannot submit the web-button source.
-      const web = await device.api.interest(interestEvent(pair.session.id, { source: "web_demo" }));
+      const web = await device.api.interest(interestEvent({ source: "web_demo" }));
       expect(web.status).toBe(403);
       expect(web.error?.code).toBe("forbidden");
       // The web session cannot submit the glasses source.
-      const spoof = await pair.a.api.interest(interestEvent(pair.session.id, { source: "mentra_touch" }));
+      const spoof = await pair.a.api.interest(interestEvent({ source: "mentra_touch" }));
       expect(spoof.status).toBe(403);
       expect(spoof.error?.code).toBe("forbidden");
 
@@ -113,8 +115,10 @@ test.describe("device-token path (glasses bridge, server side only)", () => {
     const pair = await world.pair();
     const device = await linkDevice(pair.a);
     try {
-      const base = interestEvent(pair.session.id, { source: "mentra_touch" });
+      const base = interestEvent({ source: "mentra_touch" });
       const bad: Array<Record<string, unknown>> = [
+        { ...base, encounterSessionId: randomUUID() }, // the old session id is gone from the contract
+        { ...base, venueId: pair.venue.id }, // nor can a signal name a place
         { ...base, gesture: "forward_swipe" },
         { ...base, gesture: "tap" },
         { ...base, gesture: "web_confirm" }, // gesture does not belong to source
@@ -138,9 +142,74 @@ test.describe("device-token path (glasses bridge, server side only)", () => {
     try {
       must(await pair.a.api.setMode(false));
       expect(must(await device.api.deviceMe()).encounterMode).toBe(false);
-      const r = await device.api.interest(interestEvent(pair.session.id, { source: "mentra_touch" }));
+      const r = await device.api.interest(interestEvent({ source: "mentra_touch" }));
       expect(wasRejected(r, "encounter_mode_off")).toBe(true);
       await expectNoMatches(pair.a.api, pair.b.api);
+    } finally {
+      await device.ctx.dispose();
+    }
+  });
+
+  test("a glasses signal uses the wearer's presence: ready by location, it matches a web signal from someone nearby", async ({ world }) => {
+    const { a, b, spot } = await world.nearbyPair({ metres: 15 });
+    const device = await linkDevice(a);
+    try {
+      const me = must(await device.api.deviceMe());
+      expect(me).toMatchObject({ encounterMode: true, ready: true });
+
+      // B (web, nearby) first, then A's glasses swipe completes it.
+      must(await b.api.interest(interestEvent()));
+      const ack = must(await device.api.interest(interestEvent({ source: "mentra_touch" })), "device interest");
+      expect(ack).toMatchObject({ status: "accepted", matched: true });
+      const { forA, forB } = await expectExactlyOneSharedMatch(a.api, b.api);
+      for (const card of [forA, forB]) {
+        expect(card).toMatchObject({ venueLabel: "Nearby", venueLabelSource: "phone_location" });
+      }
+      // No coordinates anywhere in what the wearer's device or web view can read.
+      const texts = [
+        (await device.api.deviceMe()).text,
+        (await a.api.getEncounter()).text,
+        (await a.api.listMatches()).text,
+        (await b.api.listMatches()).text,
+      ];
+      for (const t of texts) expect(coordinateLeak(t, [spot, metresNorth(spot, 15)])).toBeNull();
+    } finally {
+      await device.ctx.dispose();
+    }
+  });
+
+  test("a glasses signal from a wearer without a place is refused as no_place; devices/me ready follows mode, check-in and location", async ({ world }) => {
+    const a = await world.person();
+    const device = await linkDevice(a);
+    try {
+      const ready = async () => must(await device.api.deviceMe(), "deviceMe").ready;
+      expect(await ready(), "mode off").toBe(false);
+      must(await a.api.setMode(true));
+      expect(await ready(), "mode on, no place").toBe(false);
+      const noPlace = await device.api.interest(interestEvent({ source: "mentra_touch" }));
+      expect(wasRejected(noPlace, "no_place")).toBe(true);
+      expect(must(await a.api.getEncounter()).pendingSignal).toBeNull();
+
+      // An inaccurate location is not a place.
+      const spot = freshSpot();
+      await locate(a, spot, 150);
+      expect(await ready(), "location too rough").toBe(false);
+      expect(wasRejected(await device.api.interest(interestEvent({ source: "mentra_touch" })), "no_place")).toBe(true);
+
+      await locate(a, spot, 20);
+      expect(await ready(), "usable location").toBe(true);
+      must(await a.api.clearLocation());
+      expect(await ready(), "location forgotten").toBe(false);
+
+      const venue = await world.venue(a);
+      expect(venue.code).toMatch(/^[A-Z0-9]{6}$/);
+      expect(await ready(), "checked in").toBe(true);
+      must(await a.api.checkOut());
+      expect(await ready(), "checked out").toBe(false);
+      await locate(a, spot, 20);
+      must(await a.api.setMode(false));
+      expect(await ready(), "mode off again").toBe(false);
+      expect(wasRejected(await device.api.interest(interestEvent({ source: "mentra_touch" })), "encounter_mode_off")).toBe(true);
     } finally {
       await device.ctx.dispose();
     }
@@ -167,7 +236,7 @@ test.describe("device-token path (glasses bridge, server side only)", () => {
     const fake = await deviceApi(`cue_dev_${randomUUID().replace(/-/g, "")}${randomUUID().replace(/-/g, "")}`);
     try {
       expect((await apiFor(fake).deviceMe()).status).toBe(401);
-      expect((await apiFor(fake).interest(interestEvent(randomUUID(), { source: "mentra_touch" }))).status).toBe(401);
+      expect((await apiFor(fake).interest(interestEvent({ source: "mentra_touch" }))).status).toBe(401);
     } finally {
       await fake.dispose();
     }
@@ -177,13 +246,13 @@ test.describe("device-token path (glasses bridge, server side only)", () => {
     const pair = await world.pair();
     const device = await linkDevice(pair.a);
     try {
-      must(await device.api.interest(interestEvent(pair.session.id, { source: "mentra_touch" })));
+      must(await device.api.interest(interestEvent({ source: "mentra_touch" })));
       expect(must(await pair.a.api.getEncounter()).pendingSignal).not.toBeNull();
 
       expect((await pair.a.api.deviceUnlink()).status).toBe(204);
 
       expect((await device.api.deviceMe()).status).toBe(401);
-      expect((await device.api.interest(interestEvent(pair.session.id, { source: "mentra_touch" }))).status).toBe(401);
+      expect((await device.api.interest(interestEvent({ source: "mentra_touch" }))).status).toBe(401);
       expect(must(await pair.a.api.getEncounter()).device.linked).toBe(false);
       expect(must(await pair.a.api.getEncounter()).pendingSignal).toBeNull();
       // B's confirmation finds nothing to match.

@@ -34,12 +34,14 @@ export type DeviceClaimResult = z.infer<typeof DeviceClaimResult>;
 
 /**
  * GET /api/devices/me (device token auth). Lets the bridge know whether to
- * forward swipes, and which session id to stamp on events.
+ * forward swipes. `ready` means a swipe can be matched right now: encounter
+ * mode is on and the wearer's phone has given Cue a place (venue check-in or
+ * a fresh location).
  */
 export const DeviceContext = z.object({
   deviceId: Uuid,
   encounterMode: z.boolean(),
-  encounterSessionId: Uuid.nullable(),
+  ready: z.boolean(),
   serverTime: IsoDateTime,
   /**
    * The wearer's newest active match, so glasses can show the match even when

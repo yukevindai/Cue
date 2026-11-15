@@ -93,7 +93,8 @@ export function hasUsableText(text: PartyText): boolean {
 /** Display names, photos, ids and the sensitive fields are never part of the model input. */
 export function buildModelInput(ctx: WingmanMatchContext): ModelInput {
   return {
-    venueLabel: cleanVenueLabel(ctx.venueLabel),
+    // A phone-location match is labelled "Nearby", which is not a venue: send no venue at all.
+    venueLabel: ctx.venueLabelSource === "phone_location" ? "" : cleanVenueLabel(ctx.venueLabel),
     you: partyText(ctx.requester),
     them: partyText(ctx.other),
   };

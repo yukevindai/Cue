@@ -22,6 +22,7 @@ export type IgnoreReason =
   | "offline"
   | "context_stale"
   | "encounter_mode_off"
+  | "no_place"
   | "debounced"
   | "submit_in_flight";
 
@@ -46,6 +47,7 @@ export interface PipelineDeps {
 
 const CONTEXT_IGNORE: Record<Exclude<ContextSnapshot["state"], "ready">, IgnoreReason> = {
   encounter_mode_off: "encounter_mode_off",
+  no_place: "no_place",
   unlinked: "unlinked",
   offline: "offline",
   stale: "context_stale",
@@ -85,7 +87,13 @@ export class GesturePipeline {
     }
 
     const context = this.deps.context();
-    if (context.state !== "ready") return this.ignore(CONTEXT_IGNORE[context.state], raw.gestureName);
+    if (context.state !== "ready") {
+      const outcome = this.ignore(CONTEXT_IGNORE[context.state], raw.gestureName);
+      // Tell the wearer why nothing was sent. Nothing is queued or replayed.
+      if (context.state === "encounter_mode_off") await this.play("encounter_off");
+      else if (context.state === "no_place") await this.play("no_place");
+      return outcome;
+    }
 
     if (this.inFlight) return this.ignore("submit_in_flight", raw.gestureName);
     if (!this.debouncer.tryAccept(this.now())) return this.ignore("debounced", raw.gestureName);
@@ -93,7 +101,6 @@ export class GesturePipeline {
     // One fresh id per accepted gesture; the device clock stamps occurredAt.
     const event = InterestEvent.parse({
       eventId: this.newEventId(),
-      encounterSessionId: context.encounterSessionId,
       source: "mentra_touch",
       gesture: "backward_swipe",
       occurredAt: new Date(this.now()).toISOString(),

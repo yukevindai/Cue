@@ -18,6 +18,7 @@ export type IgnoreReason =
   | "offline"
   | "context_stale"
   | "encounter_mode_off"
+  | "no_place"
   | "debounced"
   | "submit_in_flight";
 
@@ -39,6 +40,7 @@ export interface PipelineDeps {
 
 const CONTEXT_IGNORE: Record<Exclude<ContextSnapshot["state"], "ready">, IgnoreReason> = {
   encounter_mode_off: "encounter_mode_off",
+  no_place: "no_place",
   unlinked: "unlinked",
   offline: "offline",
   stale: "context_stale",
@@ -67,7 +69,6 @@ export class InterestPipeline {
     // (informational only: the server's receipt time drives the match window).
     const event: InterestEvent = {
       eventId: this.deps.newEventId(),
-      encounterSessionId: context.encounterSessionId,
       source: SOURCE,
       gesture: GESTURE,
       occurredAt: new Date(this.now()).toISOString(),

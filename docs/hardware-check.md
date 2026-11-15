@@ -4,7 +4,12 @@ For the person holding the loaner glasses. Follow top to bottom; it should take
 under ten minutes once the laptop tools are installed. Fill in the table at the
 end and commit it.
 
-> **Status: the real-swipe checkpoint is MET (2026-11-14).**
+> **Status: the real-swipe checkpoint was MET (2026-11-14), under the old
+> session model. It has NOT been re-verified under place-based matching.**
+> Matching no longer needs a pre-joined session: it needs Encounter mode on and
+> a place for the wearer (see step 6). The steps below were updated for that;
+> nobody has run them on a device. The 2026-11-14 result below was recorded when
+> the wearer had joined a two-person demo session.
 > On a real Mentra Live unit, seven real backward swipes reached the live
 > server under the wearer's account in about 0.2 to 0.3 s, and two completed
 > matches. One caveat: on that unit the gesture name for the toward-the-ear
@@ -110,8 +115,14 @@ should now show the device as linked ("Mentra Live").
 
 ## 6. First checkpoint: a real backward swipe reaches the server under the right account
 
-1. In the web app, the wearer joins the demo session and turns encounter mode
-   on. The miniapp pill turns to "Encounter mode ON" within ~2 s.
+1. In the web app on the wearer's phone (same account as the paired glasses),
+   turn on Encounter mode and give Cue a place: allow location, or check in at a
+   venue ("Host a place", or scan a venue's QR code / "Enter a venue code"). The
+   "Where you are" card must read "Ready". The glasses cannot report where the
+   wearer is: the place always comes from the phone. Keep the Cue page open on
+   the phone if relying on location. The miniapp pill turns to "Encounter mode
+   ON" within ~2 s. The miniapp forwards a swipe only once the server reports
+   the wearer as ready; otherwise it drops it and plays a cue.
 2. Swipe backward once on the glasses.
 3. Look at all three:
    - Miniapp: "Last swipe: submitted: accepted".
@@ -125,6 +136,9 @@ should now show the device as linked ("Mentra Live").
      The newest row must be the **wearer's email**, `mentra_touch`,
      `backward_swipe`, within a second or two of the swipe.
 4. The other account's encounter page must show nothing.
+5. For a match, a second person in the same place (same venue check-in, or a
+   phone within 40 m) signals within 15 seconds. A signal pairs with the closest
+   such person, so keep other people out of the test.
 
 Only when this passes, change the status box at the top of this file.
 
@@ -139,8 +153,11 @@ For each: do it five times, then confirm no new `interest_events` row and no sou
   near the temple. Ten of each. Record how many produced a `backward_swipe`
   row in the gesture list. Any accidental activation goes in the table.
 - Turn encounter mode off in the web app, wait 3 s, swipe backward: "Last
-  swipe: ignored: encounter_mode_off", no row. Turn it back on: still no row
-  until you swipe again (nothing is replayed).
+  swipe: ignored: encounter_mode_off", no row, and the "mode off" cue. Turn it
+  back on: still no row until you swipe again (nothing is replayed).
+- Encounter mode on but no place (location blocked and not checked in; the
+  "Where you are" card says "Not ready"), wait 3 s, swipe backward: ignored as
+  `no_place`, no row, and the "no place: open Cue on your phone" cue.
 - Two backward swipes within one second: one row.
 - Phone in airplane mode, swipe, airplane mode off: no row appears afterwards.
 
@@ -159,7 +176,7 @@ Also check whether the swipe is still delivered while music is playing.
 In the miniapp's "Sound check", tap Sent, Match, Not sent. Record whether each
 is heard **from the glasses** (not the phone speaker) and roughly how late.
 If nothing is heard, check the glasses are the phone's active Bluetooth audio
-output (iOS: Settings → Bluetooth). Then, in a real match (second user taps
+output (iOS: Settings → Bluetooth). Then, in a real match (a second person in the same place taps
 "Interested" in the web app within 15 s, either order), the wearer should hear
 the single beep on their swipe and the two rising beeps if their swipe
 completes the match. If their swipe came first, the match itself is announced
@@ -200,9 +217,10 @@ staff on site which route they support before spending the time.
 - **`zip` on Windows.** The Mentra CLI needs a `zip` program on the PATH; install
   one before `pnpm miniapp:dev`.
 - **Two different codes.** In the web app, the Glasses card's "Link glasses"
-  code is the **pairing code** you type into the miniapp. The big code at the
-  top of Encounter is the **session join code** for the second person. They are
-  not interchangeable.
+  code is the **pairing code** you type into the miniapp. A venue's six-character
+  code (under its QR code) is for checking a phone in at a place. They are not
+  interchangeable. (Before place matching, the second code was a session join
+  code.)
 - **One browser, one account.** Two tabs of one browser share one login. Give
   each demo account its own browser profile (or device).
 - **Check the gesture name.** Do step 5 even if the default looks right: the
@@ -222,7 +240,9 @@ staff on site which route they support before spending the time.
 | Raw gesture for swipe toward the lenses | |
 | Raw names seen for tap / double tap / long press | |
 | Configured backward gesture (`config.ts` or UI override) | UI override ("Use as backward swipe"); the default `backward_swipe` did not match on this unit. Name shown: not recorded |
-| Step 6 passed (real swipe → wearer's row)? | **Yes, 2026-11-14.** 7 real swipes reached the live server under the wearer's account in about 0.2 to 0.3 s; 2 matches completed |
+| Step 6 passed (real swipe → wearer's row)? | **Yes, 2026-11-14, under the old session model.** 7 real swipes reached the live server under the wearer's account in about 0.2 to 0.3 s; 2 matches completed. Not re-verified under place-based matching |
+| Step 6 under place-based matching (Ready via venue or location)? | not yet recorded |
+| "Mode off" and "no place" cues heard from the glasses? | not yet recorded |
 | Forward swipe / taps submit nothing? | not yet recorded |
 | Hair-adjustment accidental activations (n / 10 each) | not yet recorded |
 | Stock action on backward swipe (volume, track, beep)? | not yet recorded |

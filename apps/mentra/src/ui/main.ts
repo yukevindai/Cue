@@ -21,6 +21,7 @@ function render(status: BridgeStatus) {
   const contextLabels: Record<string, [string, string]> = {
     ready: ["Encounter mode ON", "ok"],
     encounter_mode_off: ["Encounter mode off", "warn"],
+    no_place: ["Open Cue on your phone", "warn"],
     unlinked: ["No account", "bad"],
     offline: ["Server unreachable", "bad"],
     stale: ["Checking…", "warn"],

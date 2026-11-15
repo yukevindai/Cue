@@ -15,7 +15,7 @@ import { describe, expect, it } from "vitest";
 import { DEVICE_LABEL, GESTURE, GESTURE_DEBOUNCE_MS, ROUTES, SOURCE } from "../lens/Assets/Scripts/Cue/Core/config";
 import { uuidV4 } from "../lens/Assets/Scripts/Cue/Core/uuid";
 import { normalizePairingCode, parseDeviceClaimResult, parseDeviceContext, parseInterestAck } from "../lens/Assets/Scripts/Cue/Core/wire";
-import { ack, deviceContext, SESSION } from "./fakes";
+import { ack, deviceContext } from "./fakes";
 
 describe("contract parity", () => {
   it("source/gesture is an allowed device pair", () => {
@@ -30,7 +30,7 @@ describe("contract parity", () => {
 
   it("an event built by the Lens parses as a strict InterestEvent", () => {
     for (let i = 0; i < 200; i++) {
-      const event = { eventId: uuidV4(), encounterSessionId: SESSION, source: SOURCE, gesture: GESTURE, occurredAt: new Date().toISOString() };
+      const event = { eventId: uuidV4(), source: SOURCE, gesture: GESTURE, occurredAt: new Date().toISOString() };
       expect(InterestEvent.safeParse(event).success).toBe(true);
     }
   });
@@ -45,9 +45,9 @@ describe("contract parity", () => {
     expect(InterestAck.parse(a)).toEqual(parseInterestAck(a));
     const matched = ack("11111111-1111-4111-8111-111111111111", { matched: true, expiresAt: null });
     expect(InterestAck.parse(matched)).toEqual(parseInterestAck(matched));
-    const rejected = ack("11111111-1111-4111-8111-111111111111", { status: "rejected", reason: "blocked", expiresAt: null });
+    const rejected = ack("11111111-1111-4111-8111-111111111111", { status: "rejected", reason: "no_place", expiresAt: null });
     expect(InterestAck.parse(rejected)).toEqual(parseInterestAck(rejected));
-    const ctx = deviceContext({ encounterSessionId: null, encounterMode: false });
+    const ctx = deviceContext({ ready: false, encounterMode: false });
     expect(DeviceContext.parse(ctx)).toEqual(parseDeviceContext(ctx));
     const withMatch = deviceContext({ activeMatchId: "44444444-4444-4444-8444-444444444444" });
     expect(DeviceContext.parse(withMatch)).toEqual(parseDeviceContext(withMatch));
@@ -58,6 +58,7 @@ describe("contract parity", () => {
   });
 
   it("hand parsers reject malformed bodies", () => {
+    expect(parseDeviceContext({ ...deviceContext(), ready: undefined })).toBeNull();
     expect(parseInterestAck({ ...ack("nope") })).toBeNull();
     expect(parseInterestAck({ ...ack("11111111-1111-4111-8111-111111111111"), status: "maybe" })).toBeNull();
     expect(parseInterestAck(null)).toBeNull();

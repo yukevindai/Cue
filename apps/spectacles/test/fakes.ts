@@ -1,6 +1,5 @@
 import type { HttpRequest, HttpResponse, HttpTransport } from "../lens/Assets/Scripts/Cue/Core/http";
 
-export const SESSION = "22222222-2222-4222-8222-222222222222";
 export const DEVICE = "33333333-3333-4333-8333-333333333333";
 export const TOKEN = "tok_" + "x".repeat(40);
 
@@ -51,7 +50,7 @@ export function deviceContext(over: Record<string, unknown> = {}) {
   return {
     deviceId: DEVICE,
     encounterMode: true,
-    encounterSessionId: SESSION,
+    ready: true,
     serverTime: "2026-11-15T12:00:00.000Z",
     ...over,
   };

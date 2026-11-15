@@ -59,10 +59,12 @@ function context(overrides: {
   them?: PartyOverrides;
   cacheKey?: string;
   venueLabel?: string;
+  venueLabelSource?: WingmanMatchContext["venueLabelSource"];
 }): WingmanMatchContext {
   return {
     matchId: MATCH,
     venueLabel: overrides.venueLabel ?? "Immerse the Bay demo floor",
+    venueLabelSource: overrides.venueLabelSource ?? "venue_checkin",
     requester: party(ALEX, 1, { interests: ["Hiking", "café exploration"], bio: "Weekend trail runner." }, overrides.you ?? {}),
     other: party(SAM, 1, { interests: ["hiking", "Latte art"], bio: "I bake sourdough on Sundays." }, overrides.them ?? {}),
     cacheKey: overrides.cacheKey ?? "v1:v1",
@@ -296,6 +298,28 @@ describe("no overlap, sparse profiles and AI assist off", () => {
     const ctx = context({ them: { aiAssist: false }, venueLabel: "  " });
     const result = await getWingmanSuggestion(MATCH, ALEX, deps(ctx, fakeClient(() => null).client));
     expect(result.suggestedQuestion).toBe("What's been the best part of your day so far?");
+  });
+
+  it("a phone-location match ('Nearby') gets the venue-free opener, never 'What brought you to Nearby'", async () => {
+    const ctx = context({ them: { aiAssist: false }, venueLabel: "Nearby", venueLabelSource: "phone_location" });
+    const result = await getWingmanSuggestion(MATCH, ALEX, deps(ctx, fakeClient(() => null).client));
+    expect(result.suggestedQuestion).toBe("What's been the best part of your day so far?");
+    expect(result.suggestedQuestion).not.toMatch(/nearby/i);
+  });
+
+  it("a phone-location match does not send 'Nearby' to the model as a venue", async () => {
+    const ctx = context({ venueLabel: "Nearby", venueLabelSource: "phone_location" });
+    const { client, parse } = fakeClient(() => output([], null, "encounter_context"));
+    const result = await getWingmanSuggestion(MATCH, ALEX, deps(ctx, client));
+    expect(parse).toHaveBeenCalledTimes(1);
+    expect(sentText(parse)).not.toMatch(/nearby/i);
+    expect(result.suggestedQuestion).toBe("What's been the best part of your day so far?");
+  });
+
+  it("a venue check-in match still names the venue in the fixed opener", async () => {
+    const ctx = context({ them: { aiAssist: false }, venueLabel: "Hall Seven", venueLabelSource: "venue_checkin" });
+    const result = await getWingmanSuggestion(MATCH, ALEX, deps(ctx, fakeClient(() => null).client));
+    expect(result.suggestedQuestion).toBe("What brought you to Hall Seven today?");
   });
 });
 

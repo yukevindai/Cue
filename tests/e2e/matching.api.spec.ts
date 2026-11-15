@@ -39,7 +39,7 @@ test.describe("two-account matching (spec section 3)", () => {
       expect(forB.other.displayName).toBe(pair.a.displayName);
       for (const card of [forA, forB]) {
         expect(card.venueLabel).toBe("E2E Test Cafe");
-        expect(card.venueLabelSource).toBe("manual");
+        expect(card.venueLabelSource).toBe("venue_checkin");
         expect(Math.abs(new Date(card.encounterAt).getTime() - new Date(ackFirst.receivedAt).getTime())).toBeLessThan(50);
       }
       // GET /api/matches/[id] agrees with the list.
@@ -90,7 +90,7 @@ test.describe("two-account matching (spec section 3)", () => {
 
   test("duplicate input: repeated eventId and a second signal while pending never add matches", async ({ world }) => {
     const pair = await world.pair();
-    const ev = interestEvent(pair.session.id);
+    const ev = interestEvent();
 
     const first = must(await pair.a.api.interest(ev), "first");
     expect(first.status).toBe("accepted");
@@ -106,7 +106,7 @@ test.describe("two-account matching (spec section 3)", () => {
     await expectNoMatches(pair.a.api, pair.b.api);
 
     // B completes the match once.
-    const evB = interestEvent(pair.session.id);
+    const evB = interestEvent();
     const done = must(await pair.b.api.interest(evB), "B");
     expect(done.matched).toBe(true);
     await expectExactlyOneSharedMatch(pair.a.api, pair.b.api);
@@ -123,7 +123,7 @@ test.describe("two-account matching (spec section 3)", () => {
 
   test("the same eventId sent concurrently is accepted once", async ({ world }) => {
     const pair = await world.pair();
-    const ev = interestEvent(pair.session.id);
+    const ev = interestEvent();
     const [r1, r2] = await Promise.all([pair.a.api.interest(ev), pair.a.api.interest(ev)]);
     const statuses = [must(r1).status, must(r2).status].sort();
     expect(statuses).toEqual(["accepted", "duplicate"]);

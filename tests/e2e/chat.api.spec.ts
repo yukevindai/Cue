@@ -398,7 +398,7 @@ test.describe("chat: lifecycle (messages die with the match)", () => {
     await bothGone(pair.a, pair.b, matchId);
     expect(await rowCount(matchId)).toBe(0);
 
-    // The pair is still in the session after a reset that does not leave; match again.
+    // The pair is still checked in after a reset that does not leave; match again.
     must(await pair.a.api.setMode(true));
     must(await pair.b.api.setMode(true));
     must(await signal(pair, pair.a));

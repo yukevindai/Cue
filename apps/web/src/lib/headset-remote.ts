@@ -14,12 +14,12 @@ import { rejectionCopy } from "./encounter";
  * owns the audio element, the Media Session handlers and the network call.
  *
  * Mirrors the Mentra pipeline (apps/mentra/src/pipeline.ts): command ->
- * choice gate -> session / mode gate -> pending gate -> debounce ->
+ * choice gate -> mode / place gate -> pending gate -> debounce ->
  * InterestEvent. Every command that does not become a signal gets a reason the
  * wearer can read; nothing is dropped silently.
  *
- * PRIVACY: every input here is the wearer's OWN state (listening, own session
- * membership, own mode, own pending signal). Nothing about the other person.
+ * PRIVACY: every input here is the wearer's OWN state (listening, own mode,
+ * whether Cue knows their own place, own pending signal). Nothing about anyone else.
  */
 
 /** Media Session actions this page listens for. */
@@ -113,9 +113,8 @@ export function choiceInstruction(choice: SignalChoice): string {
 export type IgnoreReason =
   | "not_listening"
   | "not_chosen"
-  | "no_session"
-  | "session_not_full"
   | "encounter_mode_off"
+  | "no_place"
   | "already_pending"
   | "debounced";
 
@@ -123,8 +122,9 @@ export type IgnoreReason =
 export interface HeadsetState {
   listening: boolean;
   choice: SignalChoice;
-  session: { id: string; memberCount: number; capacity: number } | null;
   encounterMode: boolean;
+  /** The server's `ready`: encounter mode is on and Cue knows the wearer's place. */
+  ready: boolean;
   /** Own signal already out, or a send still in flight. */
   pending: boolean;
   /** When the last signal was sent from this card (ms), or null. */
@@ -144,17 +144,14 @@ export function decideCommand(
 ): HeadsetDecision {
   if (!state.listening) return { kind: "ignored", reason: "not_listening" };
   if (choiceForCommand(command) !== state.choice) return { kind: "ignored", reason: "not_chosen" };
-  const { session } = state;
-  if (!session) return { kind: "ignored", reason: "no_session" };
-  if (session.memberCount < session.capacity) return { kind: "ignored", reason: "session_not_full" };
   if (!state.encounterMode) return { kind: "ignored", reason: "encounter_mode_off" };
+  if (!state.ready) return { kind: "ignored", reason: "no_place" };
   if (state.pending) return { kind: "ignored", reason: "already_pending" };
   if (state.lastSentAtMs !== null && nowMs - state.lastSentAtMs < debounceMs) {
     return { kind: "ignored", reason: "debounced" };
   }
   const event = InterestEvent.parse({
     eventId: newEventId(),
-    encounterSessionId: session.id,
     source: "headset_remote",
     gesture: gestureForCommand(command),
     occurredAt: new Date(nowMs).toISOString(),
@@ -168,12 +165,10 @@ export function ignoreReasonText(reason: IgnoreReason, choice: SignalChoice): st
       return "this page isn't listening.";
     case "not_chosen":
       return `not your signal. Yours is ${choiceLabel(choice).toLowerCase()}.`;
-    case "no_session":
-      return "you're not in a session.";
-    case "session_not_full":
-      return "the second person hasn't joined yet.";
     case "encounter_mode_off":
-      return "encounter mode is paused. Resume to signal.";
+      return "encounter mode is off. Turn it on to signal.";
+    case "no_place":
+      return "Cue doesn't know where you are yet. Allow location, or check in with a venue code.";
     case "already_pending":
       return "your signal is already out.";
     case "debounced":
