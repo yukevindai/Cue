@@ -53,11 +53,20 @@ export const CARD_DECK_IDS = ["music", "weekend", "energy", "loves"] as const;
 export const CardDeckId = z.enum(CARD_DECK_IDS);
 export type CardDeckId = z.infer<typeof CardDeckId>;
 
+/** Deck titles in the person's own editor. */
 export const CARD_DECK_TITLES: Record<CardDeckId, string> = {
   music: "What you listen to",
   weekend: "Your kind of weekend",
   energy: "Your energy",
   loves: "Things you love",
+};
+
+/** Deck titles when showing SOMEONE ELSE'S picks (a match's card, the preview). */
+export const CARD_DECK_TITLES_ABOUT_OTHERS: Record<CardDeckId, string> = {
+  music: "Listens to",
+  weekend: "A good weekend",
+  energy: "Energy",
+  loves: "Loves",
 };
 
 /** A person may pick at most this many cards from each deck. */

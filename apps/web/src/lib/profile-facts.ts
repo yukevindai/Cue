@@ -1,7 +1,7 @@
 import {
   ARCHETYPES,
   CARD_DECK_IDS,
-  CARD_DECK_TITLES,
+  CARD_DECK_TITLES_ABOUT_OTHERS,
   EDUCATION_LABELS,
   GENDER_LABELS,
   getCard,
@@ -53,7 +53,7 @@ export function sharedFacts(p: SharedProfile): SharedFacts {
       const c = getCard(id);
       return c && c.deck === deck ? [c.label] : [];
     });
-    return labels.length ? [{ deck, title: CARD_DECK_TITLES[deck], labels }] : [];
+    return labels.length ? [{ deck, title: CARD_DECK_TITLES_ABOUT_OTHERS[deck], labels }] : [];
   });
 
   return {
