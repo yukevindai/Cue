@@ -222,7 +222,7 @@ test.describe("UI: privacy through the UI", () => {
 });
 
 test.describe("UI: the match moment", () => {
-  test("shows It's mutual and the Chinese line on both phones", async ({ world, browser }) => {
+  test("shows It's mutual on both phones, in English only", async ({ world, browser }) => {
     const pair = await world.pair({ venue: VENUE });
     const a = await openAs(browser, pair.a, "/encounter");
     const b = await openAs(browser, pair.b, "/encounter");
@@ -237,8 +237,9 @@ test.describe("UI: the match moment", () => {
       await expect(moment).toBeVisible();
       // The apostrophe in the product copy is typographic (U+2019).
       await expect(moment.getByRole("heading", { name: /It.s mutual\./ })).toBeVisible();
-      await expect(moment.getByText("在茫茫人海中，你我一见钟情")).toBeVisible();
       await expect(moment.getByText("In a sea of people, you noticed each other.")).toBeVisible();
+      // The app's own text is English only.
+      expect(await moment.innerText()).not.toMatch(/[\u3400-\u9fff]/);
     }
   });
 });

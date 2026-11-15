@@ -240,10 +240,6 @@ No. It is self-declared, 18 to 99. Nothing about a person is verified.
 Either person can Unmatch or Block, which ends the match and deletes the
 conversation. There is no message reporting or moderation beyond that.
 
-**Why is there Chinese text on the match screen?**
-It is the line "在茫茫人海中，你我一见钟情", with an English gloss beneath it. It is a
-tone choice for the match moment only. Privacy, safety and error text stays plain.
-
 **Why 15 seconds?**
 It is the proposed matching window in `docs/spec.md` (section 3). It keeps the
 two signals close together in time, so a match means both people signaled

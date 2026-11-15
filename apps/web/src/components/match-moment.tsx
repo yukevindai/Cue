@@ -82,17 +82,7 @@ export function MatchMoment({ match, onDismiss }: { match: MatchCard; onDismiss:
           >
             It&rsquo;s mutual.
           </h2>
-          <p
-            lang="zh-Hans"
-            className="mt-5 animate-rise text-xl leading-relaxed tracking-[0.08em] text-cream [animation-delay:200ms] sm:text-2xl"
-            style={{
-              fontFamily:
-                '"Songti SC", STSong, "Noto Serif SC", "Source Han Serif SC", "Noto Serif CJK SC", serif',
-            }}
-          >
-            在茫茫人海中，你我一见钟情
-          </p>
-          <p className="mt-1 animate-rise font-display text-lg italic text-cream/80 [animation-delay:200ms]">
+          <p className="mt-5 animate-rise font-display text-xl italic text-cream/80 [animation-delay:200ms] sm:text-2xl">
             In a sea of people, you noticed each other.
           </p>
 
