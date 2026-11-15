@@ -3,7 +3,6 @@
 // made with a web session. Neither is evidence that either pair of physical
 // glasses works; the real devices are checked by hand (docs/hardware-check.md
 // and docs/meta-glasses-check.md).
-import { MatchRealtimeRow } from "@cue/contracts";
 import { anonymousApi, deviceApi } from "./helpers/auth";
 import { apiFor, interestEvent, must, wasRejected } from "./helpers/api";
 import { expectExactlyOneSharedMatch, expectNoMatches, sleepPast } from "./helpers/assertions";
@@ -94,7 +93,9 @@ test.describe("Mentra swipe and headset remote signal (server path only)", () =>
       const late = must(await signal(pair, pair.b), "B late web signal");
       expect(late).toMatchObject({ status: "accepted", matched: false });
       await expectNoMatches(pair.a.api, pair.b.api);
-      expect(watchBMatches.events.map((e) => MatchRealtimeRow.safeParse(e.new).success)).toEqual([]);
+      // Supabase realtime cannot RLS-filter DELETE events (they carry only the id), and other tests'
+      // cleanup deletes rows, so only inserts and updates are meaningful here.
+      expect(watchBMatches.events.filter((e) => e.eventType !== "DELETE")).toEqual([]);
     } finally {
       await watchB.close();
       await watchBMatches.close();

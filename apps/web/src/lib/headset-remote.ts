@@ -74,13 +74,13 @@ export function parseSignalChoice(raw: string | null | undefined): SignalChoice 
 export function commandLabel(command: MediaCommand): string {
   switch (command) {
     case "play":
-      return "Play";
+      return "Play (single tap)";
     case "pause":
-      return "Pause";
+      return "Pause (single tap)";
     case "nexttrack":
-      return "Next track";
+      return "Next track (double tap)";
     case "previoustrack":
-      return "Previous track";
+      return "Previous track (triple tap)";
   }
 }
 

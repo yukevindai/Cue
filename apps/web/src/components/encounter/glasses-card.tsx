@@ -69,7 +69,7 @@ export function GlassesCard({ device }: { device: DeviceStatus }) {
     <Card aria-labelledby="glasses-title">
       <div className="flex items-center justify-between gap-3">
         <h2 id="glasses-title" className="font-display text-2xl leading-tight tracking-tight">
-          Mentra Live glasses
+          Mentra Live
         </h2>
         <p role="status">
           {device.linked ? (
