@@ -21,14 +21,16 @@ test.describe("one browser, two tabs, two accounts", () => {
       await tabA.goto("/sign-in");
       await tabB.goto("/sign-in");
 
-      // Tab A signs in as A and starts a session.
+      // Tab A signs in as A and hosts a place (which checks A in).
       await tabA.getByLabel("Email").fill(a.user.email);
       await tabA.getByLabel("Password").fill(a.user.password);
       await tabA.getByRole("button", { name: "Sign in", exact: true }).click();
       await expect(tabA).toHaveURL(/\/encounter$/);
-      await tabA.getByLabel("Where are you?").fill(venue);
-      await tabA.getByRole("button", { name: "Start a session" }).click();
-      await expect(tabA.getByText(venue, { exact: true })).toBeVisible();
+      await tabA.getByLabel("Name of the place").fill(venue);
+      await tabA.getByRole("button", { name: "Host this place" }).click();
+      await expect(tabA.getByText(`Checked in at ${venue}`, { exact: true })).toBeVisible();
+      const hosted = must(await a.api.getEncounter(), "A encounter").checkIn;
+      if (hosted) world.trackVenue(hosted.venueId);
 
       // Tab B (its sign-in page was already loaded) signs in as B.
       await tabB.getByLabel("Email").fill(b.user.email);
@@ -44,14 +46,15 @@ test.describe("one browser, two tabs, two accounts", () => {
       await expect(tabA.getByText(b.user.email)).toBeVisible();
       await expect(tabA.getByText(a.user.email)).toHaveCount(0);
 
-      // And the Encounter view is B's (no session yet), not A's.
+      // And the Encounter view is B's (not checked in anywhere), not A's.
       await tabA.getByRole("link", { name: "Encounter" }).first().click();
-      await expect(tabA.getByLabel("Where are you?")).toBeVisible();
-      await expect(tabA.getByText(venue, { exact: true })).toHaveCount(0);
+      await expect(tabA.getByText("Not checked in at a venue.")).toBeVisible();
+      await expect(tabA.getByText(`Checked in at ${venue}`, { exact: true })).toHaveCount(0);
 
-      // A's session was not touched by anything the stale tab did.
+      // A's check-in was not touched by anything the stale tab did.
       const aEncounter = must(await a.api.getEncounter(), "A encounter");
-      expect(aEncounter.session?.venueLabel).toBe(venue);
+      expect(aEncounter.checkIn?.name).toBe(venue);
+      expect(must(await b.api.getEncounter(), "B encounter").checkIn).toBeNull();
     } finally {
       await context.close();
     }

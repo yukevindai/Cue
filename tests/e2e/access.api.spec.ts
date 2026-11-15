@@ -26,10 +26,13 @@ test.describe("authentication", () => {
       ],
       ["GET /api/encounter", () => api.getEncounter()],
       ["POST /api/encounter/mode", () => api.setMode(true)],
-      ["POST /api/demo/session", () => api.createSession("Nowhere")],
-      ["POST /api/demo/session/join", () => api.joinSession("ABCDEF")],
+      ["POST /api/encounter/location", () => api.setLocation({ lat: 0.001, lng: 0.001, accuracyM: 5 })],
+      ["DELETE /api/encounter/location", () => api.clearLocation()],
+      ["POST /api/venues", () => api.createVenue("Nowhere")],
+      ["POST /api/venues/check-in", () => api.checkIn("ABCDEF")],
+      ["POST /api/venues/check-out", () => api.checkOut()],
       ["POST /api/demo/reset", () => api.reset(false)],
-      ["POST /api/interest", () => api.interest(interestEvent(id))],
+      ["POST /api/interest", () => api.interest(interestEvent())],
       ["GET /api/matches", () => api.listMatches()],
       ["GET /api/matches/[id]", () => api.getMatch(id)],
       ["POST /api/matches/[id]/unmatch", () => api.unmatch(id)],
@@ -52,34 +55,41 @@ test.describe("authentication", () => {
 });
 
 test.describe("third account", () => {
-  test("is refused at join and never sees, reads or touches the pair's data", async ({ world, fake }) => {
+  test("learns nothing about a venue's occupants and never sees, reads or touches the pair's data", async ({ world, fake }) => {
     const tag = randomUUID().slice(0, 8);
     const pair = await world.pair({ a: { bio: `bio-A-${tag}` }, b: { bio: `bio-B-${tag}` } });
     const third = await world.person({ bio: `bio-C-${tag}` });
-    const joinCode = (must(await pair.a.api.getEncounter()).session ?? { joinCode: "" }).joinCode;
 
-    const join = await third.api.joinSession(joinCode);
-    expect(join.status).toBe(409);
-    expect(join.error?.code).toBe("session_full");
-
-    // The pair is unaffected and can still match.
+    // The pair is unaffected and can match.
     must(await signal(pair, pair.a));
     expect(must(await signal(pair, pair.b)).matched).toBe(true);
     const { forA } = await expectExactlyOneSharedMatch(pair.a.api, pair.b.api);
 
-    const texts: string[] = [join.text];
+    const texts: string[] = [];
     const watch = async <T extends { text: string }>(p: Promise<T>) => {
       const r = await p;
       texts.push(r.text);
       return r;
     };
 
-    // No session, no matches.
+    // Not checked in: no place, no matches.
     const enc = await watch(third.api.getEncounter());
     expect(enc.ok).toBe(true);
-    expect(enc.data?.session).toBeNull();
+    expect(enc.data?.checkIn).toBeNull();
+    expect(enc.data?.ready).toBe(false);
     const list = await watch(third.api.listMatches());
     expect(list.data?.matches).toEqual([]);
+
+    // Checking in with the venue code is allowed (the code is the invitation), but the reply only
+    // describes the third person's own state: nobody else in the place is named or counted.
+    must(await third.api.setMode(true));
+    const joined = await watch(third.api.checkIn(pair.venue.code));
+    expect(joined.ok).toBe(true);
+    expect(joined.data?.checkIn?.name).toBe(pair.venue.name);
+    const encIn = await watch(third.api.getEncounter());
+    expect(Object.keys(encIn.data ?? {}).sort()).toEqual(
+      ["checkIn", "device", "encounterMode", "location", "pendingSignal", "ready", "serverTime"],
+    );
 
     // Cannot read, unmatch, or request suggestions for the pair's match.
     const card = await watch(third.api.getMatch(forA.id));
@@ -91,13 +101,14 @@ test.describe("third account", () => {
     expect(sugg.status).toBe(404);
     expect(sugg.error?.code).toBe("not_found");
     expect(await fake.requests(), "a refused suggestions request makes no model call").toHaveLength(0);
-    // ...and the pair's match is intact.
     await expectExactlyOneSharedMatch(pair.a.api, pair.b.api);
 
-    // Cannot inject signals into the pair's session.
-    const sneaky = await watch(third.api.interest(interestEvent(pair.session.id)));
-    expect(wasRejected(sneaky, "not_in_session")).toBe(true);
+    // A signal from the third person, in the same venue, cannot take over the pair's match: the pair's
+    // signals are consumed, so it just waits, and the match is intact.
+    const sneaky = await watch(third.api.interest(interestEvent()));
+    expect(sneaky.data).toMatchObject({ status: "accepted", matched: false });
     await expectExactlyOneSharedMatch(pair.a.api, pair.b.api);
+    expect(must(await third.api.listMatches()).matches).toEqual([]);
 
     // Profile routes only ever return the caller's own profile, even if asked for another.
     const own = await watch(third.api.getProfile());
@@ -195,10 +206,9 @@ test.describe("one-sided interest is invisible", () => {
     const watchers = [
       await watchTable(pair.b, "matches"),
       await watchTable(pair.b, "interest_events"),
-      await watchTable(pair.b, "demo_session_members"),
     ];
     try {
-      // Let late change events from the pair's own setup (session join, mode on) drain, then start counting.
+      // Let late change events from the pair's own setup (check-in, mode on) drain, then start counting.
       await sleep(1500);
       for (const w of watchers) w.events.length = 0;
       const ack = must(await signal(pair, pair.a), "A signal");
@@ -215,7 +225,7 @@ test.describe("one-sided interest is invisible", () => {
         "A's display name": pair.a.displayName,
       });
 
-      // Realtime for B: nothing at all (own-row RLS on interest_events / members, participant RLS on matches).
+      // Realtime for B: nothing at all (own-row RLS on interest_events, participant RLS on matches).
       await sleep(1500);
       for (const w of watchers) expect(w.events).toEqual([]);
     } finally {

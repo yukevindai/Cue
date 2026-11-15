@@ -157,6 +157,10 @@ declare
   v_loc   jsonb;
   v_ven   jsonb := null;
 begin
+  -- Read often (every status poll, every glasses check-in), so stale
+  -- coordinates are cleared here as well as when a location is reported.
+  perform public._sweep_stale_locations(v_now);
+
   select * into v_p from public.user_presence where user_id = p_user_id;
   if not found then
     return jsonb_build_object(

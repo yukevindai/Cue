@@ -122,8 +122,10 @@ The "Find common ground" card is optional and shown only to the person who asks.
 
 Sent, per person, only if that person shared the field and has AI assist on:
 interests, bio, personality card labels, character name, MBTI, the looking-for
-label, location, work or school, and the education label. The coarse venue label
-is also sent.
+label, location, work or school, and the education label. The venue's name is
+also sent when the match was made at a venue check-in. A match made by phone
+location is labelled "Nearby", which is not a venue, so no venue is sent (and
+never a position).
 
 **Never sent:** age, gender (and own words), ethnicity, drinking, smoking, drugs,
 display name, photo, ids, and chat messages. This is structural: the code that
@@ -139,7 +141,7 @@ What Claude returns, and what the server does with it:
   the quotes, not by the model.
 - One suggested opening question, or none.
 - If either person gives too little (no interests, bio, cards or work or school),
-  the model is not called and a fixed venue-based opener is shown.
+  the model is not called and a fixed opener is shown (based on the venue's name, or generic for a "Nearby" match).
 - Claude never receives chat messages and never sends anything. "Use this opener"
   copies the question into the message box. The person edits it and sends it, or
   does not.
@@ -175,8 +177,9 @@ Alex and Sam share a city and several cards (indie, trails, cafes, the outdoors)
 
 ## Manual test list
 
-Use two browsers signed in as two demo accounts in one session. Run these against
-the local stack with `pnpm dev`.
+Use two browsers signed in as two demo accounts, in the same place (host a place
+on one and check the other in by QR code or code, or turn on Encounter mode on
+both with location). Run these against the local stack with `pnpm dev`.
 
 1. Sign in as Alex. Open the profile, change a few fields and a few cards, and
    save. The character appears and updates when the cards change. With no cards
@@ -196,5 +199,5 @@ the local stack with `pnpm dev`.
    the message box, and nothing is sent until Sam sends it.
 8. Unmatch as either person. The conversation is gone for both. Matching again
    starts an empty conversation.
-9. Check rejection: sign in as Riley, who is outside the session. There is no
-   match, so there is no chat.
+9. Check a non-match: sign in as Riley and do not signal, or signal on her own
+   with nobody else in the window. There is no match, so there is no chat.
