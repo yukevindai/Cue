@@ -18,7 +18,7 @@ import { useServerNow } from "./use-server-now";
 const FADED_LINE_MS = 6000;
 const MESSAGE_MS = 12_000;
 const FADED_TEXT =
-  "That signal has faded. Nothing was shared. You can signal again whenever you like.";
+  "That signal has faded. Nothing was shared, and the moment stays yours. Signal again whenever you like.";
 
 interface PanelMessage {
   text: string;
@@ -189,8 +189,8 @@ export function SignalPanel({
           <CountdownRing secondsLeft={view.secondsLeft} fraction={view.fraction} />
           <p className="font-medium">{signalSourceText(view.source)}</p>
           <p className="mx-auto mt-2 max-w-sm text-ink-soft">
-            If they signal within the window, you&apos;ll both know. If not, this quietly fades and
-            nothing is shared.
+            If they noticed you too and signal within the window, you&apos;ll both know. If not, it
+            quietly fades and nothing is shared.
           </p>
         </div>
       ) : view.kind === "paused" ? (
@@ -206,6 +206,11 @@ export function SignalPanel({
           <p className="font-display text-3xl italic leading-tight">
             {view.kind === "waiting_for_partner" ? "Not quite yet" : "Whenever you're ready"}
           </p>
+          {view.kind !== "waiting_for_partner" ? (
+            <p className="mx-auto mt-2 max-w-sm text-ink-soft">
+              If someone here catches your eye, let them know.
+            </p>
+          ) : null}
           <Button
             size="lg"
             full
