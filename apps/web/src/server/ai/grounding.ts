@@ -5,8 +5,6 @@ import {
   cardLabels,
   EDUCATION_LABELS,
   LOOKING_FOR_LABELS,
-  MAX_AGE,
-  MIN_AGE,
   type OpenerBasis,
   type SharedInterest,
   type WingmanEvidence,
@@ -55,21 +53,20 @@ const NOTHING: PartyText = {
   location: null,
   workOrSchool: null,
   education: null,
-  age: null,
 };
 
 /**
  * The profile text one party contributes. Nothing at all when aiAssist is off.
  *
- * Reads an explicit allow-list of properties, by name. Ethnicity, drinking,
- * smoking, drugs, gender and genderSelfDescribed (`NEVER_SENT_TO_AI`) are never
- * read here, whatever the sharing settings say; the backend has already nulled
+ * Reads an explicit allow-list of properties, by name. Age, and ethnicity,
+ * drinking, smoking, drugs, gender and genderSelfDescribed (`NEVER_SENT_TO_AI`),
+ * are never read here, whatever the sharing settings say; the backend has already nulled
  * every field the owner did not share. Ids and enum codes are turned into the
  * labels a person sees.
  */
 export function partyText(party: WingmanParty): PartyText {
   if (!party.aiAssist) return { ...NOTHING, interests: [], cards: [] }; // fresh arrays: callers may not share them
-  const { interests, bio, cards, archetype, mbti, lookingFor, location, workOrSchool, education, age } = party.profile;
+  const { interests, bio, cards, archetype, mbti, lookingFor, location, workOrSchool, education } = party.profile;
   return {
     interests: cleanList(interests),
     bio: cleanOrNull(bio),
@@ -80,13 +77,12 @@ export function partyText(party: WingmanParty): PartyText {
     location: cleanOrNull(location),
     workOrSchool: cleanOrNull(workOrSchool),
     education: education ? cleanOrNull(EDUCATION_LABELS[education]) : null,
-    age: Number.isInteger(age) && age! >= MIN_AGE && age! <= MAX_AGE ? age : null,
   };
 }
 
 /**
  * Whether a party gives the model something personal to work with: interests,
- * a bio, personality cards, or work/school. Age, location, MBTI, looking-for
+ * a bio, personality cards, or work/school. Location, MBTI, looking-for
  * and education on their own are too thin for a grounded opener, so a party
  * with only those gets the fixed venue opener and no model call.
  */
@@ -246,7 +242,7 @@ function locateIn(field: WingmanProfileField, text: PartyText, quote: string): W
  * Returns the person's own wording, or null if the quote is not in the field
  * it claims. The only leniency is between interests and bio, which are both
  * things the person wrote in their own words; every other field must be cited
- * correctly. Age is not a field and can never be evidence.
+ * correctly. Age is never sent and is not a field, so it can never be evidence.
  */
 export function locateEvidence(
   claimed: { field: WingmanProfileField; quote: string },

@@ -28,8 +28,8 @@ export interface WingmanMatchContext {
  * The only profile text that may reach the model for one party. Human-readable
  * text only (card labels, the character name, option labels), never ids or
  * enum codes. Empty / null means "not shared" or "not filled in"; the model
- * cannot tell which. Ethnicity, drinking, smoking, drugs and gender have no
- * place here by design.
+ * cannot tell which. Age, ethnicity, drinking, smoking, drugs and gender have
+ * no place here by design.
  */
 export interface PartyText {
   interests: string[];
@@ -45,8 +45,6 @@ export interface PartyText {
   workOrSchool: string | null;
   /** Option label, e.g. "Bachelor's degree". */
   education: string | null;
-  /** May shape tone only. Never evidence and never mentioned in the opener. */
-  age: number | null;
 }
 
 /** Everything the model is allowed to see. */

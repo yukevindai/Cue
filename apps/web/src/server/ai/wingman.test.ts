@@ -279,7 +279,6 @@ describe("no overlap, sparse profiles and AI assist off", () => {
       location: null,
       workOrSchool: null,
       education: null,
-      age: null,
     });
     expect(JSON.stringify(buildModelInput(off))).not.toMatch(/secret hobby|private bio/);
   });
@@ -718,7 +717,6 @@ describe("richer profile input", () => {
         location: "Oakland",
         workOrSchool: "Product designer at a bike co-op",
         education: "Master's degree",
-        age: 29,
       },
       their_profile: {
         interests: ["Board games"],
@@ -730,11 +728,10 @@ describe("richer profile input", () => {
         location: "oakland",
         workOrSchool: "Nurse at a community clinic",
         education: "Bachelor's degree",
-        age: 31,
       },
     });
     const sent = sentText(parse);
-    for (const code of ["weekend.trails", "night_owl", "masters", "bachelors", "\"friendship\""]) {
+    for (const code of ["weekend.trails", "night_owl", "masters", "bachelors", "\"friendship\"", "\"age\"", "29", "31"]) {
       expect(sent).not.toContain(code);
     }
   });
@@ -758,12 +755,12 @@ describe("richer profile input", () => {
     expect(sent).not.toMatch(/MARKER/);
     expect(JSON.stringify(result)).not.toMatch(/MARKER/);
 
-    // Structural: the builder never even touches those properties.
+    // Structural: the builder never even touches those properties, nor age.
     const { buildModelInput } = await import("./grounding");
     const guard = (p: SharedProfile) =>
       new Proxy(p, {
         get(target, key, receiver) {
-          if ((NEVER_SENT_TO_AI as readonly (string | symbol)[]).includes(key)) {
+          if ([...NEVER_SENT_TO_AI, "age"].includes(key as string)) {
             throw new Error(`model input read ${String(key)}`);
           }
           return Reflect.get(target, key, receiver);
@@ -782,11 +779,11 @@ describe("richer profile input", () => {
     await getWingmanSuggestion(
       MATCH,
       ALEX,
-      deps(richContext({}, { location: null, workOrSchool: null, education: null, cards: [], archetype: null, age: null }), client),
+      deps(richContext({}, { location: null, workOrSchool: null, education: null, cards: [], archetype: null }), client),
     );
     const their = sentInput(parse).their_profile;
     expect(Object.keys(their).sort()).toEqual(["bio", "interests", "lookingFor", "mbti"]);
-    expect(parse.mock.calls[0]![0].messages[0]!.content as string).not.toMatch(/Nurse|Bachelor|Lo-fi|Dogs|31/);
+    expect(parse.mock.calls[0]![0].messages[0]!.content as string).not.toMatch(/Nurse|Bachelor|Lo-fi|Dogs/);
   });
 
   it("AI assist off sends nothing from that party's richer profile", async () => {
@@ -1081,7 +1078,6 @@ describe("cache and the richer fields", () => {
     ["work or school", { workOrSchool: "Teacher" }],
     ["education", { education: "doctorate" as const }],
     ["the character", { archetype: "spark" as const }],
-    ["age", { age: 32 }],
   ])("a change to %s under an unchanged backend key misses the cache", async (_name, change) => {
     const { client, parse } = fakeClient(() => output([]));
     let ctx = richContext();
@@ -1094,12 +1090,15 @@ describe("cache and the richer fields", () => {
     expect(parse).toHaveBeenCalledTimes(2);
   });
 
-  it("a sensitive field changing does not change what the model sees, so the cache still holds", async () => {
+  it.each([
+    ["a sensitive field", { ethnicity: "Synthetic value", drinking: "often" as const }],
+    ["age", { age: 45 }],
+  ])("%s changing does not change what the model sees, so the cache still holds", async (_name, change) => {
     const { client, parse } = fakeClient(() => output([]));
     let ctx = richContext();
     const shared = deps(ctx, client, { getContext: async () => ctx });
     await getWingmanSuggestion(MATCH, ALEX, shared);
-    ctx = richContext({}, { ethnicity: "Synthetic value", drinking: "often" });
+    ctx = richContext({}, change);
     expect((await getWingmanSuggestion(MATCH, ALEX, shared)).cached).toBe(true);
     expect(parse).toHaveBeenCalledTimes(1);
   });
