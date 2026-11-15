@@ -66,6 +66,24 @@ phone model and OS. If the app offers a glasses update, take it first and note i
 
 ## 2. Install the miniapp on the phone
 
+**From the website (no laptop, no shared Wi-Fi).** Open
+`https://<cue-web-origin>/mentra` on a computer or a second phone. On the phone
+with the Mentra app: **Settings → Developer settings → Mini App Development →
+Scan Mini App QR Code**, and scan the code on that page. If the page is open on
+the Mentra phone itself, "Open in the Mentra app" is the same link. The site
+serves the files `mentra-miniapp release` serves (`/mentra/miniapp.json`,
+`/mentra/icon.png`, `/mentra/bundle.zip`), built by
+`apps/web/scripts/build-mentra-bundle.mjs` with every web build; the server
+address is preset to the production site.
+
+> **Not verified on a phone.** The Mentra tool only ever generates links to a
+> laptop on the local network (`http://<lan-ip>:<port>`). Whether the Mentra
+> app also installs from a public `https://` address has not been tried. Record
+> the result in the table at the end. If it refuses, use the laptop install
+> below, which is unchanged.
+
+**From a laptop (development, and the fallback).**
+
 ```bash
 cd apps/mentra
 MENTRA_PUBLIC_CUE_SERVER_URL=https://<cue-web-origin> pnpm miniapp:dev
