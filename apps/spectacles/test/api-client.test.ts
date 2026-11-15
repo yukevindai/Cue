@@ -3,11 +3,10 @@ import { CueApiClient } from "../lens/Assets/Scripts/Cue/Core/api-client";
 import { GESTURE, SOURCE } from "../lens/Assets/Scripts/Cue/Core/config";
 import { createLogger } from "../lens/Assets/Scripts/Cue/Core/logger";
 import type { InterestEvent } from "../lens/Assets/Scripts/Cue/Core/wire";
-import { ack, deviceContext, DEVICE, fakeClock, fakeTransport, json, SESSION, TOKEN, type Handler } from "./fakes";
+import { ack, deviceContext, DEVICE, fakeClock, fakeTransport, json, TOKEN, type Handler } from "./fakes";
 
 const EVENT: InterestEvent = {
   eventId: "11111111-1111-4111-8111-111111111111",
-  encounterSessionId: SESSION,
   source: SOURCE,
   gesture: GESTURE,
   occurredAt: "2026-11-15T12:00:00.000Z",

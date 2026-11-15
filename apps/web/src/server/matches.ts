@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { MatchCard, SharedProfile } from "@cue/contracts";
+import type { MatchCard, SharedProfile, VenueLabelSource } from "@cue/contracts";
 import { iso, rpc, unwrap } from "@/server/db";
 import { HttpError } from "@/server/http";
 import { getProfileRows, sharingOf, toSharedProfile, type ProfileRow } from "@/server/profiles";
@@ -12,7 +12,7 @@ export interface MatchRow {
   user_b: string;
   first_signal_at: string;
   venue_label: string;
-  venue_label_source: "manual";
+  venue_label_source: VenueLabelSource;
   status: "active" | "ended";
   created_at: string;
 }
@@ -197,6 +197,8 @@ export interface WingmanParty {
 export interface WingmanMatchContext {
   matchId: string;
   venueLabel: string;
+  /** `phone_location` means the label is only "Nearby", not a venue. */
+  venueLabelSource: VenueLabelSource;
   requester: WingmanParty;
   other: WingmanParty;
   /**
@@ -233,6 +235,7 @@ export async function getWingmanMatchContext(
   return {
     matchId: row.id,
     venueLabel: row.venue_label,
+    venueLabelSource: row.venue_label_source,
     requester,
     other,
     cacheKey: `v1:${row.id}:${requester.userId}:${requester.version}:${other.userId}:${other.version}`,

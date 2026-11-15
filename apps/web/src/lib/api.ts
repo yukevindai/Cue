@@ -3,12 +3,13 @@ import {
   type ApiErrorCode,
   type BlockInput,
   ChatMessage,
-  type CreateSessionInput,
+  type CheckInInput,
+  type CreateVenueInput,
   type DemoResetInput,
   EncounterStatus,
   InterestAck,
   type InterestEvent,
-  type JoinSessionInput,
+  type LocationInput,
   MatchCard,
   MatchList,
   MessageList,
@@ -58,12 +59,8 @@ export function describeError(err: unknown): string {
       return "You've been signed out. Sign in again to continue.";
     case "rate_limited":
       return "That's a few too many tries in a row. Give it a moment.";
-    case "session_full":
-      return "That session already has two people in it.";
-    case "not_in_session":
-      return "You're not in a session yet.";
     case "encounter_mode_off":
-      return "Encounter mode is paused.";
+      return "Encounter mode is off.";
     case "invalid_request":
       return err.message || "Some of that didn't look right.";
     case "not_found":
@@ -175,10 +172,17 @@ export const api = {
   getEncounter: (o: Opt = {}) => request(routes.encounter, EncounterStatus, o),
   setEncounterMode: (enabled: boolean) =>
     request(routes.encounterMode, EncounterStatus, { method: "POST", body: { enabled } }),
-  createSession: (input: CreateSessionInput) =>
-    request(routes.demoSession, EncounterStatus, { method: "POST", body: input }),
-  joinSession: (input: JoinSessionInput) =>
-    request(routes.demoSessionJoin, EncounterStatus, { method: "POST", body: input }),
+  /** The phone's position while encounter mode is on. Never logged or stored client-side. */
+  reportLocation: (input: LocationInput) =>
+    request(routes.encounterLocation, EncounterStatus, { method: "POST", body: input }),
+  forgetLocation: () => request(routes.encounterLocation, EncounterStatus, { method: "DELETE" }),
+  /** Creates a venue and checks the caller in. */
+  createVenue: (input: CreateVenueInput) =>
+    request(routes.venues, EncounterStatus, { method: "POST", body: input }),
+  /** 404 (`not_found`) for an unknown code. */
+  checkIn: (input: CheckInInput) =>
+    request(routes.venueCheckIn, EncounterStatus, { method: "POST", body: input }),
+  checkOut: () => request(routes.venueCheckOut, EncounterStatus, { method: "POST" }),
   resetDemo: (input: Partial<DemoResetInput> = {}) =>
     request(routes.demoReset, EncounterStatus, { method: "POST", body: input }),
 

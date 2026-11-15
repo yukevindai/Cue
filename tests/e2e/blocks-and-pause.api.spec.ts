@@ -8,13 +8,18 @@ test.describe("blocked accounts", () => {
     const pair = await world.pair();
     expect((await pair.a.api.block(pair.b.user.id)).status).toBe(204);
 
-    // The blocker is told (the signal is refused); the blocked person is not
-    // (the signal is accepted but can never match).
-    const fromBlocker = await signal(pair, pair.a);
-    expect(wasRejected(fromBlocker, "blocked")).toBe(true);
-    const fromBlocked = await signal(pair, pair.b);
-    expect(notMatched(fromBlocked)).toBe(true);
-    // Order swapped.
+    // Neither side is told anything: a signal from either is an ordinary
+    // accepted one that waits out its window and can never complete a match.
+    const fromBlocker = must(await signal(pair, pair.a), "blocker signal");
+    expect(fromBlocker).toMatchObject({ status: "accepted", matched: false, reason: null });
+    expect(fromBlocker.expiresAt).not.toBeNull();
+    const fromBlocked = must(await signal(pair, pair.b), "blocked signal");
+    expect(fromBlocked).toMatchObject({ status: "accepted", matched: false, reason: null });
+    expect(fromBlocked.expiresAt).not.toBeNull();
+    expect(Object.keys(fromBlocked).sort()).toEqual(Object.keys(fromBlocker).sort());
+    // Both are still pending on their own side (the other's signal did not consume or cancel it).
+    for (const who of [pair.a, pair.b]) expect(must(await who.api.getEncounter()).pendingSignal).not.toBeNull();
+    // A fresh gesture while pending is a duplicate for both, still not a match.
     expect(notMatched(await signal(pair, pair.b))).toBe(true);
     expect(notMatched(await signal(pair, pair.a))).toBe(true);
     await expectNoMatches(pair.a.api, pair.b.api);

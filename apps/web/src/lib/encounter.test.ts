@@ -6,32 +6,37 @@ import {
   effectivePendingSignal,
   formatCountdown,
   groupPairingCode,
-  joinCodeProblem,
-  normalizeJoinCode,
-  occupancyText,
+  normalizeVenueCode,
+  placeSummary,
   rejectionCopy,
+  safeReturnPath,
+  serverLocationText,
   signalSourceText,
   spellCode,
-  venueLabelProblem,
+  venueCheckInUrl,
+  venueCodeProblem,
+  venueNameProblem,
 } from "./encounter";
 
 const T0 = Date.parse("2026-11-14T18:00:00.000Z");
 const iso = (ms: number) => new Date(ms).toISOString();
-const SESSION_ID = "7b0f5c0e-5c59-4c0f-9d5e-0d7a0e6f3a11";
+const VENUE_ID = "7b0f5c0e-5c59-4c0f-9d5e-0d7a0e6f3a11";
 const EVENT_ID = "2f1d8f3a-91c4-4f0b-8a55-6f1f0c7a9e22";
 
-function status(over: Partial<EncounterStatus> = {}, memberCount = 2): EncounterStatus {
+const CHECK_IN = {
+  venueId: VENUE_ID,
+  name: "Main hall",
+  code: "AB3K7Q",
+  checkedInAt: iso(T0 - 60_000),
+  expiresAt: iso(T0 + 8 * 3600_000),
+};
+
+function status(over: Partial<EncounterStatus> = {}): EncounterStatus {
   return {
-    session: {
-      id: SESSION_ID,
-      joinCode: "AB12CD",
-      venueLabel: "Main hall",
-      venueLabelSource: "manual",
-      memberCount,
-      capacity: 2,
-      createdAt: iso(T0 - 60_000),
-    },
     encounterMode: true,
+    checkIn: null,
+    location: { status: "fresh", accuracyM: 12, locatedAt: iso(T0 - 2_000) },
+    ready: true,
     pendingSignal: null,
     device: { linked: false, deviceId: null, deviceLabel: null, lastSeenAt: null },
     serverTime: iso(T0),
@@ -49,21 +54,23 @@ function signal(receivedMs: number, source: PendingSignal["source"] = "web_demo"
 }
 
 describe("deriveSignalView", () => {
-  it("is no_session without a session", () => {
-    expect(deriveSignalView(status({ session: null }), T0)).toEqual({ kind: "no_session" });
-  });
-
   it("is paused when encounter mode is off, even with a signal still on the server", () => {
     const s = status({ encounterMode: false, pendingSignal: signal(T0) });
     expect(deriveSignalView(s, T0 + 1000)).toEqual({ kind: "paused" });
   });
 
-  it("is idle with both people present and no signal", () => {
+  it("is idle when ready and no signal is out", () => {
     expect(deriveSignalView(status(), T0)).toEqual({ kind: "idle" });
   });
 
-  it("waits for the second person when only one member is present", () => {
-    expect(deriveSignalView(status({}, 1), T0)).toEqual({ kind: "waiting_for_partner" });
+  it("is no_place while Cue doesn't know where the person is", () => {
+    const s = status({ ready: false, location: { status: "none", accuracyM: null, locatedAt: null } });
+    expect(deriveSignalView(s, T0)).toEqual({ kind: "no_place" });
+  });
+
+  it("still shows an own pending signal if the place lapses meanwhile", () => {
+    const s = status({ ready: false, pendingSignal: signal(T0) });
+    expect(deriveSignalView(s, T0 + 1000)).toMatchObject({ kind: "pending" });
   });
 
   it("shows an own pending signal with whole seconds left and the remaining fraction", () => {
@@ -104,38 +111,95 @@ describe("effectivePendingSignal", () => {
   });
 });
 
-describe("join code and venue label", () => {
-  it("normalises codes to uppercase without whitespace", () => {
-    expect(normalizeJoinCode("  ab 12cd \n")).toBe("AB12CD");
+describe("venue code and name", () => {
+  it("normalises codes to uppercase without spaces or dashes, at most 6", () => {
+    expect(normalizeVenueCode("  ab3 k-7q \n")).toBe("AB3K7Q");
+    expect(normalizeVenueCode("ab3k7qzz")).toBe("AB3K7Q");
   });
 
-  it("checks code length against the contract (4 to 12)", () => {
-    expect(joinCodeProblem("")).not.toBeNull();
-    expect(joinCodeProblem("ABC")).not.toBeNull();
-    expect(joinCodeProblem("ABCD")).toBeNull();
-    expect(joinCodeProblem("ABCDEFGHIJKL")).toBeNull();
-    expect(joinCodeProblem("ABCDEFGHIJKLM")).not.toBeNull();
+  it("asks for exactly 6 letters or numbers", () => {
+    expect(venueCodeProblem("")).not.toBeNull();
+    expect(venueCodeProblem("AB3K7")).toMatch(/6 characters/);
+    expect(venueCodeProblem("AB3K7?")).toMatch(/letters and numbers/);
+    expect(venueCodeProblem("AB3K7Q")).toBeNull();
   });
 
-  it("requires a venue label of 1 to 80 characters after trimming", () => {
-    expect(venueLabelProblem("   ")).not.toBeNull();
-    expect(venueLabelProblem(" Main hall ")).toBeNull();
-    expect(venueLabelProblem("x".repeat(80))).toBeNull();
-    expect(venueLabelProblem("x".repeat(81))).not.toBeNull();
+  it("requires a name of 1 to 80 characters after trimming", () => {
+    expect(venueNameProblem("   ")).not.toBeNull();
+    expect(venueNameProblem(" Main hall ")).toBeNull();
+    expect(venueNameProblem("x".repeat(80))).toBeNull();
+    expect(venueNameProblem("x".repeat(81))).not.toBeNull();
   });
 
-  it("describes occupancy in words", () => {
-    expect(occupancyText({ memberCount: 1, capacity: 2 })).toMatch(/^Just you so far/);
-    expect(occupancyText({ memberCount: 2, capacity: 2 })).toBe("Both of you are here.");
+  it("builds the URL a venue's QR code opens", () => {
+    expect(venueCheckInUrl("https://cue.example/", "AB3K7Q")).toBe("https://cue.example/v/AB3K7Q");
+  });
+});
+
+describe("place", () => {
+  it("is off while encounter mode is off, whatever else is known", () => {
+    expect(placeSummary(status({ encounterMode: false, ready: false, checkIn: CHECK_IN })).tone).toBe(
+      "off",
+    );
+  });
+
+  it("is ready when the server says so, naming the venue when checked in", () => {
+    expect(placeSummary(status())).toMatchObject({ tone: "ready", headline: "Ready to signal" });
+    expect(placeSummary(status({ checkIn: CHECK_IN })).detail).toMatch(/checked in at Main hall/);
+  });
+
+  it("says Cue doesn't know where you are when not ready", () => {
+    expect(placeSummary(status({ ready: false }))).toMatchObject({
+      tone: "not_ready",
+      headline: "Cue doesn't know where you are yet",
+    });
+  });
+
+  it("describes the server's location status without coordinates", () => {
+    expect(serverLocationText(status())).toBe("Location on, accurate to about 12 m");
+    expect(
+      serverLocationText(
+        status({ location: { status: "inaccurate", accuracyM: 240.4, locatedAt: iso(T0) } }),
+      ),
+    ).toMatch(/about 240 m\. Cue needs 100 m or better/);
+    expect(
+      serverLocationText(status({ location: { status: "stale", accuracyM: 12, locatedAt: iso(T0) } })),
+    ).toMatch(/out of date/);
+    expect(
+      serverLocationText(status({ location: { status: "none", accuracyM: null, locatedAt: null } })),
+    ).toBeNull();
+  });
+});
+
+describe("safeReturnPath", () => {
+  it("keeps same-origin paths", () => {
+    expect(safeReturnPath("/v/AB3K7Q")).toBe("/v/AB3K7Q");
+    expect(safeReturnPath("/matches?x=1#y")).toBe("/matches?x=1#y");
+  });
+
+  it("refuses anything that could leave the site, and auth pages", () => {
+    for (const bad of [
+      null,
+      "",
+      "v/AB3K7Q",
+      "https://evil.example/",
+      "//evil.example",
+      "/\\evil.example",
+      "/\tevil",
+      "javascript:alert(1)",
+      "/sign-in",
+      "/sign-up?next=/x",
+    ]) {
+      expect(safeReturnPath(bad)).toBe("/encounter");
+    }
   });
 });
 
 describe("buildInterestEvent", () => {
-  it("builds exactly the strict contract body for the web button", () => {
-    const event = buildInterestEvent(SESSION_ID, EVENT_ID, new Date(T0));
+  it("builds exactly the strict contract body for the web button, with no place", () => {
+    const event = buildInterestEvent(EVENT_ID, new Date(T0));
     expect(event).toEqual({
       eventId: EVENT_ID,
-      encounterSessionId: SESSION_ID,
       source: "web_demo",
       gesture: "web_confirm",
       occurredAt: "2026-11-14T18:00:00.000Z",
@@ -144,7 +208,7 @@ describe("buildInterestEvent", () => {
   });
 
   it("uses a fresh event id per call", () => {
-    expect(buildInterestEvent(SESSION_ID).eventId).not.toBe(buildInterestEvent(SESSION_ID).eventId);
+    expect(buildInterestEvent().eventId).not.toBe(buildInterestEvent().eventId);
   });
 });
 
@@ -156,9 +220,9 @@ describe("copy helpers", () => {
     expect(signalSourceText("web_demo")).toBe("Sent from this page");
   });
 
-  it("maps rejection reasons", () => {
-    expect(rejectionCopy("already_matched")).toMatchObject({ matchesLink: true, refresh: false });
-    expect(rejectionCopy("session_inactive")).toMatchObject({ refresh: true });
+  it("maps rejection reasons to a next step", () => {
+    expect(rejectionCopy("no_place").text).toMatch(/venue code/);
+    expect(rejectionCopy("encounter_mode_off").text).toMatch(/Turn it on/);
     expect(rejectionCopy("invalid_event").text).toMatch(/try again/);
     expect(rejectionCopy(null).text).toMatch(/try again/);
   });

@@ -6,6 +6,9 @@ the route works at all. Fill in the table at the end and commit it.
 
 > **Status: the on-device checkpoint is NOT met.**
 > Nothing in this route has been run on real Meta glasses or a real iPhone.
+> Pairing with a Mentra swipe by place has not been run on any hardware either.
+> (The Mentra swipe alone was verified on 2026-11-14 under the old session
+> model, not under place-based matching.)
 > Automated tests cover the server path and the page logic only (a scripted
 > media command is not a tap on a temple). The checkpoint is met when steps 1
 > to 4 below pass on the glasses and the table is filled in.
@@ -20,7 +23,9 @@ receives standard headset media commands. One chosen command (default: double
 tap, which arrives as next track) is sent as an interest signal with
 `source: "headset_remote"`, authenticated by the web session. The server
 treats it like any other signal: a Mentra Live swipe and a Meta double tap from
-the two members of a session within 15 seconds create one match.
+two people in the same place (a shared venue check-in, or phones within 40 m)
+within 15 seconds create one match. The page is open on the phone by definition,
+so it also reports the phone's location while Encounter mode is on.
 
 Per Meta's help page (seen only as a search snippet, not verified on hardware):
 
@@ -62,14 +67,17 @@ environment):
   Control Center or Settings, Bluetooth). Note the Meta AI app version.
 - A Cue account for the wearer, and the live site at `https://<cue-web-origin>`.
 - For step 4: a Mentra Live wearer with the miniapp paired
-  (`docs/hardware-check.md`), a second account, and both in one demo session.
-  Each account needs its own browser profile or device.
+  (`docs/hardware-check.md`), a second account, and both in the same place
+  (checked into the same venue, or phones within 40 m of each other). Each
+  account needs its own browser profile or device.
 
 ## 1. Start listening
 
 1. On the iPhone, open `https://<cue-web-origin>` in Safari and sign in as the
    Meta wearer. Put the glasses on.
-2. Open Encounter. Find the "Meta glasses" card.
+2. Open Encounter. Turn on Encounter mode and allow location, or check in at a
+   venue; the "Where you are" card must read "Ready". Find the "Meta glasses"
+   card.
 3. Tap "Listen for my glasses". iOS needs this tap before it allows audio.
 4. Confirm the card says it is listening. The track is very quiet: listen for it
    **in the glasses**, and check it is not coming from the phone speaker. If it
@@ -102,13 +110,16 @@ pattern produced. A different mapping is still usable: pick it in step 3.
 In the list, tap "Use as my signal" on the command you want to send. The default
 is double tap (next track). The choice is stored in the browser on that phone.
 Tap the chosen pattern once and confirm the card shows a signal outcome. A
-signal outside an active session with encounter mode on shows a reason, not
-silence.
+signal with Encounter mode off, or with no place ("Not ready"), shows a reason,
+not silence.
 
 ## 4. Cross-glasses match with a Mentra wearer
 
-Both accounts are in the same demo session, both with encounter mode on, both
-"Available". The Meta page is still listening.
+Both accounts are in the same place (same venue check-in, or phones within 40 m),
+both "Ready" with Encounter mode on. The Meta page is still listening. Keep other
+people out of the test: a signal pairs with the closest person who signalled.
+This is also the first time a Mentra swipe and a Meta double tap are paired by
+place; it has not been done before.
 
 1. Mentra wearer swipes backward. Within 15 seconds the Meta wearer double
    taps. Both screens should show "It's mutual."
@@ -129,7 +140,9 @@ double tap. Confirm no signal is sent (the card shows why it ignored it).
   any accidental double tap or other command.
 - Phone locked and in a pocket, one minute, then double tap. Check whether a
   signal arrives.
-- Safari in the background (another app in front), then double tap.
+- Safari in the background (another app in front), then double tap. Also note
+  whether the phone's location still updates: the page reports it only while
+  visible, so a venue check-in is the safer way to stay "Ready".
 - Another audio app or Meta AI takes over: start music or invoke Meta AI, then
   double tap. Note whether commands still reach the Cue page, and whether the
   quiet track resumes.

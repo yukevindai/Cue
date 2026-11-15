@@ -39,13 +39,14 @@ export const DEVICE_SOURCES: readonly InterestSource[] = ["mentra_touch", "spect
 
 /**
  * Body of POST /api/interest. Application-owned labels; the server derives the
- * user from authentication and stamps `receivedAt`. Never carries a user id.
+ * user from authentication, their place from their presence (venue check-in or
+ * phone location), and stamps `receivedAt`. Never carries a user id, a place
+ * or coordinates.
  */
 export const InterestEvent = z
   .object({
     /** Client-generated idempotency key. Re-sending the same id is a duplicate. */
     eventId: Uuid,
-    encounterSessionId: Uuid,
     source: InterestSource,
     gesture: InterestGesture,
     /** Device clock; informational only. The matching window uses server receipt time. */
@@ -61,14 +62,14 @@ export type InterestEvent = z.infer<typeof InterestEvent>;
 export const InterestAckStatus = z.enum(["accepted", "duplicate", "rejected"]);
 export type InterestAckStatus = z.infer<typeof InterestAckStatus>;
 
-export const InterestRejectReason = z.enum([
-  "not_in_session",
-  "session_inactive",
-  "encounter_mode_off",
-  "blocked",
-  "already_matched",
-  "invalid_event",
-]);
+/**
+ * - `encounter_mode_off`: the sender has encounter mode off.
+ * - `no_place`: Cue does not know where the sender is: no venue check-in and
+ *   no fresh, accurate phone location.
+ * Blocks and existing matches are never a reason: such people are simply not
+ * candidates, so neither is disclosed.
+ */
+export const InterestRejectReason = z.enum(["encounter_mode_off", "no_place", "invalid_event"]);
 export type InterestRejectReason = z.infer<typeof InterestRejectReason>;
 
 /**

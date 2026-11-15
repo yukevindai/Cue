@@ -26,7 +26,7 @@ import {
   freshClient,
   must,
   newPair,
-  openSession,
+  openVenue,
   reportSkips,
   signal,
   stackUp,
@@ -59,8 +59,8 @@ interface Matched extends Pair {
 /** Two fresh users with an ACTIVE match, and their cookie sessions. */
 async function matchedPair(): Promise<Matched> {
   const p = await newPair();
-  await signal(p.a, p.sessionId);
-  const ack = await signal(p.b, p.sessionId);
+  await signal(p.a);
+  const ack = await signal(p.b);
   expect(ack.matched).toBe(true);
   const [ca, cb] = await Promise.all([cookieFor(p.a), cookieFor(p.b)]);
   return { ...p, matchId: ack.match_id!, ca, cb };
@@ -158,9 +158,9 @@ describe.skipIf(!stackUp || !webUp)("chat (real web server + real stack)", () =>
     ok(await send(m1.ca, m1.matchId, "first conversation", clientId), ChatMessage, 201);
     // Give A a second active match with someone else.
     const other = await createUser();
-    const s2 = await openSession(m1.a, other);
-    await signal(m1.a, s2.sessionId);
-    const ack = await signal(other, s2.sessionId);
+    await openVenue(m1.a, other);
+    await signal(m1.a);
+    const ack = await signal(other);
     expect(ack.matched).toBe(true);
     const ca = await cookieFor(m1.a);
     const res = await send(ca, ack.match_id!, "second conversation", clientId);
@@ -340,8 +340,8 @@ describe.skipIf(!stackUp)("chat RLS and direct database access (real stack)", ()
 
   it("participants can select their messages but not write; non-participants and anon see nothing; chat_reads is closed", async () => {
     const p = await newPair();
-    await signal(p.a, p.sessionId);
-    const ack = await signal(p.b, p.sessionId);
+    await signal(p.a);
+    const ack = await signal(p.b);
     const matchId = ack.match_id!;
     const third = await createUser();
     const row = must(

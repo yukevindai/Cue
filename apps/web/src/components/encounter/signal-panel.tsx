@@ -1,7 +1,6 @@
 "use client";
 
-import type { EncounterStatus, PendingSignal } from "@cue/contracts";
-import Link from "next/link";
+import { MATCH_WINDOW_SECONDS, type EncounterStatus, type PendingSignal } from "@cue/contracts";
 import { useEffect, useRef, useState } from "react";
 import { useLive } from "@/components/live-provider";
 import { Button, Card, Notice } from "@/components/ui";
@@ -22,24 +21,17 @@ const FADED_TEXT =
 
 interface PanelMessage {
   text: string;
-  matchesLink?: boolean;
 }
 
 /**
  * The user's own signal: send it, watch it, let it fade.
  *
  * PRIVACY: every branch below is driven by the user's OWN pending signal, own
- * mode and session membership. The only thing that differs when the other
- * person had already signalled is that a match appears (shown by the
- * provider), never anything in this panel.
+ * mode and own place. The only thing that differs when someone nearby had
+ * already signalled is that a match appears (shown by the provider), never
+ * anything in this panel.
  */
-export function SignalPanel({
-  encounter,
-  onLeftSession,
-}: {
-  encounter: EncounterStatus;
-  onLeftSession: (text: string) => void;
-}) {
+export function SignalPanel({ encounter }: { encounter: EncounterStatus }) {
   const { clockOffsetMs, refreshEncounter, refreshMatches, matches } = useLive();
   const now = useServerNow(clockOffsetMs, 250);
 
@@ -103,17 +95,16 @@ export function SignalPanel({
     faded !== null &&
     !becameMatch &&
     !sending &&
-    (view.kind === "idle" || view.kind === "waiting_for_partner");
+    (view.kind === "idle" || view.kind === "no_place");
 
   async function sendInterest() {
-    const session = encounter.session;
-    if (inFlight.current || !session) return;
+    if (inFlight.current) return;
     inFlight.current = true;
     setSending(true);
     setMessage(null);
     setFaded(null);
     try {
-      const ack = await api.sendInterest(buildInterestEvent(session.id));
+      const ack = await api.sendInterest(buildInterestEvent());
       if (ack.status === "accepted") {
         if (ack.matched) {
           // The provider shows the match moment; nothing else to do here.
@@ -133,21 +124,12 @@ export function SignalPanel({
         if (!ack.matched) setMessage({ text: "Your signal is already out." });
       } else {
         const copy = rejectionCopy(ack.reason);
-        setMessage({ text: copy.text, matchesLink: copy.matchesLink });
-        if (ack.reason === "not_in_session" || ack.reason === "session_inactive") {
-          onLeftSession(copy.text);
-        }
-        if (copy.matchesLink) void refreshMatches();
+        setMessage({ text: `Nothing was sent. ${copy.text}` });
         if (copy.refresh) void refreshEncounter();
       }
     } catch (err) {
       if (isApiError(err, "encounter_mode_off")) {
-        setMessage({ text: "Encounter mode is paused. Resume to signal." });
-        void refreshEncounter();
-      } else if (isApiError(err, "not_in_session")) {
-        const text = "You're not in this session any more.";
-        setMessage({ text });
-        onLeftSession(text);
+        setMessage({ text: `Nothing was sent. ${rejectionCopy("encounter_mode_off").text}` });
         void refreshEncounter();
       } else if (isApiError(err, "network")) {
         setMessage({ text: `${describeError(err)} Your signal wasn't sent.` });
@@ -195,18 +177,18 @@ export function SignalPanel({
         </div>
       ) : view.kind === "paused" ? (
         <div>
-          <p className="font-display text-3xl italic leading-tight">Paused</p>
+          <p className="font-display text-3xl italic leading-tight">Encounter mode is off</p>
           <p className="mx-auto mt-3 max-w-sm text-ink-soft">
-            You can&apos;t signal while encounter mode is paused, and nothing you do here or on
-            your glasses is sent. Resume above when you&apos;re ready.
+            You can&apos;t signal while it is off, and nothing you do here or on your glasses is
+            sent. Turn it on above when you&apos;re ready.
           </p>
         </div>
       ) : (
         <div>
           <p className="font-display text-3xl italic leading-tight">
-            {view.kind === "waiting_for_partner" ? "Not quite yet" : "Whenever you're ready"}
+            {view.kind === "no_place" ? "Not quite yet" : "Whenever you're ready"}
           </p>
-          {view.kind !== "waiting_for_partner" ? (
+          {view.kind !== "no_place" ? (
             <p className="mx-auto mt-2 max-w-sm text-ink-soft">
               If someone here catches your eye, let them know.
             </p>
@@ -216,16 +198,16 @@ export function SignalPanel({
             full
             className="mx-auto mt-6 min-h-16 max-w-md text-xl"
             busy={sending}
-            disabled={view.kind === "waiting_for_partner"}
+            disabled={view.kind === "no_place"}
             aria-describedby="signal-help"
             onClick={sendInterest}
           >
             Interested
           </Button>
           <p id="signal-help" className="mx-auto mt-4 max-w-sm text-ink-soft">
-            {view.kind === "waiting_for_partner"
-              ? "Waiting for the second person to join."
-              : "Sends one signal to the other person in this session. They won't know unless they signal too."}
+            {view.kind === "no_place"
+              ? "Cue doesn't know where you are yet. Allow location, or check in with a venue code, then signal."
+              : `Sends one signal. If someone near you signals within ${MATCH_WINDOW_SECONDS} seconds, Cue pairs you with the nearest of them. Otherwise nobody is told.`}
           </p>
           {showFaded ? (
             <p className="mx-auto mt-5 max-w-sm animate-fade font-display text-lg italic text-ink-soft">
@@ -236,17 +218,7 @@ export function SignalPanel({
       )}
 
       {message ? (
-        <Notice className="mx-auto mt-6 max-w-md text-left">
-          {message.text}
-          {message.matchesLink ? (
-            <>
-              {" "}
-              <Link href="/matches" className="font-semibold underline underline-offset-4">
-                Open Matches
-              </Link>
-            </>
-          ) : null}
-        </Notice>
+        <Notice className="mx-auto mt-6 max-w-md text-left">{message.text}</Notice>
       ) : null}
     </Card>
   );

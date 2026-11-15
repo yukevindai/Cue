@@ -14,7 +14,7 @@ opened in Lens Studio or run on a device. Checklist: `docs/spectacles-check.md`.
 ```
 GestureModule pinch-down (left/right hand)
   -> Core/double-pinch.ts      two same-hand pinches within 450 ms, confidence >= 0.5
-  -> Core/encounter-context.ts only when GET /api/devices/me says encounter mode is on (fresh, < 6 s)
+  -> Core/encounter-context.ts only when GET /api/devices/me says ready (encounter on + a place; fresh, < 6 s)
   -> Core/pipeline.ts          debounce 1 s, one InterestEvent with a fresh eventId
   -> Core/api-client.ts        Bearer device token, retry 5xx/network with the same eventId (3 tries, 4 s budget)
   -> Core/feedback.ts          sound + one line of text, from the wearer's own ack only
@@ -38,7 +38,8 @@ GestureModule pinch-down (left/right hand)
 |---|---|---|
 | Not linked | Opens the system keyboard for the 6-character pairing code | "Not linked. Get a code in Cue on your phone, then double pinch to enter it" |
 | Linked, encounter mode off | Nothing (dropped, never replayed) | "Linked. Turn on encounter mode in Cue" |
-| Linked, encounter mode on | Sends one `spectacles_hand` / `double_pinch` signal | "Encounter on. Double pinch to signal" |
+| Linked, encounter mode on, but no place (no venue check-in, no fresh phone location) | Nothing (dropped) | "Encounter on. Open Cue on your phone or check in to a venue" |
+| Linked, encounter mode on and `ready` | Sends one `spectacles_hand` / `double_pinch` signal | "Encounter on. Double pinch to signal" |
 | Server unreachable / stale | Nothing | "Can't reach Cue" / "Connecting..." |
 
 A single pinch never sends anything: it is how Spectacles users select things.
@@ -93,10 +94,12 @@ The source/gesture pair is registered in three places, which must agree:
 - `sourceAllowedForAuth` in `packages/matching/src/rules.ts` (a device token may
   send `mentra_touch` or `spectacles_hand`; a web session may send neither);
 - SQL `public.interest_pair_ok`, widened by
-  `supabase/migrations/20261115020000_spectacles_hand_source.sql`.
+  `supabase/migrations/20261115030000_spectacles_hand_source.sql`.
 
-Matching is unchanged: a Spectacles double pinch and the other person's Mentra
-swipe, Meta tap or web button make one match like any other pair.
+Matching does not depend on the source: a Spectacles double pinch and a Mentra
+swipe, Meta tap or web button from another person in the same place (shared
+venue check-in, or phones within 40 m) inside 15 s make one match. The Lens has
+no location of its own; the wearer's place comes from their phone.
 
 ## Security and privacy
 

@@ -7,14 +7,12 @@ import { api, describeError } from "@/lib/api";
 
 type Action = "reset" | "end";
 
-/** Organiser tools, deliberately quiet: reset for another run, or end the session. */
-export function DemoControls({
-  onEnded,
-  onReset,
-}: {
-  onEnded: (text: string) => void;
-  onReset: () => void;
-}) {
+const RESET_TEXT =
+  "Ends the matches you made in the last 12 hours and clears your pending signal.";
+const END_TEXT = `${RESET_TEXT} It also checks you out and turns Encounter mode off.`;
+
+/** Demo tools, deliberately quiet: reset for another run, or end and leave. */
+export function DemoControls({ onReset }: { onReset: () => void }) {
   const { applyEncounter, refreshMatches } = useLive();
   const [confirm, setConfirm] = useState<Action | null>(null);
   const [busy, setBusy] = useState(false);
@@ -34,16 +32,17 @@ export function DemoControls({
     try {
       const status = await api.resetDemo({ leave: action === "end" });
       setConfirm(null);
-      if (action === "end") onEnded("Session ended. Start a new one, or join with a code.");
-      else {
-        setDone("Demo reset. Ready for another run.");
-        onReset();
-      }
+      setDone(
+        action === "end"
+          ? "Demo ended. You're checked out and Encounter mode is off."
+          : "Demo reset. Ready for another run.",
+      );
+      onReset();
       applyEncounter(status);
       void refreshMatches();
     } catch (err) {
       setError(
-        `${action === "end" ? "The session is still running." : "Nothing was reset."} ${describeError(err)}`,
+        `${action === "end" ? "Nothing was ended." : "Nothing was reset."} ${describeError(err)}`,
       );
     } finally {
       setBusy(false);
@@ -54,13 +53,16 @@ export function DemoControls({
     <details className="rounded-card border border-line px-5 py-4 text-ink-soft open:pb-5">
       <summary className="cursor-pointer rounded-md py-1 font-medium">Demo controls</summary>
       <div className="mt-3 space-y-4">
-        <p className="text-sm">For whoever is running the demo. Both actions affect both people.</p>
+        <p className="text-sm">
+          Reset demo ends the matches you made in the last 12 hours and clears your pending signal.
+          End demo does that, and also checks you out and turns Encounter mode off.
+        </p>
         <div className="flex flex-col gap-3 sm:flex-row">
           <Button variant="secondary" onClick={() => open("reset")}>
             Reset demo
           </Button>
           <Button variant="danger" onClick={() => open("end")}>
-            End session
+            End demo
           </Button>
         </div>
         <p role="status" className="text-sm font-medium text-ink">
@@ -77,26 +79,22 @@ export function DemoControls({
           onConfirm={() => run("reset")}
           onCancel={() => setConfirm(null)}
         >
-          <p>
-            Clears pending signals and removes this session&apos;s matches for both of you, so you
-            can run the demo again. You both stay in the session.
-          </p>
+          <p>{RESET_TEXT}</p>
+          <p>Those matches end for the other person too, with their conversations.</p>
         </ConfirmDialog>
       ) : null}
       {confirm === "end" ? (
         <ConfirmDialog
-          title="End this session?"
-          confirmLabel="End session"
+          title="End the demo?"
+          confirmLabel="End demo"
           danger
           busy={busy}
           error={error}
           onConfirm={() => run("end")}
           onCancel={() => setConfirm(null)}
         >
-          <p>
-            Ends this session for both people and clears its signals and matches. You&apos;ll need
-            a new code to start again.
-          </p>
+          <p>{END_TEXT}</p>
+          <p>Those matches end for the other person too, with their conversations.</p>
         </ConfirmDialog>
       ) : null}
     </details>

@@ -2,13 +2,14 @@
 --
 -- The Cue Lens on Snap Spectacles (apps/spectacles) recognises a double pinch
 -- with Spectacles hand tracking and sends it as an interest signal with a
--- device token, exactly like the Mentra miniapp. Matching rules are unchanged:
--- any two distinct members' signals inside the window match, whatever their
--- sources.
+-- device token, exactly like the Mentra miniapp. Matching does not depend on
+-- the source: any two people's signals in the same place inside the window
+-- match, whatever their sources.
 --
 -- interest_pair_ok backs both the interest_events check constraint and the
--- guard in submit_interest (20261115000000_headset_remote_source.sql), so
--- widening it here is the whole database change. The new definition is a strict
+-- guard in submit_signal (20261115000000_headset_remote_source.sql,
+-- 20261115020000_place_based_matching.sql), so widening it here is the whole
+-- database change. The new definition is a strict
 -- superset of the old one, so every existing row still satisfies the constraint.
 -- Mirrors GESTURES_BY_SOURCE in packages/contracts/src/interest.ts.
 --

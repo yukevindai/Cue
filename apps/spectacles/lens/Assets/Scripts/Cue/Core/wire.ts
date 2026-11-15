@@ -8,7 +8,6 @@ import { GESTURE, SOURCE } from "./config";
 
 export interface InterestEvent {
   eventId: string;
-  encounterSessionId: string;
   source: typeof SOURCE;
   gesture: typeof GESTURE;
   occurredAt: string;
@@ -28,7 +27,8 @@ export interface InterestAck {
 export interface DeviceContext {
   deviceId: string;
   encounterMode: boolean;
-  encounterSessionId: string | null;
+  /** Encounter mode is on AND the wearer's phone has given Cue a place (venue check-in or fresh location). */
+  ready: boolean;
   serverTime: string;
 }
 
@@ -92,11 +92,11 @@ export function parseDeviceContext(value: unknown): DeviceContext | null {
   const o = asObject(value);
   if (o === null) return null;
   if (!isUuid(o.deviceId) || typeof o.encounterMode !== "boolean") return null;
-  if (!(o.encounterSessionId === null || isUuid(o.encounterSessionId)) || !isString(o.serverTime)) return null;
+  if (typeof o.ready !== "boolean" || !isString(o.serverTime)) return null;
   return {
     deviceId: o.deviceId,
     encounterMode: o.encounterMode,
-    encounterSessionId: o.encounterSessionId as string | null,
+    ready: o.ready,
     serverTime: o.serverTime,
   };
 }

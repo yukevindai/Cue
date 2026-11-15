@@ -39,12 +39,15 @@ What has and has not been verified for the Spectacles client
    pinch, type the code, press return. Expect "Linking..." then "Linked. Turn on
    encounter mode in Cue". The web card should show "Snap Spectacles" and the
    double-pinch hint.
-4. Turn on encounter mode on the phone. Within about 2 s the Lens shows
-   "Encounter on. Double pinch to signal".
+4. Turn on encounter mode on the phone with the Cue page open (so it reports
+   location) or check in to a venue. Within about 2 s the Lens shows
+   "Encounter on. Double pinch to signal". Before Cue has a place it shows
+   "Encounter on. Open Cue on your phone or check in to a venue".
 5. Single pinch 10 times with pauses. Expect nothing sent (no "Signal sent").
 6. Double pinch once. Expect the soft beep and "Signal sent", and on the phone
    `GET /api/encounter` shows `pendingSignal.source = "spectacles_hand"`.
-7. Have the other person signal (any route) within 15 s. Expect the match in
+7. Have the other person, in the same place (same venue, or phones within
+   40 m), signal by any route within 15 s. Expect the match in
    both web apps. If the Spectacles wearer signals second, the Lens plays the
    two-note match cue.
 8. Turn encounter mode off, double pinch, turn it back on. Expect no signal (not

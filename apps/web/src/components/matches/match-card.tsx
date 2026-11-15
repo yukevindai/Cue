@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ARCHETYPES, LOOKING_FOR_LABELS, type MatchCard as MatchCardData } from "@cue/contracts";
 import { Avatar, Chip } from "@/components/ui";
-import { formatEncounterTime } from "@/lib/format";
+import { formatEncounterTime, matchPlace } from "@/lib/format";
 import { ageAndCity } from "@/lib/profile-facts";
 
 const MAX_CHIPS = 4;
@@ -18,12 +18,13 @@ export function MatchCard({ match }: { match: MatchCardData }) {
   const character = other.archetype ? ARCHETYPES[other.archetype] : null;
   const facts = ageAndCity(other);
   const unread = match.unreadCount;
+  const place = matchPlace(match);
 
   return (
     <li>
       <Link
         href={`/matches/${match.id}`}
-        aria-label={`${other.displayName}, met at ${match.venueLabel}, ${when}${unread > 0 ? `, ${unreadText(unread)}` : ""}`}
+        aria-label={`${other.displayName}, ${place.line.charAt(0).toLowerCase()}${place.line.slice(1)}, ${when}${unread > 0 ? `, ${unreadText(unread)}` : ""}`}
         className="block rounded-card border border-line bg-surface p-5 shadow-card transition-colors hover:border-line-strong hover:bg-white sm:p-6"
       >
         <div className="flex items-start gap-4 sm:gap-5">
@@ -41,10 +42,10 @@ export function MatchCard({ match }: { match: MatchCardData }) {
             {character ? <p className="font-display text-lg italic leading-snug text-ink-soft">{character.name}</p> : null}
             {facts ? <p className="mt-0.5 font-medium">{facts}</p> : null}
             <p className="mt-1 text-ink">
-              Met at {match.venueLabel}
+              {place.line}
               <span className="text-ink-soft"> · {when}</span>
             </p>
-            <p className="text-sm text-ink-soft">Venue entered by hand, not GPS</p>
+            {place.note ? <p className="text-sm text-ink-soft">{place.note}</p> : null}
           </div>
         </div>
 

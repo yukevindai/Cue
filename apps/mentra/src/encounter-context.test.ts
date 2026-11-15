@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { CONTEXT_MAX_AGE_MS, EncounterContextTracker, type ContextFetchResult } from "./encounter-context";
-import { DEVICE_ID, SESSION_ID } from "./testing";
+import { DEVICE_ID } from "./testing";
 
-const ctx = (encounterMode: boolean, encounterSessionId: string | null): ContextFetchResult => ({
+const ctx = (encounterMode: boolean, ready: boolean): ContextFetchResult => ({
   ok: true,
-  context: { deviceId: DEVICE_ID, encounterMode, encounterSessionId, serverTime: "2026-11-14T10:00:00.000Z" },
+  context: { deviceId: DEVICE_ID, encounterMode, ready, serverTime: "2026-11-14T10:00:00.000Z" },
 });
 
 function make(fetchContext: () => Promise<ContextFetchResult>) {
@@ -14,21 +14,25 @@ function make(fetchContext: () => Promise<ContextFetchResult>) {
 
 describe("EncounterContextTracker", () => {
   it("is stale before the first refresh", () => {
-    expect(make(async () => ctx(true, SESSION_ID)).tracker.snapshot()).toEqual({ state: "stale" });
+    expect(make(async () => ctx(true, true)).tracker.snapshot()).toEqual({ state: "stale" });
   });
 
-  it("ready with the session id", async () => {
-    const { tracker } = make(async () => ctx(true, SESSION_ID));
-    expect(await tracker.refresh()).toEqual({ state: "ready", encounterSessionId: SESSION_ID });
+  it("mode on and ready is ready", async () => {
+    const { tracker } = make(async () => ctx(true, true));
+    expect(await tracker.refresh()).toEqual({ state: "ready" });
   });
 
-  it("mode off and null session id are encounter_mode_off", async () => {
-    expect(await make(async () => ctx(false, SESSION_ID)).tracker.refresh()).toEqual({ state: "encounter_mode_off" });
-    expect(await make(async () => ctx(true, null)).tracker.refresh()).toEqual({ state: "encounter_mode_off" });
+  it("mode off is encounter_mode_off, whatever ready says", async () => {
+    expect(await make(async () => ctx(false, true)).tracker.refresh()).toEqual({ state: "encounter_mode_off" });
+    expect(await make(async () => ctx(false, false)).tracker.refresh()).toEqual({ state: "encounter_mode_off" });
+  });
+
+  it("mode on but not ready is no_place", async () => {
+    expect(await make(async () => ctx(true, false)).tracker.refresh()).toEqual({ state: "no_place" });
   });
 
   it("a failed refresh takes effect immediately", async () => {
-    let result: ContextFetchResult = ctx(true, SESSION_ID);
+    let result: ContextFetchResult = ctx(true, true);
     const { tracker } = make(async () => result);
     await tracker.refresh();
     result = { ok: false, reason: "offline" };
@@ -38,7 +42,7 @@ describe("EncounterContextTracker", () => {
   });
 
   it("goes stale after the max age", async () => {
-    const { tracker, clock } = make(async () => ctx(true, SESSION_ID));
+    const { tracker, clock } = make(async () => ctx(true, true));
     await tracker.refresh();
     clock.t += CONTEXT_MAX_AGE_MS;
     expect(tracker.snapshot().state).toBe("ready");
@@ -58,15 +62,15 @@ describe("EncounterContextTracker", () => {
     const { tracker } = make(() => new Promise<ContextFetchResult>((r) => resolvers.push(r)));
     const first = tracker.refresh();
     const second = tracker.refresh();
-    resolvers[1]!(ctx(true, SESSION_ID));
+    resolvers[1]!(ctx(true, true));
     await second;
-    resolvers[0]!(ctx(false, null));
+    resolvers[0]!(ctx(false, false));
     await first;
-    expect(tracker.snapshot()).toEqual({ state: "ready", encounterSessionId: SESSION_ID });
+    expect(tracker.snapshot()).toEqual({ state: "ready" });
   });
 
   it("reset forgets everything", async () => {
-    const { tracker } = make(async () => ctx(true, SESSION_ID));
+    const { tracker } = make(async () => ctx(true, true));
     await tracker.refresh();
     tracker.reset();
     expect(tracker.snapshot()).toEqual({ state: "stale" });

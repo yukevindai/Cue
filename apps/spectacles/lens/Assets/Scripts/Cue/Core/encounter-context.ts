@@ -9,8 +9,9 @@ import type { DeviceContext } from "./wire";
  * Same semantics as apps/mentra/src/encounter-context.ts.
  */
 export type ContextSnapshot =
-  | { state: "ready"; encounterSessionId: string }
+  | { state: "ready" }
   | { state: "encounter_mode_off" }
+  | { state: "no_place" }
   | { state: "unlinked" }
   | { state: "offline" }
   | { state: "stale" };
@@ -58,8 +59,11 @@ export class EncounterContextTracker {
     const { result, at } = this.last;
     if (!result.ok) return { state: result.reason };
     if (this.now() - at > this.maxAgeMs) return { state: "stale" };
-    const { encounterMode, encounterSessionId } = result.context;
-    if (!encounterMode || encounterSessionId === null) return { state: "encounter_mode_off" };
-    return { state: "ready", encounterSessionId };
+    const { encounterMode, ready } = result.context;
+    if (!encounterMode) return { state: "encounter_mode_off" };
+    // Encounter mode on, but the server does not know where the wearer is
+    // (no venue check-in, no fresh phone location): a signal could not match.
+    if (!ready) return { state: "no_place" };
+    return { state: "ready" };
   }
 }

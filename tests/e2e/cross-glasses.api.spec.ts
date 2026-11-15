@@ -9,6 +9,7 @@ import { expectExactlyOneSharedMatch, expectNoMatches, sleepPast } from "./helpe
 import { expect, test } from "./helpers/fixtures";
 import { watchTable } from "./helpers/realtime";
 import { signal, type Person } from "./helpers/scenario";
+import { metresNorth } from "./helpers/geo";
 
 /** Pairs a device for `person` through the real pair/claim flow. */
 async function linkDevice(person: Person) {
@@ -32,7 +33,7 @@ test.describe("Mentra swipe and headset remote signal (server path only)", () =>
       const pair = await world.pair({ venue: "E2E Test Cafe" });
       const device = await linkDevice(pair.a);
       try {
-        const swipe = () => device.api.interest(interestEvent(pair.session.id, { source: "mentra_touch" }));
+        const swipe = () => device.api.interest(interestEvent({ source: "mentra_touch" }));
         const remote = () => signal(pair, pair.b, { source: "headset_remote" });
 
         const first = must(order === "Mentra first" ? await swipe() : await remote(), "first signal");
@@ -49,7 +50,7 @@ test.describe("Mentra swipe and headset remote signal (server path only)", () =>
         expect(forB.other.displayName).toBe(pair.a.displayName);
         for (const card of [forA, forB]) {
           expect(card.venueLabel).toBe("E2E Test Cafe");
-          expect(card.venueLabelSource).toBe("manual");
+          expect(card.venueLabelSource).toBe("venue_checkin");
           expect(Math.abs(new Date(card.encounterAt).getTime() - new Date(first.receivedAt).getTime())).toBeLessThan(50);
         }
         expect(must(await pair.a.api.getEncounter()).pendingSignal).toBeNull();
@@ -102,17 +103,22 @@ test.describe("Mentra swipe and headset remote signal (server path only)", () =>
     }
   });
 
-  test("a device token cannot send headset_remote, and an outsider cannot inject one", async ({ world }) => {
+  test("a device token cannot send headset_remote, and someone with no place cannot signal", async ({ world }) => {
     const pair = await world.pair();
     const third = await world.person();
     const device = await linkDevice(pair.a);
     try {
-      const viaDevice = await device.api.interest(interestEvent(pair.session.id, { source: "headset_remote" }));
+      const viaDevice = await device.api.interest(interestEvent({ source: "headset_remote" }));
       expect(viaDevice.status).toBe(403);
       expect(viaDevice.error?.code).toBe("forbidden");
 
-      const outsider = await third.api.interest(interestEvent(pair.session.id, { source: "headset_remote" }));
-      expect(wasRejected(outsider, "not_in_session")).toBe(true);
+      // Someone with no place cannot signal at all: refused, and nothing is left pending.
+      const outsider = await third.api.interest(interestEvent({ source: "headset_remote" }));
+      expect(wasRejected(outsider, "encounter_mode_off")).toBe(true);
+      must(await third.api.setMode(true));
+      const noPlace = await third.api.interest(interestEvent({ source: "headset_remote" }));
+      expect(wasRejected(noPlace, "no_place")).toBe(true);
+      expect(must(await third.api.getEncounter()).pendingSignal).toBeNull();
 
       expect(must(await pair.a.api.getEncounter()).pendingSignal).toBeNull();
       // B's signal finds nothing to match: neither refused attempt left a pending signal.
@@ -125,7 +131,7 @@ test.describe("Mentra swipe and headset remote signal (server path only)", () =>
 
   test("headset_remote rejects gestures of other sources and a client user id", async ({ world }) => {
     const pair = await world.pair();
-    const base = interestEvent(pair.session.id, { source: "headset_remote" });
+    const base = interestEvent({ source: "headset_remote" });
     for (const body of [
       { ...base, gesture: "web_confirm" },
       { ...base, gesture: "backward_swipe" },
@@ -147,4 +153,57 @@ test.describe("Mentra swipe and headset remote signal (server path only)", () =>
       expect(must(await signal(pair, pair.b, { source: "headset_remote", gesture })).matched).toBe(true);
     });
   }
+});
+
+test.describe("Mentra swipe and headset remote match by place (server path only)", () => {
+  for (const order of ["Mentra first", "headset first"] as const) {
+    test(`${order}: matched by phone location, no venue, card says Nearby`, async ({ world }) => {
+      const { a, b, spot } = await world.nearbyPair({ metres: 20 });
+      const device = await linkDevice(a);
+      try {
+        const swipe = () => device.api.interest(interestEvent({ source: "mentra_touch" }));
+        const remote = () => b.api.interest(interestEvent({ source: "headset_remote" }));
+        const first = must(order === "Mentra first" ? await swipe() : await remote());
+        expect(first).toMatchObject({ status: "accepted", matched: false });
+        await expectNoMatches(a.api, b.api);
+        const second = must(order === "Mentra first" ? await remote() : await swipe());
+        expect(second).toMatchObject({ status: "accepted", matched: true });
+        const { forA, forB } = await expectExactlyOneSharedMatch(a.api, b.api);
+        for (const card of [forA, forB]) {
+          expect(card).toMatchObject({ venueLabel: "Nearby", venueLabelSource: "phone_location" });
+        }
+        expect(metresNorth(spot, 20).lat).toBeGreaterThan(spot.lat);
+      } finally {
+        await device.ctx.dispose();
+      }
+    });
+  }
+
+  test("matched by a shared venue check-in, no phone location, card names the venue", async ({ world }) => {
+    const pair = await world.pair({ venue: "Glasses Cross Hall" });
+    const device = await linkDevice(pair.a);
+    try {
+      must(await device.api.interest(interestEvent({ source: "mentra_touch" })));
+      const ack = must(await pair.b.api.interest(interestEvent({ source: "headset_remote", gesture: "media_play_pause" })));
+      expect(ack.matched).toBe(true);
+      const { forA, forB } = await expectExactlyOneSharedMatch(pair.a.api, pair.b.api);
+      for (const card of [forA, forB]) {
+        expect(card).toMatchObject({ venueLabel: "Glasses Cross Hall", venueLabelSource: "venue_checkin" });
+      }
+    } finally {
+      await device.ctx.dispose();
+    }
+  });
+
+  test("two wearers far apart do not match", async ({ world }) => {
+    const { a, b } = await world.nearbyPair({ metres: 400 });
+    const device = await linkDevice(a);
+    try {
+      must(await device.api.interest(interestEvent({ source: "mentra_touch" })));
+      expect(must(await b.api.interest(interestEvent({ source: "headset_remote" }))).matched).toBe(false);
+      await expectNoMatches(a.api, b.api);
+    } finally {
+      await device.ctx.dispose();
+    }
+  });
 });
