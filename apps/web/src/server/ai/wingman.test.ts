@@ -138,6 +138,15 @@ beforeEach(() => {
   vi.spyOn(console, "warn").mockImplementation(() => {});
 });
 
+/**
+ * What a person would see, as text. Leaves out `generatedAt` and `matchId`:
+ * a timestamp or uuid can contain any digits by chance, which made assertions
+ * like "does not mention 29" fail at random.
+ */
+function shownText(result: unknown): string {
+  return JSON.stringify(result, (key, value) => (key === "generatedAt" || key === "matchId" ? undefined : value));
+}
+
 describe("grounded overlap", () => {
   it("returns a claim with evidence from both profiles and the model's opener", async () => {
     const { client, parse } = fakeClient(() => output([claim("Hiking", "Hiking", "hiking")]));
@@ -214,7 +223,7 @@ describe("related interests are linked without overstating", () => {
     overstated.summary = "You are both passionate baristas and 97% compatible.";
     const { client } = fakeClient(() => output([overstated], "Where's the best coffee you've found lately?"));
     const result = await getWingmanSuggestion(MATCH, ALEX, deps(context({}), client));
-    expect(JSON.stringify(result)).not.toMatch(/barista|97|compatible/);
+    expect(shownText(result)).not.toMatch(/barista|97|compatible/);
   });
 });
 
@@ -376,7 +385,7 @@ describe("prompt injection in profile text", () => {
     const result = await getWingmanSuggestion(MATCH, ALEX, deps(ctx, client));
     expect(result.sharedInterests).toEqual([]);
     expect(result.noOverlap).toBe(true);
-    expect(JSON.stringify(result)).not.toMatch(/skydiv|compatib|evil/i);
+    expect(shownText(result)).not.toMatch(/skydiv|compatib|evil/i);
   });
 
   it("a fooled model that pairs real but unrelated quotes gets no label, no claim of sharing, no opener of its own", async () => {
@@ -396,7 +405,7 @@ describe("prompt injection in profile text", () => {
     ]);
     expect(result.suggestedQuestion).toBe("What brought you to Immerse the Bay demo floor today?");
     expect(result.openerBasis).toBe("encounter_context");
-    expect(JSON.stringify(result)).not.toMatch(/both (love|enjoy|start)|compatib/i);
+    expect(shownText(result)).not.toMatch(/both (love|enjoy|start)|compatib/i);
   });
 
   it.each([
@@ -418,7 +427,7 @@ describe("prompt injection in profile text", () => {
   it("does not let an unsafe label through", async () => {
     const { client } = fakeClient(() => output([claim("Hiking http://evil.example", "Hiking", "hiking")]));
     const result = await getWingmanSuggestion(MATCH, ALEX, deps(context({}), client));
-    expect(JSON.stringify(result)).not.toContain("evil");
+    expect(shownText(result)).not.toContain("evil");
     expect(result.sharedInterests[0]!.label).toBe("Hiking");
   });
 
@@ -736,8 +745,9 @@ describe("richer profile input", () => {
     }
   });
 
-  it("never reads or sends ethnicity, drinking, smoking, drugs or gender, even when shared", async () => {
+  it("never reads or sends age, ethnicity, drinking, smoking, drugs or gender, even when shared", async () => {
     const markers = {
+      age: "MARKER-AGE-q7",
       ethnicity: "MARKER-ETHNICITY-q7",
       drinking: "MARKER-DRINKING-q7",
       smoking: "MARKER-SMOKING-q7",
@@ -753,14 +763,14 @@ describe("richer profile input", () => {
     const sent = sentText(parse);
     expect(sent).toContain("On a trail"); // the request was made and carries the allowed fields
     expect(sent).not.toMatch(/MARKER/);
-    expect(JSON.stringify(result)).not.toMatch(/MARKER/);
+    expect(shownText(result)).not.toMatch(/MARKER/);
 
     // Structural: the builder never even touches those properties, nor age.
     const { buildModelInput } = await import("./grounding");
     const guard = (p: SharedProfile) =>
       new Proxy(p, {
         get(target, key, receiver) {
-          if ([...NEVER_SENT_TO_AI, "age"].includes(key as string)) {
+          if ((NEVER_SENT_TO_AI as readonly string[]).includes(key as string)) {
             throw new Error(`model input read ${String(key)}`);
           }
           return Reflect.get(target, key, receiver);
@@ -927,7 +937,7 @@ describe("grounding on the richer fields", () => {
     const { client } = fakeClient(() => output([claim("Twenties", "29", "31", { yours: "bio", theirs: "bio" })]));
     const result = await getWingmanSuggestion(MATCH, ALEX, deps(richContext(), client));
     expect(result.sharedInterests).toEqual([]);
-    expect(JSON.stringify(result)).not.toMatch(/29|31|twent/i);
+    expect(shownText(result)).not.toMatch(/29|31|twent/i);
   });
 
   it("age is not a field: output that cites it fails validation and is not cached", async () => {
