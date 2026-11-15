@@ -307,3 +307,17 @@ export function speak(
     }
   });
 }
+
+/**
+ * Speaks `text` now, replacing anything already being said, so a second tap
+ * restarts the line instead of queueing it. For explicit "say it" buttons.
+ */
+export function speakNow(text: string, opts: { maxWaitMs?: number; env?: SpeechEnv } = {}): Promise<void> {
+  const env = opts.env ?? browserSpeechEnv();
+  try {
+    env.speechSynthesis?.cancel();
+  } catch {
+    // nothing was playing
+  }
+  return speak(text, { ...opts, env });
+}

@@ -76,6 +76,18 @@ See "Status log" below. Update it when a milestone lands or a decision changes.
 
 ### Status log
 
+- 2026-11-15 17:40 UTC: "Hear it again" for the wingman line (PR #13). The
+  match screen's line has a replay button; the match page has a "Your wingman"
+  block that asks for the line only on a tap ("Hear your wingman"), then shows
+  and says it (shared `components/matches/wingman-line.tsx`, `speakNow` in
+  `lib/speech.ts`). A tap speaks even when "Wingman voice" is off. Also: while
+  a person's own signal is pending the page re-checks matches every 2 s
+  (`POLL_SIGNAL_OUT_MS` in `live-provider.tsx`); before, a missed live update
+  could delay the first signaller's match screen by up to 20 s (seen as the
+  first UI match after a cold local stack). Verified: typecheck, lint, tests
+  (web 426), build, `pnpm test:e2e` 251/251, browser walkthrough with speech
+  output stubbed. PR #12 (rename to SocialEyes) is merged and live. NOT
+  verified: real sound on a phone or glasses.
 - 2026-11-15 16:30 UTC: Product and repository renamed to **SocialEyes**
   (`yukevindai/SocialEyes`), on the owner's instruction: everything in the
   web app, the tests' quoted text and the docs. Not renamed, by the owner's

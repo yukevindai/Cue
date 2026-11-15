@@ -1,18 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import {
-  listenOnce,
-  primeSpeech,
-  readTranscript,
-  recognitionProblem,
-  recognitionSupported,
-  speak,
-  type SpeechEnv,
-  type SpeechRecognitionErrorEventLike,
-  type SpeechRecognitionEventLike,
-  type SpeechRecognitionLike,
-  type SynthesisLike,
-  type UtteranceLike,
-} from "./speech";
+import { listenOnce, primeSpeech, readTranscript, recognitionProblem, recognitionSupported, speak, type SpeechEnv, type SpeechRecognitionErrorEventLike, type SpeechRecognitionEventLike, type SpeechRecognitionLike, type SynthesisLike, type UtteranceLike, speakNow } from "./speech";
 
 function results(parts: { text: string; final: boolean }[]): SpeechRecognitionEventLike {
   const list = parts.map((p) => Object.assign([{ transcript: p.text }], { isFinal: p.final }));
@@ -197,5 +184,44 @@ describe("synthesis", () => {
   it("is a no-op without synthesis", async () => {
     primeSpeech({});
     await expect(speak("hello", { env: {} })).resolves.toBeUndefined();
+  });
+});
+
+describe("speakNow", () => {
+  function fakeEnv() {
+    const log: string[] = [];
+    class U {
+      lang = "";
+      volume = 1;
+      rate = 1;
+      onstart: (() => void) | null = null;
+      onend: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      constructor(public text: string) {}
+    }
+    const env = {
+      speechSynthesis: {
+        speak: (u: U) => {
+          log.push(`speak:${u.text}`);
+          u.onend?.();
+        },
+        cancel: () => {
+          log.push("cancel");
+        },
+      },
+      SpeechSynthesisUtterance: U,
+    };
+    return { env: env as unknown as import("./speech").SpeechEnv, log };
+  }
+
+  it("cancels what is playing, then speaks the text", async () => {
+    const { env, log } = fakeEnv();
+    await speakNow("Yo, Sam noticed you too.", { env });
+    await speakNow("Yo, Sam noticed you too.", { env });
+    expect(log).toEqual(["cancel", "speak:Yo, Sam noticed you too.", "cancel", "speak:Yo, Sam noticed you too."]);
+  });
+
+  it("does nothing without speech output, and never rejects", async () => {
+    await expect(speakNow("hello", { env: {} })).resolves.toBeUndefined();
   });
 });

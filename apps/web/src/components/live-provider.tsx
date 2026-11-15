@@ -90,6 +90,8 @@ export function useLive(): LiveValue {
 const MOMENT_MAX_AGE_MS = 10 * 60 * 1000;
 const POLL_LIVE_MS = 20_000;
 const POLL_DEGRADED_MS = 4_000;
+/** Matches and status refresh while this person's own signal is pending. */
+const POLL_SIGNAL_OUT_MS = 2_000;
 /** Encounter status refresh while encounter mode is on. */
 const POLL_ENCOUNTER_MS = 10_000;
 
@@ -338,6 +340,20 @@ export function LiveProvider({
     }, POLL_ENCOUNTER_MS);
     return () => window.clearInterval(id);
   }, [encounterMode, refreshEncounter]);
+
+  // While this person's own signal is out, a match can arrive at any moment.
+  // The live update normally brings it; if that update is missed (a dropped
+  // connection, a cold start), look every couple of seconds so the match
+  // still shows promptly. Only one's own pending signal starts this, so it
+  // says nothing about anyone else.
+  const signalOut = encounter?.pendingSignal != null;
+  useEffect(() => {
+    if (!signalOut) return;
+    const id = window.setInterval(() => {
+      if (document.visibilityState === "visible") refreshAll();
+    }, POLL_SIGNAL_OUT_MS);
+    return () => window.clearInterval(id);
+  }, [signalOut, refreshAll]);
 
   const { geo, retry: retryLocation } = useLocationReporter({
     enabled: encounterMode,
