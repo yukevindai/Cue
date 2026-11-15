@@ -2,150 +2,166 @@ import "server-only";
 
 import { randomInt } from "node:crypto";
 import {
-  DEMO_SESSION_CAPACITY,
-  type DemoSession,
+  VENUE_CODE_ALPHABET,
   type EncounterStatus,
   type InterestSource,
+  type LocationInput,
+  type LocationStatus,
 } from "@cue/contracts";
-import { iso, rpc, unwrap } from "@/server/db";
+import { iso, isoOrNull, rpc, unwrap } from "@/server/db";
 import { getDeviceStatus } from "@/server/devices";
 import { HttpError } from "@/server/http";
 import { rateLimit } from "@/server/rate-limit";
 import { getAdminSupabase } from "@/server/supabase-admin";
 
-const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O/1/I
-const JOIN_CODE_LENGTH = 6;
+const VENUE_CODE_LENGTH = 6;
 
-function randomJoinCode(): string {
+function randomVenueCode(): string {
   let code = "";
-  for (let i = 0; i < JOIN_CODE_LENGTH; i++) code += CODE_ALPHABET[randomInt(CODE_ALPHABET.length)];
+  for (let i = 0; i < VENUE_CODE_LENGTH; i++) code += VENUE_CODE_ALPHABET[randomInt(VENUE_CODE_ALPHABET.length)];
   return code;
 }
 
-interface SessionRow {
-  id: string;
-  join_code: string;
-  venue_label: string;
-  venue_label_source: "manual";
-  created_at: string;
+/** jsonb returned by SQL `presence_state`. Never contains coordinates. */
+export interface PresenceState {
+  encounter_mode: boolean;
+  ready: boolean;
+  venue: {
+    id: string;
+    name: string;
+    code: string;
+    checked_in_at: string;
+    expires_at: string;
+  } | null;
+  location: {
+    status: LocationStatus;
+    accuracy_m: number | null;
+    located_at: string | null;
+  };
 }
 
-/** The caller's own view only: their session, their mode, their own pending signal. */
+export async function getPresenceState(userId: string): Promise<PresenceState> {
+  return rpc<PresenceState>("presence_state", { p_user_id: userId });
+}
+
+interface PendingRow {
+  event_id: string;
+  source: InterestSource;
+  received_at: string;
+  expires_at: string;
+}
+
+/** The caller's OWN unexpired pending signal (place-based rows have no session). */
+async function ownPendingSignal(userId: string): Promise<PendingRow | null> {
+  return unwrap(
+    await getAdminSupabase()
+      .from("interest_events")
+      .select("event_id, source, received_at, expires_at")
+      .eq("user_id", userId)
+      .is("session_id", null)
+      .eq("status", "pending")
+      .gt("expires_at", new Date().toISOString())
+      .maybeSingle(),
+  ) as PendingRow | null;
+}
+
+/**
+ * The caller's own view only: their mode, their place (never coordinates),
+ * their own pending signal and their device. Incoming interest is never shown.
+ */
 export async function getEncounterStatus(userId: string): Promise<EncounterStatus> {
   await rpc<null>("expire_own_signals", { p_user_id: userId });
-  const db = getAdminSupabase();
+  const [presence, pending, device] = await Promise.all([
+    getPresenceState(userId),
+    ownPendingSignal(userId),
+    getDeviceStatus(userId),
+  ]);
 
-  const member = unwrap(
-    await db
-      .from("demo_session_members")
-      .select("session_id, encounter_mode")
-      .eq("user_id", userId)
-      .is("left_at", null)
-      .maybeSingle(),
-  ) as { session_id: string; encounter_mode: boolean } | null;
-
-  let session: DemoSession | null = null;
-  let pendingSignal: EncounterStatus["pendingSignal"] = null;
-
-  if (member) {
-    const row = unwrap(
-      await db
-        .from("demo_sessions")
-        .select("id, join_code, venue_label, venue_label_source, created_at")
-        .eq("id", member.session_id)
-        .eq("status", "active")
-        .maybeSingle(),
-    ) as SessionRow | null;
-    if (row) {
-      const members = await db
-        .from("demo_session_members")
-        .select("user_id", { count: "exact", head: true })
-        .eq("session_id", row.id)
-        .is("left_at", null);
-      if (members.error) throw new Error(`database error ${members.error.code}`);
-      session = {
-        id: row.id,
-        joinCode: row.join_code,
-        venueLabel: row.venue_label,
-        venueLabelSource: row.venue_label_source,
-        memberCount: members.count ?? 0,
-        capacity: DEMO_SESSION_CAPACITY,
-        createdAt: iso(row.created_at),
-      };
-      const pending = unwrap(
-        await db
-          .from("interest_events")
-          .select("event_id, source, received_at, expires_at")
-          .eq("user_id", userId)
-          .eq("session_id", row.id)
-          .eq("status", "pending")
-          .gt("expires_at", new Date().toISOString())
-          .maybeSingle(),
-      ) as {
-        event_id: string;
-        source: InterestSource;
-        received_at: string;
-        expires_at: string;
-      } | null;
-      if (pending) {
-        pendingSignal = {
+  return {
+    encounterMode: presence.encounter_mode,
+    checkIn: presence.venue
+      ? {
+          venueId: presence.venue.id,
+          name: presence.venue.name,
+          code: presence.venue.code,
+          checkedInAt: iso(presence.venue.checked_in_at),
+          expiresAt: iso(presence.venue.expires_at),
+        }
+      : null,
+    location: {
+      status: presence.location.status,
+      accuracyM: presence.location.accuracy_m,
+      locatedAt: isoOrNull(presence.location.located_at),
+    },
+    ready: presence.ready,
+    pendingSignal: pending
+      ? {
           eventId: pending.event_id,
           source: pending.source,
           receivedAt: iso(pending.received_at),
           expiresAt: iso(pending.expires_at),
-        };
-      }
-    }
-  }
-
-  return {
-    session,
-    encounterMode: session ? (member?.encounter_mode ?? false) : false,
-    pendingSignal,
-    device: await getDeviceStatus(userId),
+        }
+      : null,
+    device,
     serverTime: new Date().toISOString(),
   };
 }
 
+/** Turning it off cancels the pending signal and forgets the location (in SQL). */
 export async function setEncounterMode(userId: string, enabled: boolean): Promise<EncounterStatus> {
-  const ok = await rpc<boolean>("set_encounter_mode", { p_user_id: userId, p_enabled: enabled });
-  if (!ok) throw new HttpError("not_in_session", "Join or create a session first");
+  await rpc<null>("set_presence_mode", { p_user_id: userId, p_enabled: enabled });
   return getEncounterStatus(userId);
 }
 
-export async function createSession(userId: string, venueLabel: string): Promise<EncounterStatus> {
+/**
+ * Stores the phone's position. With encounter mode off nothing is stored and
+ * the status comes back unchanged (still 200): the page may race a mode change.
+ */
+export async function reportLocation(userId: string, input: LocationInput): Promise<EncounterStatus> {
+  // The page reports about every 15 s and on movement; allow bursts.
+  rateLimit(`location:${userId}`, 30, 60_000);
+  await rpc<boolean>("report_location", {
+    p_user_id: userId,
+    p_lat: input.lat,
+    p_lng: input.lng,
+    p_accuracy_m: input.accuracyM,
+  });
+  return getEncounterStatus(userId);
+}
+
+export async function clearLocation(userId: string): Promise<EncounterStatus> {
+  await rpc<null>("clear_location", { p_user_id: userId });
+  return getEncounterStatus(userId);
+}
+
+/** Creates a venue with a fresh code and checks the caller into it. */
+export async function createVenue(userId: string, name: string): Promise<EncounterStatus> {
+  rateLimit(`venue:${userId}`, 10, 60_000);
   const db = getAdminSupabase();
   for (let attempt = 0; attempt < 5; attempt++) {
-    const res = await db.rpc("create_demo_session", {
-      p_user_id: userId,
-      p_venue_label: venueLabel,
-      p_join_code: randomJoinCode(),
-    });
-    if (res.error?.code === "23505") continue; // join code collision
+    const res = await db.rpc("create_venue", { p_user_id: userId, p_name: name, p_code: randomVenueCode() });
+    if (res.error?.code === "23505") continue; // code collision
     unwrap(res);
     return getEncounterStatus(userId);
   }
-  throw new Error("could not allocate a join code");
+  throw new Error("could not allocate a venue code");
 }
 
-export async function joinSession(userId: string, joinCode: string): Promise<EncounterStatus> {
-  rateLimit(`join:${userId}`, 10, 60_000);
-  const full = new HttpError("session_full", "This session already has two participants");
-  const res = await getAdminSupabase().rpc("join_demo_session", {
-    p_user_id: userId,
-    p_join_code: joinCode,
-  });
-  if (res.error?.code === "CUE01") throw full;
-  const result = unwrap(res) as { status: "joined" | "not_found" | "session_full" };
-  if (result.status === "not_found") {
-    throw new HttpError("not_found", "No active session with that code");
-  }
-  if (result.status === "session_full") throw full;
+/** Codes are short and guessable, so attempts are rate limited. Unknown and inactive codes look the same. */
+export async function checkIn(userId: string, code: string): Promise<EncounterStatus> {
+  rateLimit(`checkin:${userId}`, 10, 60_000);
+  const result = await rpc<"checked_in" | "not_found">("check_in_venue", { p_user_id: userId, p_code: code });
+  if (result !== "checked_in") throw new HttpError("not_found", "No venue with that code");
+  return getEncounterStatus(userId);
+}
+
+/** Leaving cancels a pending signal (in SQL). */
+export async function checkOut(userId: string): Promise<EncounterStatus> {
+  await rpc<null>("check_out_venue", { p_user_id: userId });
   return getEncounterStatus(userId);
 }
 
 export async function resetDemo(userId: string, leave: boolean): Promise<EncounterStatus> {
-  const ok = await rpc<boolean>("reset_demo_session", { p_user_id: userId, p_leave: leave });
-  if (!ok) throw new HttpError("not_in_session", "Join or create a session first");
+  await rpc<null>("reset_my_demo", { p_user_id: userId, p_leave: leave });
   return getEncounterStatus(userId);
 }
