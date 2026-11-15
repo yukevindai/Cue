@@ -3,6 +3,7 @@ import {
   type APIRequestContext,
   type Browser,
   type BrowserContext,
+  type BrowserContextOptions,
 } from "@playwright/test";
 import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
 import { BASE_URL, stackEnv } from "./env";
@@ -85,7 +86,7 @@ export interface Actor {
   supabase: SupabaseClient;
   cookies: Cookie[];
   /** A new browser context carrying this user's session cookies (for UI specs). */
-  browserContext(browser: Browser): Promise<BrowserContext>;
+  browserContext(browser: Browser, options?: BrowserContextOptions): Promise<BrowserContext>;
   dispose(): Promise<void>;
 }
 
@@ -100,8 +101,8 @@ export async function signInActor(user: TestUser): Promise<Actor> {
     ctx,
     supabase: client,
     cookies,
-    async browserContext(browser) {
-      const bctx = await browser.newContext({ baseURL: BASE_URL, storageState: storageState(cookies) });
+    async browserContext(browser, options) {
+      const bctx = await browser.newContext({ baseURL: BASE_URL, ...options, storageState: storageState(cookies) });
       browserContexts.push(bctx);
       return bctx;
     },
