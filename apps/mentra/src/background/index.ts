@@ -17,19 +17,43 @@ import { CUE_SPEECH, cueDataUrl } from "../tones";
 
 declare const process: { env: Record<string, string | undefined> };
 
+/** Served by the Cue web app from `apps/web/public/sounds/signal.mp3`. */
+const SIGNAL_SOUND_PATH = "/sounds/signal.mp3";
+
 registerMiniapp<Channels>(async (session) => {
   const logger = createLogger(consoleSink);
+
+  let confirmedSignalSound: string | null = null;
+  /** The "sent" clip on the current Cue server, or null to use the built-in beep. */
+  async function signalSoundUrl(): Promise<string | null> {
+    const serverUrl = bridge.status().serverUrl;
+    if (serverUrl === null) return null;
+    const url = `${serverUrl}${SIGNAL_SOUND_PATH}`;
+    if (confirmedSignalSound === url) return url;
+    try {
+      const res = await fetch(url, { method: "HEAD" });
+      if (!res.ok) return null;
+      confirmedSignalSound = url;
+      return url;
+    } catch {
+      return null;
+    }
+  }
 
   // Mentra Live has speakers and no display. Audio is played by the phone and
   // reaches the glasses over Bluetooth audio when they are the active route.
   const feedback: FeedbackSink = {
     async play(cue: FeedbackCue) {
-      try {
-        await session.speaker.play({ audioUrl: cueDataUrl(cue), stopOtherAudio: false });
-      } catch (error) {
-        logger.warn("clip playback failed, falling back to speech", { cue, error });
-        await session.speaker.speak(CUE_SPEECH[cue]);
+      const clip = cue === "signal_sent" ? await signalSoundUrl() : null;
+      for (const audioUrl of clip ? [clip, cueDataUrl(cue)] : [cueDataUrl(cue)]) {
+        try {
+          await session.speaker.play({ audioUrl, stopOtherAudio: false });
+          return;
+        } catch (error) {
+          logger.warn("clip playback failed", { cue, error });
+        }
       }
+      await session.speaker.speak(CUE_SPEECH[cue]);
     },
   };
 
