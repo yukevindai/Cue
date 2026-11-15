@@ -308,7 +308,7 @@ export const SHARE_ORDER: readonly ShareKey[] = [
   "drugs",
 ];
 
-export const SENSITIVE_KEYS: readonly ShareKey[] = ["ethnicity", "drinking", "smoking", "drugs"];
+export const SENSITIVE_KEYS = ["ethnicity", "drinking", "smoking", "drugs"] as const satisfies readonly ShareKey[];
 
 /** Whether the person has filled the field in at all. */
 export function hasValue(f: FormState, key: ShareKey): boolean {
@@ -348,7 +348,7 @@ export function shareSummary(f: FormState): { will: string[]; wont: string[] } {
     const has = hasValue(f, key);
     if (on && has) will.push(name);
     else if (on) wont.push(`${name} (not added)`);
-    else if (has || !SENSITIVE_KEYS.includes(key)) wont.push(name);
+    else if (has || !(SENSITIVE_KEYS as readonly ShareKey[]).includes(key)) wont.push(name);
     // A sensitive field that is both hidden and empty is not mentioned at all.
   }
   return { will, wont };

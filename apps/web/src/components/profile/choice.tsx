@@ -72,7 +72,7 @@ export function ChoiceChips<T extends string>({
         {options.map((o) => {
           const on = value === o.value;
           return (
-            <label key={o.value} className={cx("relative", columns && "flex")}>
+            <label key={o.value} className={cx("relative", !!columns && "flex")}>
               <input
                 type="radio"
                 name={name}
@@ -81,7 +81,7 @@ export function ChoiceChips<T extends string>({
                 onChange={() => onChange(o.value)}
                 className="peer sr-only"
               />
-              <span className={cx(chipBase, on ? chipOn : chipOff, columns && "w-full justify-center px-2 tabular-nums")}>
+              <span className={cx(chipBase, on ? chipOn : chipOff, !!columns && "w-full justify-center px-2 tabular-nums")}>
                 {on && !columns ? <Check /> : null}
                 {o.label}
               </span>

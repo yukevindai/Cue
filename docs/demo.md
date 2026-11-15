@@ -1,7 +1,14 @@
 # Cue demo runbook
 
 Target length: 90 seconds, plus questions. Source of truth for behavior:
-`docs/spec.md` section 7. This runbook must not promise more than the build does.
+`docs/spec.md` section 7, as amended by `docs/profiles-and-chat.md` (richer
+profiles, a character, and in-app chat were added after the spec). This runbook
+must not promise more than the build does.
+
+**Not yet tried on real phones.** The richer profile, the character on the match
+screen and chat are covered by automated tests and have not been run on the
+phones used for the demo. The live Claude call with the fuller input has not
+been run with a real key. Rehearse both on the day before relying on them.
 
 **Hardware status.** On 2026-11-14 the real-swipe checkpoint in
 `docs/hardware-check.md` was met on the loaner Mentra Live: real swipes reached
@@ -26,6 +33,13 @@ Setup checklist:
 - [ ] `pnpm stack:reset` has been run, so the seed data is fresh.
 - [ ] Two browsers or devices are signed in: one as `alex@cue.demo` and one as
       `sam@cue.demo` (password `cue-demo-123`).
+- [ ] Use only the synthetic demo accounts for anything on screen. Do not type a
+      real person's details into a profile or chat during the demo.
+- [ ] Alex's profile is the seeded one: age, city, looking-for, work, personality
+      cards and a character. Alex's ethnicity, drinking, smoking and drugs are
+      filled in and none are shared. Check the profile page still shows them as
+      not shared, so you can point at it.
+- [ ] No chat history from an earlier run (a reset or unmatch deletes it).
 - [ ] The glasses are paired to Alex. On the Encounter page as Alex, open the
       glasses card, generate a pairing code, and enter it in the Cue app on the
       glasses. The card should then read "Glasses linked".
@@ -41,13 +55,27 @@ Setup checklist:
 
 | Time | Action | What to say |
 |---|---|---|
-| 0:00 - 0:10 | Show Alex's and Sam's profiles and the active demo session in the web app. | "These are two synthetic demo accounts in one isolated two-person session. Cue only matches people inside that session." |
+| 0:00 - 0:10 | Show Alex's and Sam's profiles (cards, character, and the per-field sharing switches) and the active demo session in the web app. | "These are two synthetic demo accounts in one isolated two-person session. Cue only matches people inside that session. Each field has its own share switch." |
 | 0:10 - 0:25 | Point at encounter mode on both accounts. | "Both people have turned encounter mode on. Each signal can only target the other person in this session." |
 | 0:25 - 0:40 | Alex makes a backward swipe along the glasses' temple strip, as if brushing back a stray hair. Show that no match appears. | "Alex signals interest. Sam gets no notification about it, and no match appears yet." If the glasses path is not verified, say so here instead of implying it works. |
 | 0:40 - 0:55 | Sam taps "Interested" in the web app. Alex's page reads "Your signal is out" until then. | "Sam is the second person. The web app is the second input because there is only one pair of glasses." |
-| 0:55 - 1:10 | Both screens show "It's mutual." Tap "See Sam's card" / "See Alex's card": approved profile details, encounter time, and venue label. | "Both signals arrived within 15 seconds, so the server created one match. Each person sees only the fields they approved for sharing." |
-| 1:10 - 1:25 | Tap "Find common ground" on one screen. Show the shared interests and the optional opening question. | "Claude only sees the profile fields each person approved for sharing and for AI assistance, plus the venue label. It suggests a starting point and does not join the conversation." |
-| 1:25 - 1:30 | Stop the demo. Let the participants talk. | "From here the conversation is theirs. Cue does not listen or reply." |
+| 0:55 - 1:10 | Both screens show "It's mutual." Open the other person's card from the match screen: approved profile details, their character, encounter time, and venue label. Point out that Alex's drinking, smoking, drugs and ethnicity are not shown. | "Both signals arrived within 15 seconds, so the server created one match. Each person sees only the fields they approved for sharing. Alex filled in some sensitive fields and shared none of them, so Sam cannot see them." |
+| 1:10 - 1:25 | Tap "Find common ground" on one screen. Show the shared interests and the optional opening question, then tap "Use this opener". The question appears in the message box. Do not send it yet. | "Claude only sees the fields each person approved for sharing and for AI assistance. It never sees age, gender, ethnicity, drinking, smoking or drugs, and it never reads messages. It writes one opening question. Nothing is sent for anyone: this only fills the box, and the person decides." |
+| 1:25 - 1:30 | Send the message from one account and show it arrive on the other. Then stop the demo. | "From here the conversation is theirs, inside Cue. Cue does not listen or reply." |
+
+## What to say about sensitive fields and chat
+
+Read aloud if asked, or when the profile is on screen:
+
+"Ethnicity, drinking, smoking and drugs are optional. They are off by default
+and never sent to Claude. If someone fills them in, they are stored in the
+database, and this is a demo with no privacy policy, so we only use made-up
+people. Age is something the person types in; nothing about anyone is verified."
+
+"Chat is only between the two matched people, and it is deleted when either of
+them unmatches or blocks. Messages show as plain text, with no links. Cue cannot
+stop someone typing their own phone number into a message. There is also no way
+to report a message yet: the controls are Unmatch and Block."
 
 ## What to say about the pre-scoped pair and the one-glasses limitation
 
@@ -102,8 +130,8 @@ A match belongs to the pair: while Alex and Sam have an active match, a new
 swipe does not create a second one. Between runs, end the match first.
 
 - "Demo controls" on the Encounter page, then reset. This ends the pair's
-  matches and clears pending signals, so the same pair can match again. Use
-  this between demo runs.
+  matches and clears pending signals, so the same pair can match again. It also
+  deletes their chat messages. Use this between demo runs.
 - `pnpm stack:reset` from the repository root. This re-applies migrations and
   seed data and clears everything for all accounts, including glasses pairing.
   Use it only when the app state is beyond a demo reset. Restart `pnpm dev` if
@@ -127,7 +155,8 @@ Keep an expiry example ready for questions:
 |---|---|
 | Venue Wi-Fi is down | Use a phone hotspot for the laptop that runs the web app. If the glasses bridge needs the network, put it on the same hotspot. Or run everything on one laptop with the local stack (`pnpm stack:start` and `pnpm dev` on localhost). Confirm before the demo which parts need the network. |
 | Glasses are unlinked, or the swipe does not arrive | Generate a new pairing code in the web app and pair the glasses again. If the hardware path cannot be recovered in the time available, say so openly. Then show the web input for both sides, and state clearly that this is not the glasses path and does not test the swipe. |
-| Claude times out or returns an error | The card shows a retry state. Tap retry once. If it fails again, move on. Matching is not affected. |
+| Claude times out or returns an error | The card shows a retry state. Tap retry once. If it fails again, move on. Matching is not affected, and chat does not use Claude. |
+| A chat message does not appear on the other screen | Realtime is only a nudge. Reload the match page: the message is stored and loads through the API. If sends fail with a rate-limit error, wait ten seconds. |
 | Realtime notification is late | Refresh the matches page. The match is stored and appears after a refresh. |
 | A third person asks about joining | Sign in as Riley (`riley@cue.demo`) on a separate browser. The join is rejected because the session is full (`session_full`). Riley sees no session, profile, or match data from Alex and Sam. |
 
@@ -139,11 +168,30 @@ notification, count, or timing signal for Sam. Sam only sees a match when both
 signals have arrived within 15 seconds.
 
 **What does Claude see?**
-Only the profile fields that each person approved for sharing and for AI
-assistance, plus the coarse venue label. It does not hear the conversation,
-does not send messages, and does not reply to either person. Profile text is
-treated as data, not instructions. The card is shown only to the person who
-asked for it.
+Only the fields that each person approved for sharing and for AI assistance
+(interests, bio, personality cards, character, MBTI, what they are looking for,
+city, work or school, education), plus the coarse venue label. It never sees age,
+gender, ethnicity, drinking, smoking or drugs, and it never sees chat messages.
+It returns one opening question and does not send it: "Use this opener" only
+fills the message box. Every "you both..." line has to be backed by a quote that
+appears in both people's supplied text. Profile text is treated as data, not
+instructions. The card is shown only to the person who asked for it.
+
+**Can people swap phone numbers in chat?**
+Yes, if they type them. Cue removed external social links and does not make links
+clickable, which lowers exposure, but it cannot stop someone typing their own
+contact details. Say so plainly.
+
+**Is the age checked?**
+No. It is self-declared, 18 to 99. Nothing about a person is verified.
+
+**What if someone sends something abusive?**
+Either person can Unmatch or Block, which ends the match and deletes the
+conversation. There is no message reporting or moderation beyond that.
+
+**Why is there Chinese text on the match screen?**
+It is the line "在茫茫人海中，你我一见钟情", with an English gloss beneath it. It is a
+tone choice for the match moment only. Privacy, safety and error text stays plain.
 
 **Why 15 seconds?**
 It is the proposed matching window in `docs/spec.md` (section 3). It keeps the
