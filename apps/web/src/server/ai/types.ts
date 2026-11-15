@@ -1,4 +1,4 @@
-import type { SharedProfile, WingmanSuggestion } from "@cue/contracts";
+import type { SharedProfile, VenueLabelSource, WingmanSuggestion } from "@cue/contracts";
 
 /** One side of a match as the backend exposes it to the wingman. */
 export interface WingmanParty {
@@ -18,6 +18,12 @@ export interface WingmanParty {
 export interface WingmanMatchContext {
   matchId: string;
   venueLabel: string;
+  /**
+   * Where the label came from. `phone_location` means the label is only
+   * "Nearby": it is not a venue, so it is never sent to the model or used in
+   * the fixed venue opener.
+   */
+  venueLabelSource?: VenueLabelSource;
   requester: WingmanParty;
   other: WingmanParty;
   /** Both profile versions + sharing; changes whenever either side edits. */

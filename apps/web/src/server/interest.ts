@@ -49,9 +49,9 @@ export async function submitInterest(
   }
   rateLimit(`interest:${caller.userId}`, 30, 10_000);
 
-  const result = await rpc<SubmitInterestResult>("submit_interest", {
+  // The place comes from the caller's presence (venue check-in or phone location), never the body.
+  const result = await rpc<SubmitInterestResult>("submit_signal", {
     p_user_id: caller.userId,
-    p_session_id: event.encounterSessionId,
     p_event_id: event.eventId,
     p_source: event.source,
     p_gesture: event.gesture,

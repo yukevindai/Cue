@@ -1,4 +1,6 @@
 import {
+  CreateVenueInput,
+  LOCATION_MAX_ACCURACY_M,
   MATCH_WINDOW_SECONDS,
   type EncounterStatus,
   type InterestEvent,
@@ -11,47 +13,102 @@ import {
  * Pure helpers for the Encounter view.
  *
  * Privacy rule (spec §2/§4): everything here is derived from the caller's OWN
- * pending signal, own mode, and session membership. Nothing in this module
- * knows, or may ever be given, anything about the other person's signal.
+ * pending signal, own mode and own place (check-in, location status). Nothing
+ * in this module knows, or may ever be given, anything about another person.
  */
 
-/* ---------- Join code / venue label ---------- */
+/* ---------- Venue code / venue name ---------- */
 
-export const JOIN_CODE_MIN = 4;
-export const JOIN_CODE_MAX = 12;
-export const VENUE_LABEL_MAX = 80;
+export const VENUE_CODE_LENGTH = 6;
+export const VENUE_NAME_MAX = 80;
 
-/** Uppercase and drop all whitespace, so "ab c1 " typed on a phone becomes "ABC1". */
-export function normalizeJoinCode(raw: string): string {
-  return raw.replace(/\s+/g, "").toUpperCase();
+/**
+ * Uppercase and drop whitespace and dashes, so "ab3 k-7q " typed on a phone
+ * becomes "AB3K7Q". Never longer than a code.
+ */
+export function normalizeVenueCode(raw: string): string {
+  return raw
+    .replace(/[\s-]+/g, "")
+    .toUpperCase()
+    .slice(0, VENUE_CODE_LENGTH);
 }
 
 /** `null` when the (normalised) code can be submitted, else what to fix. */
-export function joinCodeProblem(code: string): string | null {
-  if (code.length === 0) return "Enter the code from the other person's screen.";
-  if (code.length < JOIN_CODE_MIN) return `Codes are at least ${JOIN_CODE_MIN} characters.`;
-  if (code.length > JOIN_CODE_MAX) return `Codes are at most ${JOIN_CODE_MAX} characters.`;
+export function venueCodeProblem(code: string): string | null {
+  if (code.length === 0) return "Enter the 6-character code from the place's sign.";
+  if (!/^[A-Z0-9]*$/.test(code)) return "Codes use only letters and numbers.";
+  if (code.length !== VENUE_CODE_LENGTH) return "Venue codes are 6 characters.";
   return null;
 }
 
-/** `null` when the venue label can be submitted, else what to fix. */
-export function venueLabelProblem(raw: string): string | null {
-  const label = raw.trim();
-  if (label.length === 0) return "Type where you are, for example “Hackathon main hall”.";
-  if (label.length > VENUE_LABEL_MAX) return `Keep it to ${VENUE_LABEL_MAX} characters or fewer.`;
+/** `null` when the name can be submitted, else what to fix. Mirrors `CreateVenueInput`. */
+export function venueNameProblem(raw: string): string | null {
+  if (raw.trim().length === 0) return "Give the place a name, for example “Hackathon main hall”.";
+  if (!CreateVenueInput.safeParse({ name: raw }).success) {
+    return `Keep it to ${VENUE_NAME_MAX} characters or fewer.`;
+  }
   return null;
 }
 
-/* ---------- Session occupancy (membership, not interest) ---------- */
-
-export function isSessionFull(session: { memberCount: number; capacity: number }): boolean {
-  return session.memberCount >= session.capacity;
+/** `https://cue.example/v/AB3K7Q`: what a venue's QR code opens. */
+export function venueCheckInUrl(origin: string, code: string): string {
+  return `${origin.replace(/\/+$/, "")}/v/${encodeURIComponent(code)}`;
 }
 
-export function occupancyText(session: { memberCount: number; capacity: number }): string {
-  return isSessionFull(session)
-    ? "Both of you are here."
-    : "Just you so far. Share the code with one other person.";
+/* ---------- Place ---------- */
+
+export type PlaceTone = "ready" | "not_ready" | "off";
+
+export interface PlaceSummary {
+  tone: PlaceTone;
+  /** One short headline, e.g. "Ready to signal". */
+  headline: string;
+  /** One plain sentence on what that means or what to do next. */
+  detail: string;
+}
+
+/**
+ * The headline for "where Cue thinks you are". Driven by the server's `ready`
+ * flag, which is the only thing that decides whether a signal can match.
+ */
+export function placeSummary(encounter: EncounterStatus): PlaceSummary {
+  if (!encounter.encounterMode) {
+    return {
+      tone: "off",
+      headline: "Encounter mode is off",
+      detail: "Turn it on to signal. Nobody can match with you while it is off.",
+    };
+  }
+  if (encounter.ready) {
+    return {
+      tone: "ready",
+      headline: "Ready to signal",
+      detail: encounter.checkIn
+        ? `A signal can match with someone checked in at ${encounter.checkIn.name}, or close by.`
+        : "A signal can match with someone close to you.",
+    };
+  }
+  return {
+    tone: "not_ready",
+    headline: "Cue doesn't know where you are yet",
+    detail: "Allow location, or check in with a venue code, so a signal can match.",
+  };
+}
+
+/** The server's view of the phone location, in words. `null` when there is nothing to say. */
+export function serverLocationText(encounter: EncounterStatus): string | null {
+  const { location } = encounter;
+  const acc = location.accuracyM === null ? null : Math.round(location.accuracyM);
+  switch (location.status) {
+    case "fresh":
+      return acc === null ? "Location on" : `Location on, accurate to about ${acc} m`;
+    case "inaccurate":
+      return `Location too rough to use: about ${acc ?? "?"} m. Cue needs ${LOCATION_MAX_ACCURACY_M} m or better.`;
+    case "stale":
+      return "Location out of date. Keep Cue open so your phone can update it.";
+    case "none":
+      return null;
+  }
 }
 
 /* ---------- Own signal ---------- */
@@ -75,8 +132,8 @@ export function effectivePendingSignal(
 }
 
 export type SignalView =
-  | { kind: "no_session" }
   | { kind: "paused" }
+  | { kind: "no_place" }
   | {
       kind: "pending";
       eventId: string;
@@ -86,7 +143,6 @@ export type SignalView =
       /** 1 at the start of the window, approaching 0 at expiry. */
       fraction: number;
     }
-  | { kind: "waiting_for_partner" }
   | { kind: "idle" };
 
 /**
@@ -99,8 +155,6 @@ export function deriveSignalView(
   serverNowMs: number,
   optimistic: PendingSignal | null = null,
 ): SignalView {
-  const { session } = encounter;
-  if (!session) return { kind: "no_session" };
   if (!encounter.encounterMode) return { kind: "paused" };
 
   const signal = effectivePendingSignal(encounter, optimistic);
@@ -121,7 +175,7 @@ export function deriveSignalView(
     }
   }
 
-  if (!isSessionFull(session)) return { kind: "waiting_for_partner" };
+  if (!encounter.ready) return { kind: "no_place" };
   return { kind: "idle" };
 }
 
@@ -134,13 +188,11 @@ export function signalSourceText(source: InterestSource): string {
 
 /** The exact body of POST /api/interest for the web button. The schema is strict. */
 export function buildInterestEvent(
-  encounterSessionId: string,
   eventId: string = crypto.randomUUID(),
   now: Date = new Date(),
 ): InterestEvent {
   return {
     eventId,
-    encounterSessionId,
     source: "web_demo",
     gesture: "web_confirm",
     occurredAt: now.toISOString(),
@@ -149,45 +201,26 @@ export function buildInterestEvent(
 
 export interface RejectionCopy {
   text: string;
-  /** Refetch the encounter status: our picture of the session is out of date. */
+  /** Refetch the encounter status: our picture of mode or place is out of date. */
   refresh: boolean;
-  /** Offer a link to /matches. */
-  matchesLink: boolean;
 }
 
 export function rejectionCopy(reason: InterestRejectReason | null): RejectionCopy {
   switch (reason) {
-    case "not_in_session":
-      return { text: "You're not in this session any more.", refresh: true, matchesLink: false };
-    case "session_inactive":
-      return {
-        text: "This session has ended. Start or join a new one.",
-        refresh: true,
-        matchesLink: false,
-      };
     case "encounter_mode_off":
       return {
-        text: "Encounter mode is paused. Resume to signal.",
+        text: "Encounter mode is off, so nothing was sent. Turn it on to signal.",
         refresh: true,
-        matchesLink: false,
       };
-    case "blocked":
+    case "no_place":
       return {
-        text: "Signals aren't available in this session.",
-        refresh: false,
-        matchesLink: false,
-      };
-    case "already_matched":
-      return {
-        text: "You two have already matched. Their card is in Matches.",
-        refresh: false,
-        matchesLink: true,
+        text: "Cue doesn't know where you are yet, so nothing was sent. Allow location, or check in with a venue code, then try again.",
+        refresh: true,
       };
     default:
       return {
         text: "That signal didn't go through. Nothing was sent. Please try again.",
         refresh: true,
-        matchesLink: false,
       };
   }
 }
@@ -209,4 +242,27 @@ export function spellCode(code: string): string {
 export function formatCountdown(totalSeconds: number): string {
   const s = Math.max(0, Math.floor(totalSeconds));
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+
+/* ---------- Return path after sign-in ---------- */
+
+/**
+ * A same-origin path to go to after signing in, or `fallback`. Only plain
+ * absolute paths ("/v/AB3K7Q") are accepted: never another origin,
+ * protocol-relative ("//evil"), backslash tricks or control characters.
+ */
+export function safeReturnPath(raw: string | null | undefined, fallback = "/encounter"): string {
+  if (!raw || raw.length > 512) return fallback;
+  if (!raw.startsWith("/") || raw.startsWith("//") || raw.startsWith("/\\")) return fallback;
+  // eslint-disable-next-line no-control-regex
+  if (/[\u0000-\u001f\u007f\\]/.test(raw)) return fallback;
+  try {
+    const base = "https://cue.invalid";
+    const url = new URL(raw, base);
+    if (url.origin !== base) return fallback;
+    if (url.pathname.startsWith("/sign-in") || url.pathname.startsWith("/sign-up")) return fallback;
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return fallback;
+  }
 }

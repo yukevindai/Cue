@@ -121,20 +121,15 @@ export async function requireDevice(req: Request): Promise<DeviceAuth> {
   return { deviceId: row.id, userId: row.user_id };
 }
 
-/** GET /api/devices/me */
+/** GET /api/devices/me. Mode and readiness come from the wearer's presence (SQL `presence_state`). */
 export async function getDeviceContext(device: DeviceAuth): Promise<DeviceContext> {
-  const member = unwrap(
-    await getAdminSupabase()
-      .from("demo_session_members")
-      .select("session_id, encounter_mode")
-      .eq("user_id", device.userId)
-      .is("left_at", null)
-      .maybeSingle(),
-  ) as { session_id: string; encounter_mode: boolean } | null;
+  const presence = await rpc<{ encounter_mode: boolean; ready: boolean }>("presence_state", {
+    p_user_id: device.userId,
+  });
   return {
     deviceId: device.deviceId,
-    encounterMode: member?.encounter_mode ?? false,
-    encounterSessionId: member?.session_id ?? null,
+    encounterMode: presence.encounter_mode,
+    ready: presence.ready,
     serverTime: new Date().toISOString(),
   };
 }
