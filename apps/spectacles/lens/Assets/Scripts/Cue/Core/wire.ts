@@ -96,7 +96,7 @@ export function parseDeviceContext(value: unknown): DeviceContext | null {
   return {
     deviceId: o.deviceId,
     encounterMode: o.encounterMode,
-    encounterSessionId: o.encounterSessionId,
+    encounterSessionId: o.encounterSessionId as string | null,
     serverTime: o.serverTime,
   };
 }

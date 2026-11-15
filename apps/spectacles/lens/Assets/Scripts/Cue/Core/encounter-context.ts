@@ -16,8 +16,8 @@ export type ContextSnapshot =
   | { state: "stale" };
 
 export type ContextFetchResult =
-  | { ok: true; context: DeviceContext }
-  | { ok: false; reason: "unlinked" | "offline" };
+  | { ok: true; context: DeviceContext; reason?: undefined }
+  | { ok: false; reason: "unlinked" | "offline"; context?: undefined };
 
 /**
  * Holds the most recent GET /api/devices/me answer. The Lens calls `refresh()`

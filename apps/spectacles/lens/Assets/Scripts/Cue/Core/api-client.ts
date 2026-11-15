@@ -14,13 +14,13 @@ import {
 } from "./wire";
 
 export type ClaimResult =
-  | { ok: true; result: DeviceClaimResult }
-  | { ok: false; error: "invalid_code" | "network" | "server" | "invalid_response" };
+  | { ok: true; result: DeviceClaimResult; error?: undefined }
+  | { ok: false; error: "invalid_code" | "network" | "server" | "invalid_response"; result?: undefined };
 
 /** Result of sending one InterestEvent (including retries, which reuse the same eventId). */
 export type SubmitResult =
-  | { ok: true; ack: InterestAck }
-  | { ok: false; error: "network" | "unauthorized" | "server" | "invalid_response" };
+  | { ok: true; ack: InterestAck; error?: undefined }
+  | { ok: false; error: "network" | "unauthorized" | "server" | "invalid_response"; ack?: undefined };
 
 export interface CueApiClientOptions {
   /** Cue web origin, e.g. https://cue-gamma-five.vercel.app (no trailing path). */

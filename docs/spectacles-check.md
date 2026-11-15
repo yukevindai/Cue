@@ -20,7 +20,8 @@ What has and has not been verified for the Spectacles client
 
 ## Not verified
 
-- `CueLens.ts` has not been compiled by Lens Studio or run on Spectacles. The
+- `CueLens.ts` compiles in Lens Studio 5.24 (2026-11-15) after making the Core
+  result unions narrow without strictNullChecks; it has not run on Spectacles. The
   API names come from the Spectacles docs (Gesture Module, Internet Access,
   Keyboard) and may need small fixes on first open.
 - Whether a double pinch is comfortable and reliable in a real conversation,

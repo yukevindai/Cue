@@ -84,7 +84,7 @@ export class CueLens extends BaseScriptComponent {
     ];
     for (const [handType, hand] of hands) {
       this.gestureModule.getPinchDownEvent(handType).add((args: PinchDownArgs) => {
-        void this.client?.onPinchDown({ hand, timestampMs: Date.now(), confidence: args.confidence });
+        void this.client?.onPinchDown({ hand, timestampMs: Date.now(), confidence: (args as unknown as { confidence?: number }).confidence ?? 1 });
       });
     }
   }

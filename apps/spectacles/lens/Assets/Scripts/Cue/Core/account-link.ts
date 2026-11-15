@@ -27,7 +27,9 @@ export function memoryStore(initial: Record<string, string> = {}): KeyValueStore
   };
 }
 
-export type LinkResult = { ok: true; deviceId: string } | Extract<ClaimResult, { ok: false }>;
+export type LinkResult =
+  | { ok: true; deviceId: string; error?: undefined }
+  | { ok: false; error: Extract<ClaimResult, { ok: false }>["error"]; deviceId?: undefined };
 
 /**
  * Pairing-code flow: the wearer reads a 6-character code off the Cue web app,
@@ -68,7 +70,7 @@ export class AccountLink {
     const res = await this.claim(code);
     if (!res.ok) {
       this.log.warn("device link failed", { error: res.error });
-      return res; // existing token (if any) untouched
+      return { ok: false, error: res.error }; // existing token (if any) untouched
     }
     const token = res.result.deviceToken;
     this.log.addSecret(token);
