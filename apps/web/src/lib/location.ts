@@ -2,6 +2,7 @@ import {
   LOCATION_MAX_ACCURACY_M,
   LOCATION_MAX_AGE_SECONDS,
   LOCATION_REPORT_INTERVAL_MS,
+  LOCATION_RETENTION_MINUTES,
   type LocationInput,
 } from "@cue/contracts";
 
@@ -107,6 +108,12 @@ export function shouldReport(s: ReportState, nowMs: number): boolean {
   return meaningfullyChanged(s.lastSent.input, s.latest);
 }
 
+/**
+ * Stop re-sending a position the browser hasn't confirmed for this long (it
+ * keeps being asked meanwhile). Matches how long the server keeps one.
+ */
+export const LOCATION_MAX_RESEND_AGE_MS = LOCATION_RETENTION_MINUTES * 60_000;
+
 /** Ask the browser for a new position when the one we hold is older than this. */
 export const LOCATION_REFRESH_AFTER_MS = (LOCATION_MAX_AGE_SECONDS * 1000) / 2;
 
@@ -130,4 +137,37 @@ export function geoProblemText(geo: GeoState): string | null {
     case "located":
       return null;
   }
+}
+
+export interface LocationLine {
+  text: string;
+  /** Offer "Try location again". */
+  retry: boolean;
+}
+
+/**
+ * The one location line on the Encounter page, combining this page's own
+ * geolocation (permission, errors) with the server's status (fresh, stale,
+ * inaccurate). Never shows coordinates.
+ */
+export function locationLine(
+  encounterMode: boolean,
+  geo: GeoState,
+  serverText: string | null,
+): LocationLine {
+  if (!encounterMode) {
+    return { text: "Location off. Cue only uses it while Encounter mode is on.", retry: false };
+  }
+  if (geo.kind === "unsupported" || geo.kind === "denied" || geo.kind === "unavailable" || geo.kind === "timeout") {
+    return { text: geoProblemText(geo) ?? "", retry: geo.kind !== "unsupported" };
+  }
+  if (geo.kind === "located" && geo.accuracyM > LOCATION_MAX_ACCURACY_M && !serverText?.startsWith("Location too rough")) {
+    return {
+      text: `Location too rough to use: about ${geo.accuracyM} m. Cue needs ${LOCATION_MAX_ACCURACY_M} m or better.`,
+      retry: false,
+    };
+  }
+  if (serverText) return { text: serverText, retry: false };
+  if (geo.kind === "located") return { text: "Location found. Sending it to Cue…", retry: false };
+  return { text: geoProblemText({ kind: "locating" }) ?? "", retry: false };
 }

@@ -142,8 +142,8 @@ describe.skipIf(!stackUp || !webUp)("profiles and sharing (real web server + rea
 
   beforeAll(async () => {
     const p = await newPair();
-    await signal(p.a, p.sessionId);
-    const ack = await signal(p.b, p.sessionId);
+    await signal(p.a);
+    const ack = await signal(p.b);
     expect(ack.matched).toBe(true);
     matchId = ack.match_id!;
     aId = p.a.id;
@@ -201,8 +201,8 @@ describe.skipIf(!stackUp || !webUp)("profiles and sharing (real web server + rea
   it("a brand-new profile hides sensitive fields, work/school and education by default", async () => {
     const p = await newPair();
     await admin.from("profiles").delete().eq("user_id", p.a.id);
-    await signal(p.a, p.sessionId);
-    const ack = await signal(p.b, p.sessionId);
+    await signal(p.a);
+    const ack = await signal(p.b);
     const [cookieA, cookieB] = await Promise.all([cookieFor(p.a), cookieFor(p.b)]);
     // Sharing object given empty: every key takes its contract default.
     const own = ok(await api("PUT", routes.profile, { cookie: cookieA }, fullProfile({})), OwnProfile);

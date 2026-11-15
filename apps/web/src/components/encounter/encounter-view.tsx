@@ -8,22 +8,24 @@ import { DemoControls } from "./demo-controls";
 import { GlassesCard } from "./glasses-card";
 import { HeadsetRemoteCard } from "./headset-remote-card";
 import { ModeCard } from "./mode-card";
-import { SessionCard } from "./session-card";
-import { SessionSetup } from "./session-setup";
+import { PlaceCard } from "./place-card";
 import { SignalPanel } from "./signal-panel";
+import { VenueArrival } from "./venue-arrival";
+import { VenueCard } from "./venue-card";
 
 /**
  * Encounter status. Rendered purely from the provider's `encounter`, which
- * only ever carries the caller's OWN pending signal, mode, device and session
- * membership. Nothing on this page may depend on the other person's signal.
+ * only ever carries the caller's OWN pending signal, mode, device and place.
+ * Nothing on this page may depend on anyone else's signal.
+ *
+ * `arrivalCode`: set when the person came from a venue's QR link.
  */
-export function EncounterView() {
+export function EncounterView({ arrivalCode = null }: { arrivalCode?: string | null }) {
   const { encounter, encounterError, refreshEncounter } = useLive();
   const [retrying, setRetrying] = useState(false);
-  /** Why the person is back on the setup screen, when we know. */
-  const [setupNotice, setSetupNotice] = useState<string | null>(null);
   /** Bumped on a demo reset so the signal panel starts from a clean slate. */
   const [runKey, setRunKey] = useState(0);
+  const [showQr, setShowQr] = useState(false);
 
   async function retry() {
     setRetrying(true);
@@ -41,7 +43,7 @@ export function EncounterView() {
         {encounterError ? (
           <Notice
             tone="error"
-            title="Couldn't load your session"
+            title="Couldn't load Encounter"
             action={
               <Button variant="secondary" onClick={retry} busy={retrying}>
                 Try again
@@ -51,7 +53,7 @@ export function EncounterView() {
             {describeError(encounterError)}
           </Notice>
         ) : (
-          <Loading label="Checking your session…" />
+          <Loading label="Checking where things stand…" />
         )}
       </>
     );
@@ -72,29 +74,24 @@ export function EncounterView() {
     </Notice>
   ) : null;
 
-  if (!encounter.session) {
-    return (
-      <>
-        <PageHeader title="Encounter">
-          Start a session for two, or join one with a code.
-        </PageHeader>
-        {staleNotice}
-        <SessionSetup notice={setupNotice} onEntered={() => setSetupNotice(null)} />
-      </>
-    );
-  }
-
   return (
     <>
       <PageHeader title="Encounter" />
+      {arrivalCode !== null ? <VenueArrival code={arrivalCode} /> : null}
       {staleNotice}
       <div className="space-y-6">
-        <SessionCard session={encounter.session} />
         <ModeCard enabled={encounter.encounterMode} />
-        <SignalPanel key={runKey} encounter={encounter} onLeftSession={setSetupNotice} />
+        <PlaceCard encounter={encounter} onShowQr={() => setShowQr(true)} />
+        <SignalPanel key={runKey} encounter={encounter} />
+        <VenueCard
+          encounter={encounter}
+          showQr={showQr}
+          onShowQr={() => setShowQr(true)}
+          onHideQr={() => setShowQr(false)}
+        />
         <GlassesCard device={encounter.device} />
         <HeadsetRemoteCard />
-        <DemoControls onEnded={setSetupNotice} onReset={() => setRunKey((k) => k + 1)} />
+        <DemoControls onReset={() => setRunKey((k) => k + 1)} />
       </div>
     </>
   );

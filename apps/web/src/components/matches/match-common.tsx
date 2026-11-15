@@ -226,8 +226,8 @@ export function StepAway({
           onCancel={close}
         >
           <p>
-            This ends the match and your conversation now, and stops any future match with {name}, even in a new
-            session. {name} isn&apos;t told they were blocked.
+            This ends the match and your conversation now, and stops any future match with {name}, wherever you
+            are. {name} isn&apos;t told they were blocked.
           </p>
         </ConfirmDialog>
       ) : null}

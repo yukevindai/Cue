@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
+import { safeReturnPath } from "@/lib/encounter";
 import { getBrowserSupabase } from "@/lib/supabase/browser";
 import { Button, Notice, TextField } from "@/components/ui";
 
@@ -60,9 +61,10 @@ export function AuthForm({ mode }: { mode: Mode }) {
           setBusy(false);
           return;
         }
+        // Back to where they were going (a venue's QR link, say), same-origin only.
+        const next = safeReturnPath(new URLSearchParams(window.location.search).get("next"));
         // Full navigation on purpose: server-rendered state must reset.
-        // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-        window.location.assign("/encounter");
+        window.location.assign(next);
         return;
       }
 

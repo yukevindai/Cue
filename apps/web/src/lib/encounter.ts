@@ -209,12 +209,12 @@ export function rejectionCopy(reason: InterestRejectReason | null): RejectionCop
   switch (reason) {
     case "encounter_mode_off":
       return {
-        text: "Encounter mode is off, so nothing was sent. Turn it on to signal.",
+        text: "Encounter mode is off. Turn it on to signal.",
         refresh: true,
       };
     case "no_place":
       return {
-        text: "Cue doesn't know where you are yet, so nothing was sent. Allow location, or check in with a venue code, then try again.",
+        text: "Cue doesn't know where you are yet. Allow location, or check in with a venue code, then try again.",
         refresh: true,
       };
     default:
@@ -254,7 +254,6 @@ export function formatCountdown(totalSeconds: number): string {
 export function safeReturnPath(raw: string | null | undefined, fallback = "/encounter"): string {
   if (!raw || raw.length > 512) return fallback;
   if (!raw.startsWith("/") || raw.startsWith("//") || raw.startsWith("/\\")) return fallback;
-  // eslint-disable-next-line no-control-regex
   if (/[\u0000-\u001f\u007f\\]/.test(raw)) return fallback;
   try {
     const base = "https://cue.invalid";

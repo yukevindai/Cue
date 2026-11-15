@@ -3,7 +3,6 @@ import { GESTURES_BY_SOURCE, InterestEvent } from "./interest";
 
 const base = {
   eventId: "11111111-1111-4111-8111-111111111111",
-  encounterSessionId: "22222222-2222-4222-8222-222222222222",
   occurredAt: "2026-11-15T12:00:00.000Z",
 };
 const parse = (source: string, gesture: string, extra: Record<string, unknown> = {}) =>

@@ -50,6 +50,20 @@ create table public.user_presence (
 );
 create index user_presence_venue on public.user_presence (venue_id) where venue_id is not null;
 
+-- Deleting a venue checks everyone out of it first (the foreign key alone
+-- would null venue_id but leave checked_in_at, which the check above forbids).
+create function public.venues_check_out_on_delete() returns trigger
+language plpgsql security definer set search_path = public, pg_temp as $$
+begin
+  update public.user_presence
+     set venue_id = null, checked_in_at = null, updated_at = clock_timestamp()
+   where venue_id = old.id;
+  return old;
+end $$;
+create trigger venues_check_out_on_delete
+  before delete on public.venues
+  for each row execute function public.venues_check_out_on_delete();
+
 -- Signals no longer need a session.
 alter table public.interest_events alter column session_id drop not null;
 create unique index interest_events_one_pending_per_user

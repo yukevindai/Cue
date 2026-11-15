@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { MatchCard } from "@cue/contracts";
 import { chatDraft } from "@/lib/chat-draft";
-import { formatEncounterTime } from "@/lib/format";
+import { formatEncounterTime, matchPlace } from "@/lib/format";
 import { Avatar, buttonClass, Card, Chip, SectionTitle } from "@/components/ui";
 import { CommonGround } from "./common-ground";
 import { BackLink, MatchFallback, StepAway, useMatch } from "./match-common";
@@ -51,6 +51,7 @@ function Detail({
   if (other.interests.length === 0) missing.push("interests");
 
   const details = hasDetails(other);
+  const place = matchPlace(match);
 
   return (
     <div className="animate-rise space-y-8">
@@ -65,8 +66,8 @@ function Detail({
               <p className="font-display text-2xl italic leading-snug">
                 You met {formatEncounterTime(match.encounterAt)}
               </p>
-              <p className="font-display text-2xl leading-snug">at {match.venueLabel}</p>
-              <p className="mt-2 text-sm text-ink-soft">Venue typed in by the session organiser. Not a GPS location.</p>
+              <p className="font-display text-2xl leading-snug">{place.phrase}</p>
+              {place.note ? <p className="mt-2 text-sm text-ink-soft">{place.note}</p> : null}
             </div>
             <Link href={chatHref(match.id)} className={buttonClass("primary", "lg", true) + " mt-4 sm:w-auto"}>
               <ChatIcon />
