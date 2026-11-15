@@ -413,7 +413,7 @@ function TimelineRow({
         {entry.body}
       </p>
       {failed ? (
-        <div role="alert" className="mt-1 flex flex-wrap items-center justify-end gap-x-2 text-sm">
+        <div role="alert" className="mt-1 flex max-w-[85%] flex-wrap items-center justify-end gap-x-2 text-right text-sm sm:max-w-[75%]">
           <span className="font-medium text-ember-deep">Not sent. {o.error}</span>
           <Button variant="quiet" className="min-h-10 px-2 text-sm" onClick={() => onRetry(o)}>
             Try again

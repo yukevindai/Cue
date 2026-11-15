@@ -1,6 +1,7 @@
 import { computeArchetype, DEFAULT_SHARING, MAX_CARDS_PER_DECK, PERSONALITY_CARDS, type OwnProfile } from "@cue/contracts";
 import { describe, expect, it } from "vitest";
 import {
+  aiNeverSent,
   aiSendable,
   buildShared,
   draftKey,
@@ -155,9 +156,14 @@ describe("aiSendable", () => {
     };
     const sent = aiSendable(f);
     expect(sent).toContain("work or school");
-    for (const never of ["gender", "ethnicity", "drinking", "smoking", "drug use", "photo"]) {
+    for (const never of [...aiNeverSent(), "photo"]) {
       expect(sent).not.toContain(never);
     }
+  });
+
+  it("names every excluded field once", () => {
+    expect(aiNeverSent()).toEqual(expect.arrayContaining(["gender", "ethnicity", "drinking", "smoking", "drug use"]));
+    expect(aiSendable(filled())).not.toContain("age");
   });
 
   it("is empty when AI assist is off", () => {

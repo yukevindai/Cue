@@ -36,6 +36,7 @@ import { useLive } from "@/components/live-provider";
 import { api, describeError, isApiError } from "@/lib/api";
 import { cx } from "@/lib/cx";
 import {
+  aiNeverSent,
   aiSendable,
   buildShared,
   draftKey,
@@ -73,17 +74,17 @@ const DECKS = CARD_DECK_IDS.map((deck) => ({
 
 /** Share switches shown under "What a match sees". Sensitive ones live next to their fields. */
 const SHARE_SWITCHES: { key: ShareKey; label: string; on?: string; off?: string }[] = [
-  { key: "photo", label: "Photo", on: "A match sees your photo, if you've added one.", off: "A match sees your initials instead." },
-  { key: "bio", label: "Bio" },
-  { key: "age", label: "Age" },
-  { key: "gender", label: "Gender", on: "Includes your own words, if you add them." },
-  { key: "location", label: "City" },
-  { key: "lookingFor", label: "What you're looking for" },
-  { key: "cards", label: "Cards and character", on: "Your cards and the character they give." },
-  { key: "interests", label: "Interests" },
-  { key: "mbti", label: "MBTI" },
-  { key: "workOrSchool", label: "Work or school", off: "Off unless you turn it on." },
-  { key: "education", label: "Education", off: "Off unless you turn it on." },
+  { key: "photo", label: "Show photo", on: "A match sees your photo, if you've added one.", off: "A match sees your initials instead." },
+  { key: "bio", label: "Show bio" },
+  { key: "age", label: "Show age" },
+  { key: "gender", label: "Show gender", on: "Includes your own words, if you add them." },
+  { key: "location", label: "Show city" },
+  { key: "lookingFor", label: "Show what you're looking for" },
+  { key: "cards", label: "Show cards and character", on: "Your cards and the character they give." },
+  { key: "interests", label: "Show interests" },
+  { key: "mbti", label: "Show MBTI" },
+  { key: "workOrSchool", label: "Show work or school", off: "Off unless you turn it on." },
+  { key: "education", label: "Show education", off: "Off unless you turn it on." },
 ];
 
 export function ProfileView() {
@@ -573,8 +574,8 @@ function AiExplainer({ form }: { form: FormState }) {
         {sent.length ? `${joinAnd(sent)}.` : "nothing yet. Fill in and share a field first."}
       </p>
       <p>
-        <span className="font-semibold text-ink">Never sent:</span> gender, ethnicity, drinking, smoking, drug use,
-        your photo and your messages, whatever you share.
+        <span className="font-semibold text-ink">Never sent, whatever you share:</span>{" "}
+        {joinAnd([...aiNeverSent(), "your photo", "your messages"])}.
       </p>
     </>
   );

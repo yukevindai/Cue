@@ -368,6 +368,11 @@ export function aiSendable(f: FormState): string[] {
   ).map((key) => SHARE_FIELD_NAMES[key]);
 }
 
+/** Field names that are never sent to Claude, whatever is shared, in display order. */
+export function aiNeverSent(): string[] {
+  return SHARE_ORDER.filter((key) => NEVER_AI.has(key)).map((key) => SHARE_FIELD_NAMES[key]);
+}
+
 /** "a, b and c". */
 export function joinAnd(items: readonly string[]): string {
   if (items.length <= 1) return items.join("");

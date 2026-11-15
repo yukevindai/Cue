@@ -24,20 +24,20 @@ export function MatchCard({ match }: { match: MatchCardData }) {
       <Link
         href={`/matches/${match.id}`}
         aria-label={`${other.displayName}, met at ${match.venueLabel}, ${when}${unread > 0 ? `, ${unreadText(unread)}` : ""}`}
-        className="relative block rounded-card border border-line bg-surface p-5 shadow-card transition-colors hover:border-line-strong hover:bg-white sm:p-6"
+        className="block rounded-card border border-line bg-surface p-5 shadow-card transition-colors hover:border-line-strong hover:bg-white sm:p-6"
       >
-        {unread > 0 ? (
-          <span
-            aria-hidden
-            className="absolute right-4 top-4 inline-flex min-h-7 min-w-7 items-center justify-center gap-1 rounded-full bg-ember px-2.5 text-sm font-semibold tabular-nums text-white sm:right-5 sm:top-5"
-          >
-            {unread > 99 ? "99+" : unread} new
-          </span>
-        ) : null}
         <div className="flex items-start gap-4 sm:gap-5">
           <Avatar name={other.displayName} src={other.photoUrl} size={72} />
-          <div className={unread > 0 ? "min-w-0 flex-1 pr-16" : "min-w-0 flex-1"}>
+          <div className="min-w-0 flex-1">
             <p className="font-display text-3xl leading-tight tracking-tight break-words">{other.displayName}</p>
+            {unread > 0 ? (
+              <span
+                aria-hidden
+                className="my-1 inline-flex items-center gap-1.5 rounded-full bg-ember px-2.5 py-0.5 text-sm font-semibold tabular-nums text-white"
+              >
+                {unreadText(unread).replace("unread", "new")}
+              </span>
+            ) : null}
             {character ? <p className="font-display text-lg italic leading-snug text-ink-soft">{character.name}</p> : null}
             {facts ? <p className="mt-0.5 font-medium">{facts}</p> : null}
             <p className="mt-1 text-ink">
