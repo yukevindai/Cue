@@ -26,6 +26,8 @@ export const routes = {
   unmatch: (id: string) => `/api/matches/${id}/unmatch`,
   /** POST -> WingmanSuggestion. session */
   suggestions: (id: string) => `/api/matches/${id}/suggestions`,
+  /** GET [?before=cursor] -> MessageList; POST SendMessageInput -> ChatMessage (201). session */
+  messages: (id: string) => `/api/matches/${id}/messages`,
   /** POST BlockInput -> 204 (also ends any active match with that user). session */
   blocks: "/api/blocks",
   /** POST -> PairingCode. session */
