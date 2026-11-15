@@ -2,6 +2,7 @@ import {
   ApiError,
   type ApiErrorCode,
   type BlockInput,
+  ChatMessage,
   type CreateSessionInput,
   type DemoResetInput,
   EncounterStatus,
@@ -10,10 +11,12 @@ import {
   type JoinSessionInput,
   MatchCard,
   MatchList,
+  MessageList,
   OwnProfile,
   PairingCode,
   type ProfileInput,
   routes,
+  type SendMessageInput,
   WingmanSuggestion,
 } from "@cue/contracts";
 import type { z } from "zod";
@@ -189,6 +192,17 @@ export const api = {
   /** Claude can take a while; allow longer than the default before calling it a timeout. */
   getSuggestions: (id: string, o: Opt = {}) =>
     request(routes.suggestions(id), WingmanSuggestion, { method: "POST", timeoutMs: 30_000, ...o }),
+
+  /** Newest page without `before` (this also marks the conversation read); older pages with it. */
+  listMessages: (id: string, o: Opt & { before?: string | null } = {}) =>
+    request(
+      o.before ? `${routes.messages(id)}?before=${encodeURIComponent(o.before)}` : routes.messages(id),
+      MessageList,
+      { signal: o.signal },
+    ),
+  /** Idempotent per `clientId`: retry with the same id after a failure. */
+  sendMessage: (id: string, input: SendMessageInput) =>
+    request(routes.messages(id), ChatMessage, { method: "POST", body: input }),
 
   createPairingCode: () => request(routes.devicePair, PairingCode, { method: "POST" }),
   unlinkDevice: () => requestEmpty(routes.deviceUnlink, { method: "DELETE" }),

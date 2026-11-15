@@ -2,7 +2,7 @@
 
 import { useId, useRef, useState } from "react";
 import { Button, Chip } from "@/components/ui";
-import { LIMITS } from "./form";
+import { LIMITS } from "@/lib/profile-form";
 
 export function InterestsEditor({
   interests,

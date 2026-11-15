@@ -13,9 +13,7 @@ export function MatchesView() {
   const sorted = useMemo(
     () =>
       matches
-        ? [...matches].sort(
-            (a, b) => new Date(b.encounterAt).getTime() - new Date(a.encounterAt).getTime(),
-          )
+        ? [...matches].sort((a, b) => activityAt(b) - activityAt(a))
         : null,
     [matches],
   );
@@ -23,7 +21,7 @@ export function MatchesView() {
   return (
     <>
       <PageHeader title="Matches">
-        People who signalled back. Their cards stay here until one of you unmatches.
+        The people who noticed you back. Their cards stay here until one of you unmatches.
       </PageHeader>
 
       {sorted === null && !matchesError ? <Loading label="Looking for your matches…" /> : null}
@@ -57,8 +55,8 @@ export function MatchesView() {
             </Link>
           }
         >
-          When you and someone else both signal within the same few seconds, their card appears
-          here. Nothing shows up for one-sided interest, in either direction.
+          When you notice someone and they notice you within the same few seconds, their card
+          appears here. Nothing shows up for one-sided interest, in either direction.
         </Empty>
       ) : null}
 
@@ -71,4 +69,10 @@ export function MatchesView() {
       ) : null}
     </>
   );
+}
+
+/** Most recent of the match itself and its newest message, for ordering. */
+function activityAt(m: { createdAt: string; lastMessageAt: string | null }): number {
+  const made = new Date(m.createdAt).getTime();
+  return m.lastMessageAt ? Math.max(made, new Date(m.lastMessageAt).getTime()) : made;
 }
