@@ -1,6 +1,8 @@
 import { BASE_URL } from "./helpers/env";
 import { must } from "./helpers/api";
 import { expect, test } from "./helpers/fixtures";
+import { freshSpot, locate } from "./helpers/geo";
+import { adminClient } from "./helpers/users";
 
 /**
  * Tabs of one browser share a single login. Signing in as someone else in a
@@ -62,6 +64,10 @@ test.describe("one browser, two tabs, two accounts", () => {
 
   test("a tab goes to sign-in when another tab signs out", async ({ world, browser }) => {
     const a = await world.person();
+    // A is open to signals, checked in and located before signing out.
+    await world.venue(a, "Sign Out Cafe");
+    must(await a.api.setMode(true));
+    await locate(a, freshSpot(), 5);
     const context = await a.browserContext(browser);
     try {
       const tab1 = await context.newPage();
@@ -70,6 +76,17 @@ test.describe("one browser, two tabs, two accounts", () => {
       await tab2.goto("/profile");
       await tab2.getByRole("button", { name: "Sign out" }).click();
       await expect(tab2).toHaveURL(/\/sign-in/);
+
+      // Signing out turned Encounter mode off and forgot the location; the venue check-in is kept.
+      // Read with the service role: the web session is gone.
+      const { data: presence, error } = await adminClient()
+        .from("user_presence")
+        .select("encounter_mode, venue_id, lat, lng, accuracy_m, located_at")
+        .eq("user_id", a.user.id)
+        .single();
+      expect(error).toBeNull();
+      expect(presence).toMatchObject({ encounter_mode: false, lat: null, lng: null, accuracy_m: null, located_at: null });
+      expect(presence?.venue_id).not.toBeNull();
 
       await tab1.bringToFront();
       await expect(tab1).toHaveURL(/\/sign-in/);
