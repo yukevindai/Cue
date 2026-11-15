@@ -1,16 +1,17 @@
-import { DEMO_SESSION_CAPACITY } from "@cue/contracts";
+import { DEMO_SESSION_CAPACITY, GESTURES_BY_SOURCE } from "@cue/contracts";
 import type { InterestGesture, InterestSource } from "@cue/contracts";
 
 export function gestureMatchesSource(source: InterestSource, gesture: InterestGesture): boolean {
-  return (
-    (source === "mentra_touch" && gesture === "backward_swipe") ||
-    (source === "web_demo" && gesture === "web_confirm")
-  );
+  return GESTURES_BY_SOURCE[source].includes(gesture);
 }
 
-/** Glasses devices may only send touch events; browser sessions only the web demo input. */
+/**
+ * Which credential may speak for which input. A device token (the Mentra
+ * bridge) may only send its touch source. A browser session may send the web
+ * button, or a headset media command that the signed-in page itself received.
+ */
 export function sourceAllowedForAuth(auth: "session" | "device", source: InterestSource): boolean {
-  return auth === "device" ? source === "mentra_touch" : source === "web_demo";
+  return auth === "device" ? source === "mentra_touch" : source === "web_demo" || source === "headset_remote";
 }
 
 export function canJoinSession(activeMemberCount: number): boolean {
