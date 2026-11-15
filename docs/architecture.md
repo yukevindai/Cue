@@ -53,6 +53,22 @@ Docker Hub (`SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io`). DB is at
   response (`presence_state` returns a status and an accuracy, not a position),
   not on signals or matches, not sent to Claude. See `docs/place-matching.md`.
 - The API never trusts a client-supplied user id.
+- A device token now reaches two more routes that touch match-related data.
+  `POST /api/devices/hype` returns a line about the **wearer's own** active
+  match only (the user id comes from the token, and the match id in the body must
+  be a match that user is in, else 404). `POST /api/guest/handoff` mints a
+  sign-in link for the guest account the token belongs to, and refuses (403) any
+  account whose email is not `guest-<uuid>@guest.cue.invalid`. A leaked device
+  token for a guest can therefore be turned into a browser session for that
+  guest; it cannot reach any other account, and a non-guest token cannot use it.
+- Two routes are **unauthenticated by design** and create accounts:
+  `POST /api/guest` and `POST /api/guest/device` (demo only, see
+  `docs/guest-accounts.md`). They are limited to 40 requests per 10 minutes per
+  client address per route (in memory per server instance, so a brake only on
+  Vercel) and 300 guest accounts per rolling 24 hours (counted from Auth, not
+  atomic). The account gets a random password nobody sees. With
+  `CUE_GUESTS_ENABLED=off` every guest route answers 404. Names, tokens and
+  passwords are never logged.
 - Route handlers use `handle()`, `parseBody()`, `HttpError` from
   `apps/web/src/server/http.ts`; all errors are `ApiError` from contracts.
 
@@ -79,7 +95,18 @@ Encounter, presence and venue routes (all web session, all return an
 | `POST /api/venues/check-out` | Leave the venue |
 | `POST /api/demo/reset` | Demo reset; `leave: true` also checks out and turns mode off |
 | `POST /api/interest` | Submit a signal (web session or device token) |
-| `GET /api/devices/me` | Device token: `{ encounterMode, ready }` for the glasses bridge |
+| `GET /api/devices/me` | Device token: `DeviceContext`: `{ deviceId, encounterMode, ready, latestMatchId, serverTime }` for the glasses bridge. `latestMatchId` is the wearer's newest **active** match created in the last 5 minutes, or `null`; the bridge speaks the wingman line once per new id |
+| `POST /api/matches/[id]/hype` | Web session: one spoken wingman line (`HypeLine`) for the caller about that match. 404 unless the caller is in that active match; 429 over the limit |
+| `POST /api/devices/hype` | Device token, body `{ matchId }`: the same line for the wearer. Same 404 and 429 |
+| `POST /api/guest` | **No auth**, demo only: creates a name-only guest account from `{ intro }` and signs the browser in (cookies). 201; 400, 404 (switch off), 429 |
+| `POST /api/guest/device` | **No auth**, demo only: creates a guest from `{ intro, deviceLabel?, mentraUserId? }` and links the calling glasses; returns a device token. 201; 400, 404, 429 |
+| `POST /api/guest/handoff` | Device token, demo only: a one-time `/g/<token>` link that signs a phone into the guest account the glasses belong to. 403 unless that account is a guest |
+| `GET /g/[token]` | Page route, demo only: redeems a handoff link and redirects to `/encounter` (or `/sign-in` on any failure) |
+
+The guest routes and the switch `CUE_GUESTS_ENABLED` are described in
+`docs/guest-accounts.md`; the spoken line in `docs/profiles-and-chat.md`.
+`DeviceContext` is in `packages/contracts/src/devices.ts`; `latestMatchId` is
+`Uuid.nullable().default(null)`, so an older server's response still parses.
 
 The `/v/[code]` page (not an API route) is what a venue's QR code opens.
 
@@ -242,9 +269,17 @@ and the client ignores their contents.
   words), ethnicity, drinking, smoking, drugs (`NEVER_SENT_TO_AI` in
   `packages/contracts/src/profile.ts`, plus age, which the input builder simply
   never reads), display name, photo, ids. A test asserts none of them appears in
-  the request. The input builder reads an allow-list of properties by name.
+  the request. The input builder reads an allow-list of properties by name. The
+  one exception is the spoken wingman line, which sends the other person's
+  display name (next but one bullet).
 - Chat messages are never sent to Claude. Claude gives one opener and sends
   nothing; "Use this opener" only fills the message box.
+- The spoken wingman line (`/api/matches/[id]/hype`, `/api/devices/hype`) sends
+  Claude only the other person's display name, a venue's name (not "Nearby"),
+  and the grounded suggestion's verified shared items and opener. It is
+  requested automatically on a match, needs AI assist on for both people, and
+  falls back to a fixed line otherwise. The never-sent list above is unchanged
+  for it.
 - Chat is readable only by the two participants of an active match, is deleted
   when the match ends, and is plain text on screen. The send rate limit
   (20 per 10 s per sender) is in memory per server instance.
@@ -270,6 +305,20 @@ written:
   only while encounter mode is on. See `docs/place-matching.md`.
 - The Claude input grew from interests and bio to the fields in the table in
   `docs/profiles-and-chat.md`. The prompt version is `w3`.
+- **Guest sign-up without credentials** (demo only, temporary). The spec has
+  email and password accounts. Someone can now get an account by saying or
+  typing "Hi, my name is Sam": no email, no password, a synthetic address
+  `guest-<uuid>@guest.cue.invalid` as the only marker, no migration. On Mentra
+  glasses the mini app listens through the glasses' microphone while unlinked and
+  creates and links the account in one call. To be deleted after the demos:
+  `docs/guest-accounts.md` has the switch and the removal checklist.
+- **Spoken coaching.** The spec has the wingman as a card the person asks for.
+  On a match Cue now also says one or two short sentences in a casual friend's
+  voice, requested automatically and spoken through the phone or the glasses.
+  It is built from the existing wingman's verified shared items and opener plus
+  the other person's display name and a venue's name, and falls back to a fixed
+  line. This is the one place a display name is sent to Claude. See
+  `docs/profiles-and-chat.md`.
 
 ## Ownership
 

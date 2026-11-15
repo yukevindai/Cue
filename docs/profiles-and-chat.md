@@ -127,8 +127,10 @@ also sent when the match was made at a venue check-in. A match made by phone
 location is labelled "Nearby", which is not a venue, so no venue is sent (and
 never a position).
 
-**Never sent:** age, gender (and own words), ethnicity, drinking, smoking, drugs,
-display name, photo, ids, and chat messages. This is structural: the code that
+**Never sent to this card:** age, gender (and own words), ethnicity, drinking,
+smoking, drugs, display name, photo, ids, and chat messages. (The spoken line
+below does send the other person's display name; the rest of this list is
+unchanged for it too.) This is structural: the code that
 builds the model input reads a fixed list of properties by name and never
 touches those. A test checks that these values do not appear in the request.
 `NEVER_SENT_TO_AI` in `packages/contracts/src/profile.ts` lists them.
@@ -147,6 +149,67 @@ What Claude returns, and what the server does with it:
   does not.
 - Profile text is treated as data, not instructions.
 
+### The spoken line (added 2026-11-15)
+
+When two people match, Cue also gives each of them one or two short sentences in
+a casual friend's voice, shown on the match screen as "Your wingman" and spoken
+aloud (through the glasses when they are connected to the phone, otherwise the
+phone's speaker; the glasses' own app speaks it for Mentra wearers). Unlike
+"Find common ground", **nobody has to ask for it: it is requested automatically
+when a match appears.** Routes: `POST /api/matches/[id]/hype` (web session) and
+`POST /api/devices/hype` (device token); both return one `HypeLine` for the
+caller only, and only for an active match the caller is in.
+
+What the model sees, exactly (`HypeModelInput` in `apps/web/src/server/ai/hype.ts`):
+
+- The other person's **display name**.
+- The venue's name, when the match was made at a venue check-in (not for a
+  "Nearby" match, and never a position).
+- Up to three shared items, each a short topic label and the other person's
+  quote, and the one opener, all taken from the verified output of the existing
+  "Find common ground" pipeline.
+
+Nothing else is sent: no profile is read by this code. To get those items the
+server runs the same grounded pipeline as "Find common ground" for the person
+the line is for, so every gate of that pipeline applies unchanged: the match
+must be active, **both** people must have AI assist on, only fields each person
+shared are used, and the never-sent fields (`NEVER_SENT_TO_AI`) stay unsent.
+Chat is still never read. This is the **one place a display name is sent to
+Claude**; the "Find common ground" call still does not send names.
+
+Two consequences to be plain about: a match now causes a Claude call without
+either person tapping anything (turning "Wingman voice" off stops the speech,
+not the request; turning AI assist off stops the call), and the shared-items
+step is run by the pipeline, so a match can cost up to two model calls per
+person (the suggestion, cached in `wingman_suggestions`, then the line).
+
+What the server does with the answer:
+
+- The model returns one line. It is accepted only if it is a single paragraph of
+  at most 280 characters and 40 words, has no emoji, hashtags or markdown marks,
+  passes the same safe-text check as the other model output, contains no gendered
+  words (he, she, bro, dude, girl and similar) and no crude words, contains no
+  number that is not in the input, and says the other person's name (or its
+  first word). Anything else is dropped.
+- When the line is dropped, or there is no verified common ground, or either
+  person has AI assist off, or the name cannot be spoken safely, or the model
+  times out (8 seconds by default, `HYPE_TIMEOUT_MS`), is unavailable, or over
+  its limit, or no `ANTHROPIC_API_KEY` is set, a **fixed fallback line** built from the name and venue
+  only is used, for example "Yo, Sam noticed you too. Go say hi." The response
+  says which one it was in `source` (`model` or `fallback`).
+- Limits per person per minute: 30 requests and 6 model calls (the same figures as
+  the suggestions route), in memory per server instance. Lines are cached in
+  memory per match and person for up to an hour (a minute after a failure) and
+  not reused once either profile or sharing setting changes.
+- On the web, the page asks once per match per tab and speaks it unless the
+  "Wingman voice" switch on Encounter is off (stored in that browser, on by
+  default) or linked Mentra glasses checked in within the last 30 seconds. The
+  line is shown on the match screen either way. A failure shows and says nothing.
+- A guest or anyone else with only a name gets the fallback line, since there is
+  nothing shared to ground a tip in. To get a specific tip, both people add a
+  shared interest on Profile (an interest or a personality card in common) and
+  leave AI assist on.
+
 ## Limits
 
 - **Chat cannot stop someone typing their own contact details.** Removing social
@@ -159,7 +222,10 @@ What Claude returns, and what the server does with it:
 - **The rate limit is in memory** and works per server instance only.
 - **No message reporting or moderation** beyond Unmatch and Block.
 - **The live Claude call with the fuller input has not been run with a real
-  key.** Automated tests use a fake model.
+  key, and neither has the spoken line.** Automated tests use a fake model, so
+  the model's actual wording is unseen.
+- **The spoken line has not been heard on a phone or on glasses.** Speech output
+  in phone browsers and through Meta or Mentra glasses is unverified.
 - **The new profile, character and chat screens have not been tried on the real
   phones.** They are covered by automated browser tests only.
 

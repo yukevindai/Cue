@@ -34,8 +34,9 @@ pnpm inject --server http://localhost:3000 --code ABC123 --gesture backward_swip
 **Installing without a laptop.** Every web build also builds this miniapp and
 publishes its release files under `/mentra/` on the site
 (`apps/web/scripts/build-mentra-bundle.mjs`). The page `/mentra` shows the
-install QR code for the Mentra app's developer scanner. Not yet verified on a
-phone: see `docs/hardware-check.md`, step 2. Bump `version` in `miniapp.json`
+install QR code for the Mentra app's developer scanner. The owner reported
+(2026-11-15) that this worked on their phone with no laptop; versions and exact
+steps were not recorded (`docs/hardware-check.md`, step 2). Bump `version` in `miniapp.json`
 when the bundle changes, so phones take the new one.
 
 `MENTRA_PUBLIC_CUE_SERVER_URL` sets the default Cue web origin at build time.
@@ -49,19 +50,42 @@ count, Encounter mode must be on and the server must report the wearer as
 `docs/place-matching.md`.
 
 **Verification.** A real swipe was verified on one Mentra Live unit on
-2026-11-14, under the old session model. It has not been re-verified under place
-matching, and the new audio cues (mode off, no place) have not been heard on a
-device.
+2026-11-14, under the old session model. On 2026-11-15 the owner reported that a
+real swipe reached the live site under place matching; the two accounts were
+already matched, so no new match was created in that run, and a new match by
+place from real glasses has not been seen. The new audio cues (mode off, no
+place) have not been heard on a device.
 
-**Guest by voice and spoken match line (0.3.0).** While a server address is set
-and the glasses are not linked, the mini app listens through the glasses'
-microphone (`session.transcription`, English, MICROPHONE permission) and
-`parseIntroName(text, {requireLeadIn: true})` turns a final "Hi, my name is Sam"
-into `POST /api/guest/device`; the returned device token is stored like a
-pairing token and listening stops. Pairing codes still work. "Open Cue as
-{name}" asks the background for `POST /api/guest/handoff` and opens the
-one-time URL with `session.system.openUrl`. When `GET /api/devices/me` reports a
-new `latestMatchId`, `POST /api/devices/hype` is called once per match (id kept
-in storage) and the returned line is spoken about 1.2 s later. Unverified on
-hardware: see the report notes in the PR. Code: `guest-intro.ts`,
-`match-hype.ts`, `speech.ts`.
+**Guest by voice and spoken match line (0.3.0).** *Nothing in this section has
+been tried on a device.*
+
+- **Guest by voice.** While a server address is set and the glasses are not
+  linked, the mini app listens through the glasses' microphone
+  (`session.transcription.forLanguage("en-US", ...)`; `MICROPHONE` permission in
+  `miniapp.json`, offered only when the manifest declares it). Only a final
+  transcript is used, and only if `parseIntroName(text, {requireLeadIn: true})`
+  finds a real introduction ("Hi, my name is Sam", "I'm Sam"); a bare name or
+  chatter is ignored. That one transcript goes to `POST /api/guest/device`
+  (label "Mentra Live"); the returned device token is stored like a pairing
+  token, the glasses say "Yo Sam, you're in. Open Cue on your phone." and
+  listening stops. At most one attempt per 5 s; after 5 failures it stops until
+  the setup screen is reopened (failure line: "Couldn't set that up. Try again
+  in a bit."). No transcript is kept; one is logged only at debug level. Pairing
+  codes still work. The microphone stays open for as long as the glasses are not
+  linked.
+- **Open Cue as {name}.** The setup screen shows this button for a guest account.
+  It asks the background for `POST /api/guest/handoff` and opens the one-time URL
+  with `session.system.openUrl`; an "Open Cue" link on the screen is the fallback.
+  The path is a secret and is kept out of logs.
+- **Spoken match line.** When `GET /api/devices/me` reports a new `latestMatchId`
+  (the wearer's newest active match under 5 minutes old), `POST /api/devices/hype`
+  is called once per match (id kept in storage, remembered before the request, one
+  retry on failure) and the returned line is spoken about 1.2 s later, after the
+  swipe's tone. While glasses are seen by the server, the web page does not speak
+  it as well (it checks the device was seen in the last 30 s).
+
+Hardware checklist: `docs/hardware-check.md` step 11. Code: `guest-intro.ts`,
+`match-hype.ts`, `speech.ts`, `bridge.ts`. Unverified: the microphone
+permission, whether transcription events reach a locally installed mini app,
+`openUrl` on a phone, and speaking through the glasses. Background:
+`docs/guest-accounts.md`.

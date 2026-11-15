@@ -4,11 +4,15 @@ For the person holding the Meta Adventurer glasses and an iPhone. Follow top to
 bottom; it should take about ten minutes. The first three steps decide whether
 the route works at all. Fill in the table at the end and commit it.
 
-> **Status: the on-device checkpoint is NOT met.**
-> Nothing in this route has been run on real Meta glasses or a real iPhone.
-> Pairing with a Mentra swipe by place has not been run on any hardware either.
-> (The Mentra swipe alone was verified on 2026-11-14 under the old session
-> model, not under place-based matching.)
+> **Status: the on-device checkpoint is NOT met (only partly seen).**
+> On 2026-11-15 the owner reported that a real Meta double tap reached the live
+> site under place-based matching. The two accounts were already matched, so no
+> new match was created in that run, and nothing else was recorded: not the
+> iPhone model or iOS version, not the command list, not the other gestures,
+> background or locked behavior, or audio. Pairing a Meta double tap with a
+> Mentra swipe into a new match by place has not been seen. (The Mentra swipe
+> alone was verified on 2026-11-14 under the old session model.)
+> **Nothing about voice (below) has been tried on a device.**
 > Automated tests cover the server path and the page logic only (a scripted
 > media command is not a tap on a temple). The checkpoint is met when steps 1
 > to 4 below pass on the glasses and the table is filled in.
@@ -150,6 +154,40 @@ double tap. Confirm no signal is sent (the card shows why it ignored it).
   glasses**, and roughly how late.
 - Two double taps within a second: one signal.
 
+## 6. Voice (NOT YET VERIFIED)
+
+Meta glasses have no app of their own here: they are the phone's Bluetooth
+headset. Two features use that. **Neither has been tried on a device.** Tick an
+item only after seeing it happen. Background: `docs/guest-accounts.md` and "The
+spoken line" in `docs/profiles-and-chat.md`.
+
+Spoken guest sign-up (the glasses' microphone as the phone's input):
+
+1. Sign out on the iPhone and open the sign-in page in Safari, with the glasses
+   as the audio device. Tap "Say hi" on the card "New here? Just say hi". Safari
+   should ask for the microphone. Record whether "Say hi" is shown at all (if
+   not, the card says "Voice entry isn't available in this browser, so type your
+   name below.").
+2. Say "Hi, my name is" and a first name. Record: does the card show
+   `Heard: "..."`; is the audio taken from the glasses' microphone or the phone's;
+   and does the page say "Yo <name>, you're in." and is it heard in the glasses
+   or the phone speaker. Typing the name always works as a fallback.
+3. Note that the browser sends the audio to its vendor's service to transcribe
+   it (Cue only receives the text). Record any network failure message.
+
+Spoken match line:
+
+4. With "Listen for my glasses" on and the Encounter page open, match with
+   another account in the same place. The match screen should show "Your wingman"
+   with one or two sentences, and the phone should say them. Record whether it was
+   heard in the glasses, whether it came after the signal tones, and whether
+   "Wingman voice" off silences it (the text still shows).
+5. Does the line play when Cue is in the background or the phone is locked? It is
+   expected not to: the page speaks only while it runs, and speech after a
+   gesture needs the page open. Record what happens.
+6. Does the quiet track from "Listen for my glasses" still play, and do double
+   taps still arrive, after the line has been spoken?
+
 ## What a failure means
 
 | Observation | Meaning |
@@ -187,6 +225,11 @@ double tap. Confirm no signal is sent (the card shows why it ignored it).
 | Meta AI or music app takes over audio? | |
 | Tones audible in the glasses? Delay? | |
 | Route used (web media commands / button fallback) | |
+| Real Meta double tap reached the live site under place-based matching? | Reported yes by the owner on 2026-11-15 (accounts already matched, no new match). iPhone, iOS and details not recorded |
+| Voice 1 to 3: "Say hi" shown, name heard, greeting heard in the glasses? | not yet recorded (never tried) |
+| Voice 4: spoken match line heard in the glasses? | not yet recorded (never tried) |
+| Voice 5: line spoken with Cue in the background or locked? | not yet recorded (never tried) |
+| Voice 6: quiet track and double taps still work afterwards? | not yet recorded (never tried) |
 
 ## Long-term route: native toolkit integration
 

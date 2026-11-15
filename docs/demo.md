@@ -20,13 +20,69 @@ a real Meta double tap pair by location. Rehearse on the day.
 **Hardware status.** On 2026-11-14 the real-swipe checkpoint in
 `docs/hardware-check.md` was met on the loaner Mentra Live, **under the old
 session model**: real swipes reached the live server under the wearer's account
-and completed matches. It has not been re-verified under place-based matching.
+and completed matches. On 2026-11-15 the owner reported that the Mentra mini app
+was installed from the website on their phone with no laptop, and that a real
+Mentra swipe and a real Meta double tap each reached the live site under
+place-based matching; the two accounts were already matched, so that run created
+no new match. A new match by place completed by real hardware has not been
+verified.
 The gesture mapping had to be set on the phone first ("Use as backward swipe" in
 the mini app). Re-run the on-device steps before each demo, because the mapping
 is stored on one phone and a reinstall loses it. If they do not pass on the day, say so
 openly and use the fallback in this file. A button, an
 injected event, or a web input is not the glasses path and must not be
 presented as one.
+
+**Guests and the spoken wingman line are not yet tried on a phone or on
+glasses.** Both are covered by automated tests with fakes. Speech recognition in
+phone browsers, speech through Meta or Mentra glasses, the Mentra microphone
+permission and the model's real wording are all unverified. Rehearse before
+relying on them, and keep the typed path ready.
+
+## Fastest way in: a guest account
+
+For a demo, the quickest way to get someone an account is a guest account (demo
+only; to be deleted afterwards, see `docs/guest-accounts.md`). On the sign-in or
+sign-up page, the card "New here? Just say hi" takes a name:
+
+- **Spoken:** tap "Say hi" and say "Hi, my name is Sam". The page shows what it
+  heard, and says "Yo Sam, you're in." Needs a browser with speech recognition;
+  otherwise the card says so and the typed field works. The browser sends the audio
+  to its vendor's service to transcribe it; Cue itself only receives the text.
+- **Typed:** type "Hi, my name is Sam", "I'm Sam" or just "Sam" under "Or type
+  it" and tap "Continue as guest".
+- **Mentra glasses:** while the glasses are not linked, the mini app listens
+  through the glasses' microphone. The wearer says "Hi, my name is Sam"; the
+  glasses reply "Yo Sam, you're in. Open Cue on your phone." and the setup screen
+  shows "Open Cue as Sam", which opens a one-time link signing the phone into
+  the same account. No pairing code is needed.
+- **Meta glasses:** the phone hears and speaks through them when they are its
+  Bluetooth headset. Use the spoken route above on the wearer's phone.
+
+A guest has no email or password. If they sign out they cannot get back in (the
+app warns first). A guest has only a name, so the wingman has nothing specific
+to say about them: see "Wingman voice" below. To switch the feature off, set
+`CUE_GUESTS_ENABLED=off` on Vercel and redeploy.
+
+## Wingman voice
+
+When two people match, Cue says one or two short sentences about the match in a
+casual friend's voice, and shows them as "Your wingman" on the match screen. It
+plays through the glasses when they are the phone's audio device, otherwise
+through the phone speaker; a Mentra wearer's glasses app speaks it itself. The
+"Wingman voice" switch on the Encounter page turns the speech off on that browser
+(the text still shows).
+
+- **A name-only guest, or two people with nothing in common shared, hear the fixed
+  line**, for example "Yo, Sam noticed you too. Go say hi.", with the venue's name
+  added when the match was made at a venue.
+- **To get a specific tip,** both people add a shared interest (an interest or a
+  personality card that both have) on Profile, share it, and leave AI assist on.
+  The line then mentions one shared thing and nudges them to talk. It needs a
+  working `ANTHROPIC_API_KEY`; without one the fixed line is used.
+- Say aloud if asked: Claude is sent the other person's display name, the venue's
+  name if any, and the shared things already checked
+  for "Find common ground". Nothing else, and never chat.
 
 ## Before the demo
 
@@ -75,6 +131,12 @@ Setup checklist:
 - [ ] Riley (`riley@cue.demo`) is available on a third browser for the "what if
       someone else signals?" question, but is not part of the demo.
 - [ ] `docs/hardware-check.md` has been read, and the glasses status is known.
+- [ ] Guests: if people will join by voice, `CUE_GUESTS_ENABLED` is not `off`
+      on the site, and a test guest made on the day works. After the event, see
+      `docs/guest-accounts.md` ("After the demos") to delete guest accounts.
+- [ ] Wingman voice: the Encounter page's "Wingman voice" switch is on for the
+      phone that should speak, its volume is up, and the line was heard once in a
+      rehearsal match (then use "Reset demo").
 
 ## The 90-second script
 
@@ -84,7 +146,7 @@ Setup checklist:
 | 0:10 - 0:25 | Point at encounter mode on both accounts and the "Ready" status. | "Both people have turned encounter mode on, and Cue knows both are in the same place: a venue they checked into, or phones that are close together. A signal can only match someone in the same place." |
 | 0:25 - 0:40 | Alex makes a backward swipe along the glasses' temple strip, as if brushing back a stray hair. Show that no match appears. | "Alex signals interest. Sam gets no notification about it, and no match appears yet." If the glasses path is not verified, say so here instead of implying it works. |
 | 0:40 - 0:55 | Sam taps "Interested" in the web app. Alex's page reads "Your signal is out" until then. | "Sam is the second person. The web app is the second input because there is only one pair of glasses." |
-| 0:55 - 1:10 | Both screens show "It's mutual." Open the other person's card from the match screen: approved profile details, their character, encounter time, and venue label. Point out that Alex's drinking, smoking, drugs and ethnicity are not shown. | "Both signals arrived within 15 seconds, in the same place, so the server created one match. The place on it is the venue's name, or just "Nearby". Cue does not keep or show anyone's location. Each person sees only the fields they approved for sharing. Alex filled in some sensitive fields and shared none of them, so Sam cannot see them." |
+| 0:55 - 1:10 | Both screens show "It's mutual." Open the other person's card from the match screen: approved profile details, their character, encounter time, and venue label. Point out that Alex's drinking, smoking, drugs and ethnicity are not shown. If Wingman voice is on, the phone (or the glasses) says the wingman line and "Your wingman" shows it; the seeded Alex and Sam share cards, so with a working `ANTHROPIC_API_KEY` the line should mention one; without it, it is the fixed line. | "Both signals arrived within 15 seconds, in the same place, so the server created one match. The place on it is the venue's name, or just "Nearby". Cue does not keep or show anyone's location. Each person sees only the fields they approved for sharing. Alex filled in some sensitive fields and shared none of them, so Sam cannot see them." |
 | 1:10 - 1:25 | Tap "Find common ground" on one screen. Show the shared interests and the optional opening question, then tap "Use this opener". The question appears in the message box. Do not send it yet. | "Claude only sees the fields each person approved for sharing and for AI assistance. It never sees age, gender, ethnicity, drinking, smoking or drugs, and it never reads messages. It writes one opening question. Nothing is sent for anyone: this only fills the box, and the person decides." |
 | 1:25 - 1:30 | Send the message from one account and show it arrive on the other. Then stop the demo. | "From here the conversation is theirs, inside Cue. Cue does not listen or reply." |
 
@@ -192,6 +254,7 @@ Keep an expiry example ready for questions:
 | "Not ready" on a phone, location blocked, too rough, or out of date | Check in at the venue instead: scan the QR code or type the code. Keep the Cue page open and in front. "Try location again" retries the browser's location. |
 | Two phones are in the same room but do not match | Check both read "Ready", both signalled within 15 seconds, and neither has an active match with the other (reset). If using location, indoor accuracy may put them more than 40 m apart on paper: use a venue check-in. |
 | Glasses are unlinked, or the swipe does not arrive | Generate a new pairing code in the web app and pair the glasses again. If the hardware path cannot be recovered in the time available, say so openly. Then show the web input for both sides, and state clearly that this is not the glasses path and does not test the swipe. |
+| No wingman line is heard | Check the "Wingman voice" switch, the phone's volume and that the match screen shows "Your wingman". The line plays once per match per tab; a new match is needed to hear it again. If Claude is slow or fails, a fixed line is used instead. If nothing shows, move on: matching does not depend on it. |
 | Claude times out or returns an error | The card shows a retry state. Tap retry once. If it fails again, move on. Matching is not affected, and chat does not use Claude. |
 | A chat message does not appear on the other screen | Realtime is only a nudge. Reload the match page: the message is stored and loads through the API. If sends fail with a rate-limit error, wait ten seconds. |
 | Realtime notification is late | Refresh the matches page. The match is stored and appears after a refresh. |
@@ -221,7 +284,11 @@ the venue's name or "Nearby". Location can also be faked by a modified client.
 Only the fields that each person approved for sharing and for AI assistance
 (interests, bio, personality cards, character, MBTI, what they are looking for,
 city, work or school, education), plus the venue's name when the match was made at a venue (not for a "Nearby"
-match, and never a location). It never sees age,
+match, and never a location). The spoken wingman line on a match is built from
+the same checked shared items and opener, and also sends the other person's
+display name, which "Find common ground" does not. It is requested
+automatically on a match and falls back to a fixed line if either person has AI
+assist off. It never sees age,
 gender, ethnicity, drinking, smoking or drugs, and it never sees chat messages.
 It returns one opening question and does not send it: "Use this opener" only
 fills the message box. Every "you both..." line has to be backed by a quote that

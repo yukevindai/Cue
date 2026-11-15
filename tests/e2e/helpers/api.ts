@@ -203,3 +203,36 @@ export function notMatched(r: ApiResult<Ack>): boolean {
   const o = interestOutcome(r);
   return o.kind === "ack" ? o.ack.matched === false : true;
 }
+
+/** One raw call for routes `apiFor` has no method for (guest routes). Body and status as the server sent them; redirects are not followed. */
+export interface RawResult {
+  status: number;
+  text: string;
+  json: unknown;
+  headers: Record<string, string>;
+}
+
+export async function rawCall(
+  ctx: APIRequestContext,
+  method: "GET" | "POST",
+  path: string,
+  body?: unknown,
+  headers?: Record<string, string>,
+): Promise<RawResult> {
+  const res = await ctx.fetch(path, { method, data: body, headers, failOnStatusCode: false, maxRedirects: 0 });
+  const text = await res.text();
+  let json: unknown = null;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    /* not JSON (a redirect, say) */
+  }
+  return { status: res.status(), text, json, headers: res.headers() };
+}
+
+/** Asserts a raw result is a well-formed ApiError with this status and code. */
+export function parseApiError(r: RawResult): ApiError["error"] {
+  const parsed = ApiError.safeParse(r.json);
+  if (!parsed.success) throw new Error(`not an ApiError (${r.status}): ${r.text.slice(0, 200)}`);
+  return parsed.data.error;
+}
