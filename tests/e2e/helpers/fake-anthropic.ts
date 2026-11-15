@@ -13,6 +13,11 @@ import type { Socket } from "node:net";
  *            text block is the JSON string the test supplied.
  *   - error: 500 with an Anthropic-style JSON error body (default).
  *   - hang:  accept the request and never answer.
+ *
+ * Two kinds of call reach it: the grounded wingman's ("wingman") and the
+ * spoken wingman line's ("hype", recognised by its system prompt). Each kind
+ * has its own mode and text, so a test can answer the two differently. The
+ * plain `setMode` / `respondWith` set both kinds, as before; `kind` picks one.
  */
 export const FAKE_ANTHROPIC_PORT = 3199;
 export const FAKE_ANTHROPIC_URL = `http://127.0.0.1:${FAKE_ANTHROPIC_PORT}`;
@@ -20,6 +25,9 @@ export const FAKE_ANTHROPIC_URL = `http://127.0.0.1:${FAKE_ANTHROPIC_PORT}`;
 export const DUMMY_API_KEY = "e2e-dummy-key";
 
 export type FakeMode = "ok" | "error" | "hang";
+export type CallKind = "wingman" | "hype";
+export type KindSelector = CallKind | "all";
+const KINDS: CallKind[] = ["wingman", "hype"];
 
 export interface RecordedRequest {
   method: string;
@@ -30,12 +38,24 @@ export interface RecordedRequest {
   rawBody: string;
   /** Parsed JSON body, or null if it was not JSON. */
   body: unknown;
+  /** Which pipeline sent it, told apart by the system prompt. */
+  kind: CallKind;
 }
 
 interface State {
-  mode: FakeMode;
-  text: string;
+  modes: Record<CallKind, { mode: FakeMode; text: string }>;
   requests: RecordedRequest[];
+}
+
+const freshModes = (): State["modes"] => ({
+  wingman: { mode: "error", text: "{}" },
+  hype: { mode: "error", text: "{}" },
+});
+
+/** The hype pipeline's system prompt opens with this persona; the wingman's does not. */
+function kindOf(body: unknown): CallKind {
+  const system = body && typeof body === "object" && "system" in body ? JSON.stringify((body as { system: unknown }).system) : "";
+  return system.includes("Gen Z friend") ? "hype" : "wingman";
 }
 
 const SENSITIVE = new Set(["x-api-key", "authorization"]);
@@ -64,7 +84,7 @@ export interface FakeAnthropicServer {
 }
 
 export async function startFakeAnthropic(port = FAKE_ANTHROPIC_PORT): Promise<FakeAnthropicServer> {
-  const state: State = { mode: "error", text: "{}", requests: [] };
+  const state: State = { modes: freshModes(), requests: [] };
   const sockets = new Set<Socket>();
 
   const server = http.createServer(async (req, res) => {
@@ -73,16 +93,17 @@ export async function startFakeAnthropic(port = FAKE_ANTHROPIC_PORT): Promise<Fa
 
     // Control plane (used by tests).
     if (path === "/__control" && req.method === "POST") {
-      const body = JSON.parse(await readBody(req)) as { mode: FakeMode; text?: string };
-      state.mode = body.mode;
-      if (body.text !== undefined) state.text = body.text;
-      return json(res, 200, { mode: state.mode });
+      const body = JSON.parse(await readBody(req)) as { mode: FakeMode; text?: string; kind?: KindSelector };
+      for (const k of body.kind && body.kind !== "all" ? [body.kind] : KINDS) {
+        state.modes[k].mode = body.mode;
+        if (body.text !== undefined) state.modes[k].text = body.text;
+      }
+      return json(res, 200, { modes: state.modes });
     }
     if (path === "/__reset" && req.method === "POST") {
-      state.mode = "error";
-      state.text = "{}";
+      state.modes = freshModes();
       state.requests = [];
-      return json(res, 200, { mode: state.mode });
+      return json(res, 200, { modes: state.modes });
     }
     if (path === "/__requests" && req.method === "GET") {
       return json(res, 200, { requests: state.requests });
@@ -101,10 +122,12 @@ export async function startFakeAnthropic(port = FAKE_ANTHROPIC_PORT): Promise<Fa
       for (const [k, v] of Object.entries(req.headers)) {
         headers[k] = redact(k, Array.isArray(v) ? v.join(",") : (v ?? ""));
       }
-      state.requests.push({ method: req.method, path: req.url ?? path, headers, rawBody, body });
+      const kind = kindOf(body);
+      state.requests.push({ method: req.method, path: req.url ?? path, headers, rawBody, body, kind });
+      const { mode, text } = state.modes[kind];
 
-      if (state.mode === "hang") return; // never respond; socket is destroyed on close
-      if (state.mode === "error") {
+      if (mode === "hang") return; // never respond; socket is destroyed on close
+      if (mode === "error") {
         return json(res, 500, {
           type: "error",
           error: { type: "api_error", message: "fake anthropic: simulated upstream failure" },
@@ -119,7 +142,7 @@ export async function startFakeAnthropic(port = FAKE_ANTHROPIC_PORT): Promise<Fa
         type: "message",
         role: "assistant",
         model,
-        content: [{ type: "text", text: state.text }],
+        content: [{ type: "text", text }],
         stop_reason: "end_turn",
         stop_sequence: null,
         usage: { input_tokens: 1, output_tokens: 1 },
@@ -160,11 +183,11 @@ export const fakeAnthropic = {
     const r = await fetch(`${FAKE_ANTHROPIC_URL}/__reset`, { method: "POST" });
     if (!r.ok) throw new Error(`fake anthropic reset failed: ${r.status}`);
   },
-  async setMode(mode: FakeMode, text?: string): Promise<void> {
+  async setMode(mode: FakeMode, text?: string, kind: KindSelector = "all"): Promise<void> {
     const r = await fetch(`${FAKE_ANTHROPIC_URL}/__control`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ mode, text }),
+      body: JSON.stringify({ mode, text, kind }),
     });
     if (!r.ok) throw new Error(`fake anthropic control failed: ${r.status}`);
   },
@@ -172,9 +195,15 @@ export const fakeAnthropic = {
   async respondWith(output: unknown): Promise<void> {
     await this.setMode("ok", JSON.stringify(output));
   },
-  async requests(): Promise<RecordedRequest[]> {
+  /** Answer the spoken wingman line's call with `{ line }`; the grounded wingman's mode is untouched. */
+  async hypeSays(line: string): Promise<void> {
+    await this.setMode("ok", JSON.stringify({ line }), "hype");
+  },
+  /** Every call received, or only those of one kind. */
+  async requests(kind?: CallKind): Promise<RecordedRequest[]> {
     const r = await fetch(`${FAKE_ANTHROPIC_URL}/__requests`);
     if (!r.ok) throw new Error(`fake anthropic requests failed: ${r.status}`);
-    return ((await r.json()) as { requests: RecordedRequest[] }).requests;
+    const all = ((await r.json()) as { requests: RecordedRequest[] }).requests;
+    return kind ? all.filter((q) => q.kind === kind) : all;
   },
 };

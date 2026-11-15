@@ -1,7 +1,9 @@
 import type { z } from "zod";
-import type { ProfileInput } from "@cue/contracts";
+import { GUEST_EMAIL_DOMAIN, type ProfileInput } from "@cue/contracts";
+import type { APIRequestContext, Browser, BrowserContext, BrowserContextOptions } from "@playwright/test";
 import { apiFor, interestEvent, must, type Api } from "./api";
-import { signInActor, type Actor } from "./auth";
+import { addressedApi, freshAddress, signInActor, type Actor } from "./auth";
+import { BASE_URL } from "./env";
 import { freshSpot, locate, metresNorth, type Spot } from "./geo";
 import { adminClient, createTestUser, deleteTestUser } from "./users";
 
@@ -13,6 +15,23 @@ export interface Person extends Actor {
   /** Unique, greppable display name (contains the user's random marker). */
   displayName: string;
   profile: z.input<typeof ProfileInput>;
+}
+
+/**
+ * A guest account ("Hi, my name is Sam"): no password, no way to sign in again.
+ * Its request context carries the session cookies the guest route set.
+ */
+export interface Guest {
+  id: string;
+  /** Read with the service role; a guest cannot see it and nobody else is ever sent it. */
+  email: string;
+  displayName: string;
+  /** The client address (x-forwarded-for) this guest was created from. */
+  address: string;
+  ctx: APIRequestContext;
+  api: Api;
+  /** A new browser context signed in as this guest (copies the cookies). */
+  browserContext(browser: Browser, options?: BrowserContextOptions): Promise<BrowserContext>;
 }
 
 /** A venue created through the API. */
@@ -57,7 +76,12 @@ export function syntheticProfile(marker: string, overrides: ProfileOverrides = {
  */
 export class World {
   private people: Person[] = [];
+  private guests: Guest[] = [];
   private venueIds: string[] = [];
+  private disposables: Array<() => Promise<void>> = [];
+  private sweepGuests = false;
+  private guestIds = new Set<string>();
+  private readonly startedAt = Date.now() - 10_000;
 
   /** A new user with a saved profile. */
   async person(overrides: ProfileOverrides = {}): Promise<Person> {
@@ -70,8 +94,64 @@ export class World {
     return person;
   }
 
+  /**
+   * A new guest account made through POST /api/guest from its own client
+   * address. Removed at cleanup, as is any other guest account created while
+   * this World lives (also by a browser or a raw request, and also when the
+   * test fails before it learns the id).
+   */
+  async guest(opts: { intro?: string; address?: string } = {}): Promise<Guest> {
+    this.sweepGuests = true;
+    const address = opts.address ?? freshAddress();
+    const ctx = await addressedApi(address);
+    this.disposables.push(() => ctx.dispose());
+    const intro = opts.intro ?? `Hi, my name is Guest${Math.random().toString(36).slice(2, 8).replace(/[0-9]/g, "x")}`;
+    const created = await ctx.post("/api/guest", { data: { intro }, failOnStatusCode: false });
+    if (created.status() !== 201) throw new Error(`createGuest failed: ${created.status()} ${await created.text()}`);
+    return this.adoptGuest(ctx, address);
+  }
+
+  /** Turns a request context that already holds a guest's session cookies into a tracked `Guest`. */
+  async adoptGuest(ctx: APIRequestContext, address: string): Promise<Guest> {
+    this.sweepGuests = true;
+    const api = apiFor(ctx);
+    const profile = must(await api.getProfile(), "guest profile");
+    const { data, error } = await adminClient().auth.admin.getUserById(profile.userId);
+    if (error || !data.user?.email) throw new Error(`guest lookup failed: ${error?.message ?? "no email"}`);
+    const guest: Guest = {
+      id: profile.userId,
+      email: data.user.email,
+      displayName: profile.displayName,
+      address,
+      ctx,
+      api,
+      browserContext: async (browser, options) => {
+        const bctx = await browser.newContext({ baseURL: BASE_URL, ...options, storageState: await ctx.storageState() });
+        this.disposables.push(() => bctx.close());
+        return bctx;
+      },
+    };
+    this.guests.push(guest);
+    this.guestIds.add(guest.id);
+    return guest;
+  }
+
+  /**
+   * Call in a test that makes guests some other way (the browser, a raw
+   * request): every guest account created while this World lives is deleted
+   * at cleanup.
+   */
+  watchGuests(): void {
+    this.sweepGuests = true;
+  }
+
+  /** Registers something to close at cleanup (contexts a test opened itself). */
+  onCleanup(fn: () => Promise<void>): void {
+    this.disposables.push(fn);
+  }
+
   /** `who` creates a venue (and is checked into it); it is removed at cleanup. */
-  async venue(who: Person, name = `E2E Cafe ${Math.random().toString(36).slice(2, 7)}`): Promise<Venue> {
+  async venue(who: { api: Api }, name = `E2E Cafe ${Math.random().toString(36).slice(2, 7)}`): Promise<Venue> {
     const st = must(await who.api.createVenue(name), "createVenue");
     if (!st.checkIn) throw new Error("createVenue returned no check-in");
     this.venueIds.push(st.checkIn.venueId);
@@ -84,7 +164,7 @@ export class World {
   }
 
   /** Checks `who` into an existing venue. */
-  async checkIn(who: Person, venue: Venue): Promise<void> {
+  async checkIn(who: { api: Api }, venue: Venue): Promise<void> {
     const st = must(await who.api.checkIn(venue.code), "checkIn");
     if (st.checkIn?.venueId !== venue.id) throw new Error("checked into a different venue");
   }
@@ -127,7 +207,41 @@ export class World {
     return { a, b, spot };
   }
 
+  /**
+   * Deletes the guests this World tracked plus every guest-domain account
+   * created since it started (the suite is serial, so those are this test's).
+   */
+  private async deleteGuestAccounts(): Promise<void> {
+    const ids = new Set(this.guestIds);
+    try {
+      for (let page = 1; page <= 20; page++) {
+        const { data, error } = await adminClient().auth.admin.listUsers({ page, perPage: 1000 });
+        if (error) throw new Error(error.message);
+        for (const u of data.users) {
+          if (u.email?.endsWith(`@${GUEST_EMAIL_DOMAIN}`) && Date.parse(u.created_at) >= this.startedAt) ids.add(u.id);
+        }
+        if (data.users.length < 1000) break;
+      }
+    } catch (err) {
+      console.warn(`[e2e cleanup] could not list guest accounts: ${(err as Error).message}`);
+    }
+    for (const id of ids) {
+      const { error } = await adminClient().auth.admin.deleteUser(id);
+      if (error && error.status !== 404) console.warn(`[e2e cleanup] could not delete guest ${id}: ${error.message}`);
+    }
+    this.guestIds.clear();
+  }
+
   async cleanup(): Promise<void> {
+    for (const g of this.guests.splice(0).reverse()) {
+      try {
+        await g.api.reset(true);
+      } catch {
+        /* best effort */
+      }
+    }
+    for (const fn of this.disposables.splice(0).reverse()) await fn().catch(() => undefined);
+    if (this.sweepGuests) await this.deleteGuestAccounts();
     for (const p of this.people.splice(0).reverse()) {
       try {
         await p.api.reset(true);
@@ -154,7 +268,7 @@ export class World {
  * ignored (kept so call sites read `signal(pair, who)`): a signal carries no
  * place, the server uses `who`'s own presence.
  */
-export function signal(_pair: unknown, who: Person, opts: Parameters<typeof interestEvent>[0] = {}) {
+export function signal(_pair: unknown, who: { api: Api }, opts: Parameters<typeof interestEvent>[0] = {}) {
   return who.api.interest(interestEvent(opts));
 }
 

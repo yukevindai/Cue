@@ -18,7 +18,16 @@ end and commit it.
 > shown was not recorded, so the default in `apps/mentra/src/config.ts` is
 > still wrong for that unit. Not yet recorded: the media-control conflict, hair
 > adjustments, the pocket test, and audio from the glasses. The Meta Adventurer
-> tap route is separate and not verified: `docs/meta-glasses-check.md`.
+> tap route is separate: `docs/meta-glasses-check.md`.
+>
+> **2026-11-15, reported by the owner (details not recorded):** the mini app was
+> installed from the website (step 2, "From the website") on the owner's phone
+> with no laptop, and a real Mentra swipe and a real Meta double tap each reached
+> the live site under place-based matching. The two accounts were already
+> matched, so no new match was created in that run. Still NOT verified: a new
+> match by place completed by real hardware (step 6, item 5), steps 7 to 10, and
+> everything in step 11 (voice). **Nothing about voice has been tried on a
+> device.**
 
 ## What was chosen and why
 
@@ -76,11 +85,12 @@ serves the files `mentra-miniapp release` serves (`/mentra/miniapp.json`,
 `apps/web/scripts/build-mentra-bundle.mjs` with every web build; the server
 address is preset to the production site.
 
-> **Not verified on a phone.** The Mentra tool only ever generates links to a
-> laptop on the local network (`http://<lan-ip>:<port>`). Whether the Mentra
-> app also installs from a public `https://` address has not been tried. Record
-> the result in the table at the end. If it refuses, use the laptop install
-> below, which is unchanged.
+> **Reported working, not recorded.** The Mentra tool itself only generates links
+> to a laptop on the local network (`http://<lan-ip>:<port>`). On 2026-11-15 the
+> owner reported that the install from the public site worked on their phone with
+> no laptop; the Mentra app version, phone and exact steps were not recorded, so
+> fill them in the table at the end next time. If it refuses, use the laptop
+> install below, which is unchanged.
 
 **From a laptop (development, and the fallback).**
 
@@ -205,6 +215,58 @@ in the web app only.
 Lock the phone, put it in a pocket, wait one minute, swipe backward, check for
 the row. Record the result (the miniapp design says this works; untested).
 
+## 11. Voice: spoken guest sign-up and the spoken match line (NOT YET VERIFIED)
+
+Added in mini app version 0.3.0. **Nothing in this step has been tried on a
+device.** Tick each item only after seeing it happen; leave it "not yet recorded"
+otherwise. Background: `docs/guest-accounts.md`, and "The spoken line" in
+`docs/profiles-and-chat.md`. These are demo-only conveniences; the swipe does not
+depend on them.
+
+Install the 0.3.0 bundle first (`version` in `apps/mentra/miniapp.json`), so the
+phone has the MICROPHONE permission in the manifest. Note whether the Mentra app
+asks for it.
+
+A. Microphone permission and transcription (needs the glasses **unlinked**, so
+   unlink first, or use a fresh install):
+
+1. Open the Cue mini app. The setup screen should read "Say "Hi, my name is ..."
+   to your glasses to start as a guest, or enter a pairing code." and show a
+   "Listening..." pill. If the pill never appears, the microphone permission was
+   not granted or transcription is not available to a locally installed mini
+   app: record which, and stop here.
+2. Say "Hi, my name is" and a first name, at normal volume. Expect the glasses to
+   say "Yo <name>, you're in. Open Cue on your phone." and the pill to turn to
+   "Paired". Record how long it took.
+3. Say only a name, and then unrelated sentences, with the glasses unlinked.
+   Expect nothing to happen (an introduction is required). Record any account
+   created by accident.
+4. The web app's Encounter page for that account should show the glasses linked.
+
+B. Hand off to the phone:
+
+5. Tap "Open Cue as <name>". Expect the phone's browser to open Cue, signed in
+   as that guest, on Encounter. If nothing opens, the "Open Cue" link below the
+   button should work. Record which browser opened.
+
+C. The spoken match line (needs a match by place, so another person or account in
+   the same place; see step 6, item 5):
+
+6. When a match is made, wait for the swipe's confirmation tone, then expect about
+   a second later one or two short spoken sentences through the glasses. Record
+   what was said and whether it came from the glasses or the phone speaker. A
+   name-only account hears the fixed line ("Yo, <name> noticed you too. Go say
+   hi."); a specific tip needs both people to share an interest (add one on
+   Profile) and a working `ANTHROPIC_API_KEY` on the server.
+7. The same match must be spoken only once: restart the mini app, or wait through
+   several polls, and confirm it does not repeat.
+8. With an account linked (by code or as a guest), confirm the "Listening..." pill
+   is gone, i.e. the mini app stopped listening once linked. Unlink and confirm it
+   starts listening again.
+
+If any of A to C fails, the guest and voice features are simply unavailable; the
+backward swipe, pairing by code and the web app are unaffected.
+
 ## Fallback: Bluetooth SDK bridge
 
 Switch if any of these is true after 30 minutes on site: the Mentra app has no
@@ -267,3 +329,10 @@ staff on site which route they support before spending the time.
 | Cue audible from glasses? Delay? | not yet recorded |
 | Works with phone locked in pocket? | not yet recorded |
 | Route used (miniapp / Bluetooth fallback) | miniapp |
+| Mini app installed from the website with no laptop? | Reported yes by the owner on 2026-11-15; app version, phone and steps not recorded |
+| Real swipe reached the live site under place-based matching? | Reported yes on 2026-11-15; accounts were already matched, so no new match was created. Details not recorded |
+| Step 11: MICROPHONE permission granted, "Listening..." pill shown? | not yet recorded (never tried) |
+| Step 11: spoken "Hi, my name is ..." creates and links a guest; glasses speak the greeting? | not yet recorded (never tried) |
+| Step 11: chatter or a bare name creates nothing? | not yet recorded (never tried) |
+| Step 11: "Open Cue as ..." opens the phone's browser signed in? | not yet recorded (never tried) |
+| Step 11: spoken match line heard from the glasses, once per match? | not yet recorded (never tried) |

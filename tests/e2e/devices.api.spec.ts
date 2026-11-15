@@ -36,7 +36,7 @@ test.describe("device-token path (glasses bridge, server side only)", () => {
       expect(me.deviceId).toBe(device.claim.deviceId);
       expect(me.encounterMode).toBe(true);
       expect(me.ready).toBe(true);
-      expect(Object.keys(me).sort()).toEqual(["deviceId", "encounterMode", "ready", "serverTime"]);
+      expect(Object.keys(me).sort()).toEqual(["deviceId", "encounterMode", "latestMatchId", "ready", "serverTime"]);
 
       // The user's web view reports the device as linked.
       const status = must(await pair.a.api.getEncounter()).device;

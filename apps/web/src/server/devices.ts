@@ -121,15 +121,60 @@ export async function requireDevice(req: Request): Promise<DeviceAuth> {
   return { deviceId: row.id, userId: row.user_id };
 }
 
+/**
+ * Server-side link for a user who has no browser at hand (a guest created from
+ * the glasses): mints an internal pairing code and claims it at once, through
+ * the same SQL and token format as the two-step pairing. The code never
+ * leaves this function.
+ */
+export async function linkDeviceForUser(
+  userId: string,
+  device: { deviceLabel?: string; mentraUserId?: string | null },
+): Promise<DeviceClaimResult> {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const code = randomCode();
+    const res = await getAdminSupabase().rpc("start_device_pairing", {
+      p_user_id: userId,
+      p_code_hash: sha256(code),
+      p_ttl_seconds: 60,
+    });
+    if (res.error?.code === "23505") continue;
+    unwrap(res);
+    const deviceToken = TOKEN_PREFIX + randomBytes(32).toString("base64url");
+    const deviceId = await rpc<string | null>("claim_device", {
+      p_code_hash: sha256(code),
+      p_token_hash: sha256(deviceToken),
+      p_device_label: device.deviceLabel ?? "Mentra Live",
+      p_mentra_user_id: device.mentraUserId ?? null,
+    });
+    if (!deviceId) throw new Error("internal pairing claim failed");
+    return { deviceId, deviceToken };
+  }
+  throw new Error("could not allocate a pairing code");
+}
+
+/** A match is announced on the glasses only while it is this fresh. */
+const LATEST_MATCH_WINDOW_MS = 5 * 60_000;
+
 /** GET /api/devices/me. Mode and readiness come from the wearer's presence (SQL `presence_state`). */
 export async function getDeviceContext(device: DeviceAuth): Promise<DeviceContext> {
-  const presence = await rpc<{ encounter_mode: boolean; ready: boolean }>("presence_state", {
-    p_user_id: device.userId,
-  });
+  const [presence, latest] = await Promise.all([
+    rpc<{ encounter_mode: boolean; ready: boolean }>("presence_state", { p_user_id: device.userId }),
+    getAdminSupabase()
+      .from("matches")
+      .select("id")
+      .eq("status", "active")
+      .or(`user_a.eq.${device.userId},user_b.eq.${device.userId}`)
+      .gte("created_at", new Date(Date.now() - LATEST_MATCH_WINDOW_MS).toISOString())
+      .order("created_at", { ascending: false })
+      .limit(1),
+  ]);
+  const rows = unwrap(latest) as { id: string }[];
   return {
     deviceId: device.deviceId,
     encounterMode: presence.encounter_mode,
     ready: presence.ready,
+    latestMatchId: rows[0]?.id ?? null,
     serverTime: new Date().toISOString(),
   };
 }

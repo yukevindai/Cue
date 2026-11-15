@@ -41,6 +41,13 @@ This is a hackathon prototype, not a production service.
    Claude sees only the fields each person shared with AI assist on, never age,
    gender, ethnicity, drinking, smoking or drugs, and never chat messages. It
    writes one opener and sends nothing.
+7. On a match Cue also says one or two short sentences about it in a casual
+   friend's voice ("Your wingman"), through the glasses when they are the phone's
+   audio device, otherwise the phone speaker. It is requested automatically,
+   needs AI assist on for both people, and is built from the same checked shared
+   items plus the other person's display name and a venue's name. With nothing in
+   common to go on (a name-only guest, say) it is a fixed line. The "Wingman
+   voice" switch on Encounter turns the speech off in that browser.
 
 The one-sided interest stays invisible to the other person. This is not a
 two-person private session any more: Cue pairs a signal with the closest other
@@ -54,10 +61,26 @@ people" rules on the owner's instruction), `docs/profiles-and-chat.md` for
 profiles, the character and chat (also added later, on the owner's instruction),
 and `docs/architecture.md` for the technical contract.
 
+### Fastest way in: a guest account (demo only)
+
+On the sign-in or sign-up page, "New here? Just say hi": tap "Say hi" and say
+"Hi, my name is Sam", or type "Sam" under "Or type it" and tap "Continue as
+guest". You get an account named Sam with no email or password. On Mentra
+glasses the mini app listens while unlinked: say "Hi, my name is Sam" and the
+glasses link themselves to a new guest account, and "Open Cue as Sam" signs the
+phone in. A guest who signs out cannot get back in. Guest accounts are for the
+demo and are deleted afterwards. Switch it off with `CUE_GUESTS_ENABLED=off`;
+details, limits and the removal checklist are in `docs/guest-accounts.md`.
+Spoken entry sends audio to the browser vendor's speech service (Cue receives
+only the text); it has not been tried on real phones or glasses.
+
+A name-only guest gives the wingman nothing specific to say, so they hear the
+fixed line. To get a specific tip, both people add a shared interest on Profile.
+
 ### Try it with two phones
 
 1. Open the site (or `http://localhost:3000`) on two phones, each signed in as a
-   different demo account (see below) in its own browser profile.
+   different demo account (see below) or as a guest, in its own browser profile.
 2. Turn on "Encounter mode" on both. Allow location when asked.
 3. Make both phones "Ready" in the "Where you are" card. Indoors, prefer a venue
    check-in: on one phone, "Host a place", name it, tap "Host this place"; on
@@ -75,21 +98,29 @@ On the hosted site the demo is best done with a venue check-in when indoors.
 
 **Mentra Live.** The real-swipe checkpoint was **met** (2026-11-14), under the old
 two-person session model: seven real swipes reached the live server under the
-wearer's account in about 0.2 to 0.3 s and two matches completed. It has **not
-been re-verified** under place-based matching. On that unit the swipe's gesture name was not the
+wearer's account in about 0.2 to 0.3 s and two matches completed. On 2026-11-15
+the owner reported that a real Mentra swipe reached the live site under
+place-based matching too; the two accounts were already matched, so no new match
+was created in that run. A new match by place from real hardware has **not been
+verified**. On the 2026-11-14 unit the swipe's gesture name was not the
 built-in default, so the mini app's calibration override was needed. Hair
 adjustments, the pocket test, the media-control conflict and glasses audio are
 not yet recorded. See `docs/hardware-check.md`.
 
 The Mentra mini app can be installed from the site itself, without a laptop: open
 `/mentra` on a second screen and scan its QR code with the Mentra app's developer
-scanner. This has not yet been tried on a real phone; `docs/hardware-check.md`
-step 2 has the laptop fallback.
+scanner. The owner reported (2026-11-15) that this worked on their phone with no
+laptop; the exact steps and versions were not recorded. `docs/hardware-check.md`
+step 2 has the laptop fallback. The new voice features (spoken guest sign-up and
+the spoken match line) have not been tried on any glasses.
 
-**Meta Adventurer.** Not verified. The web page listens for headset media
-commands (double tap by default). Tests cover the server path and the page
-logic only; nobody has run it on real Meta glasses or an iPhone, or paired it by
-location with a Mentra swipe. The signal
+**Meta Adventurer.** Only partly verified. The web page listens for headset media
+commands (double tap by default). The owner reported (2026-11-15) that a real
+Meta double tap reached the live site under place-based matching; the accounts
+were already matched, so no new match was created, and the steps in
+`docs/meta-glasses-check.md` (the command list, the other gestures, background
+and locked behavior, audio) were not recorded. Pairing a Meta tap with a
+Mentra swipe into a new match by location has not been verified. The signal
 shows that some Bluetooth headset sent a media command, not that Meta glasses
 did, and the gesture is a tap pattern, not a swipe. See
 `docs/meta-glasses-check.md`.
@@ -139,6 +170,8 @@ Put the others in `apps/web/.env.local` by hand. Never commit real values.
 | `WINGMAN_TIMEOUT_MS` | No | Server only | Default `15000`. |
 | `ANTHROPIC_BASE_URL` | No | Server only | Used by tests to point at a local fake Anthropic server. |
 | `ANTHROPIC_FALLBACKS` | No | Server only | Set to `off` to disable the server-side refusal fallback parameter. |
+| `HYPE_TIMEOUT_MS` | No | Server only | Time allowed for the spoken match line's model call. Default `8000`; after that the fixed line is used. |
+| `CUE_GUESTS_ENABLED` | No | Server only | Demo guest accounts are on unless this is `off`, `false` or `0`. Set it to `off` on Vercel and redeploy to stop new guests; see `docs/guest-accounts.md`. |
 
 ## Tests
 
@@ -172,7 +205,7 @@ available for it.
 | `packages/matching` | Pure matching rules with unit tests |
 | `supabase` | Config, migrations, and synthetic seed data |
 | `tests/e2e` | Playwright end-to-end tests, helpers, and the fake Anthropic server |
-| `docs` | `spec.md`, `architecture.md`, `place-matching.md`, `profiles-and-chat.md`, `demo.md`, `hardware-check.md`, `meta-glasses-check.md` |
+| `docs` | `spec.md`, `architecture.md`, `place-matching.md`, `profiles-and-chat.md`, `guest-accounts.md`, `demo.md`, `hardware-check.md`, `meta-glasses-check.md` |
 | `scripts` | `dev-stack.sh` (local stack start, stop, reset, env) |
 
 Role branches are merged by the lead; a path may be missing on a branch that
@@ -199,9 +232,20 @@ has not merged the role that owns it.
   outside the place. The QR code has no print layout, and signing up (rather than
   signing in) from a QR link loses the venue code.
 - One lock serialises all matching decisions: fine for a demo, a throughput limit.
-- Place matching has not been tried on real phones or hardware, and it has not
-  been checked against the hosted database.
+- Place matching has not been tried by two real phones matching, and no new
+  match by place has been completed by real glasses (a real swipe and a real
+  Meta double tap reached the live site on 2026-11-15, with the accounts already
+  matched).
 - No identity verification.
+- Guest accounts (demo only) are open sign-up while the switch is on, with an
+  in-memory per-address limit and a daily cap of 300 that is not atomic. A guest
+  who signs out cannot get back in. The spoken route sends audio to the browser
+  vendor's speech service, and the Mentra mini app holds the glasses' microphone
+  while it is not linked. None of it is tried on a real phone or glasses. See
+  `docs/guest-accounts.md`.
+- The spoken match line is requested automatically on a match and sends Claude
+  the other person's display name (the one place a name is sent). Its real
+  wording with a live key, and speech through phones or glasses, are unverified.
 - Chat is text only, inside the app. There is no feed and there are no push
   notifications. Live updates are in-app only.
 - Chat cannot stop someone typing their own contact details. Removing social
@@ -216,11 +260,12 @@ has not merged the role that owns it.
   server instance.
 - The live Claude call is not verified until an API key is supplied, and the
   fuller input (cards, character, MBTI, location and so on) has not been run
-  live. Automated tests use a fake model.
+  live, nor has the spoken match line. Automated tests use a fake model.
 - The profile, character and chat screens have not been tried on the real phones.
-- The Mentra swipe was verified on one real unit under the old session model (see
-  Hardware status), not under place matching; the Meta tap route has not been run
-  on real hardware.
+- The Mentra swipe was verified on one real unit under the old session model, and
+  a real swipe and a real Meta double tap were reported reaching the live site
+  under place matching (see Hardware status); no new match by place has been
+  completed by real hardware, and the Meta route's details were not recorded.
 - The end-to-end tests cover the server path (device-token and `headset_remote`
   events). They do not test a physical swipe or tap.
 - Hackathon MVP. Not production software.
@@ -231,7 +276,9 @@ has not merged the role that owns it.
 - `docs/place-matching.md`: how a signal matches by place, what is stored, API, and limits.
 - `docs/architecture.md`: stack, trust model, database, API, and ownership.
 - `docs/profiles-and-chat.md`: profile fields and sharing, the character, chat,
-  what Claude sees, limits, and a manual test list.
+  what Claude sees (including the spoken line), limits, and a manual test list.
+- `docs/guest-accounts.md`: demo-only guest accounts: how they work, the API,
+  limits, how to switch them off and how to remove them after the demos.
 - `docs/demo.md`: setup, demo script, fallbacks, and reset steps.
 - `docs/hardware-check.md`: Mentra Live on-device checklist and results.
 - `docs/meta-glasses-check.md`: Meta Adventurer on-device checklist and the native route.

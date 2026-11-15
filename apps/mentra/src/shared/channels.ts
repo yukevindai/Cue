@@ -1,7 +1,7 @@
 import type { MentraTyped, Rpc } from "@mentra/miniapp/ui";
 import type { FeedbackCue } from "../feedback";
 
-import type { BridgeStatus, LinkResponse } from "../status";
+import type { BridgeStatus, HandoffResponse, LinkResponse } from "../status";
 
 export interface Channels {
   // background -> UI
@@ -14,6 +14,8 @@ export interface Channels {
   "cue:unlink": Record<string, never>;
   "cue:set-server": Rpc<{ url: string }, LinkResponse>;
   "cue:link": Rpc<{ code: string }, LinkResponse>;
+  /** Background opens the guest sign-in link in the phone browser and returns the URL as a fallback link. */
+  "cue:open-guest": Rpc<Record<string, never>, HandoffResponse>;
 }
 
 declare global {

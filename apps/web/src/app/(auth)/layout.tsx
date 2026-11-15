@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { GuestEntry } from "@/components/guest-entry";
 import { Wordmark } from "@/components/ui";
 import { getSessionUser } from "@/server/auth";
 
@@ -16,7 +17,10 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
           </p>
         </div>
 
-        <div>{children}</div>
+        <div>
+          <GuestEntry />
+          {children}
+        </div>
       </div>
     </div>
   );

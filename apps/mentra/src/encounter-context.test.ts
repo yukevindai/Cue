@@ -4,7 +4,7 @@ import { DEVICE_ID } from "./testing";
 
 const ctx = (encounterMode: boolean, ready: boolean): ContextFetchResult => ({
   ok: true,
-  context: { deviceId: DEVICE_ID, encounterMode, ready, serverTime: "2026-11-14T10:00:00.000Z" },
+  context: { deviceId: DEVICE_ID, encounterMode, ready, latestMatchId: null, serverTime: "2026-11-14T10:00:00.000Z" },
 });
 
 function make(fetchContext: () => Promise<ContextFetchResult>) {

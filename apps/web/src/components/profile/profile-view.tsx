@@ -9,6 +9,7 @@ import {
   GENDERS,
   HABIT_FREQUENCIES,
   HABIT_FREQUENCY_LABELS,
+  isGuestEmail,
   LOOKING_FOR,
   LOOKING_FOR_LABELS,
   MAX_CARDS_PER_DECK,
@@ -474,7 +475,17 @@ function ProfileForm({ initial }: { initial: OwnProfile | null }) {
         <Card aria-labelledby="account-title" className="space-y-4">
           <SectionTitle id="account-title">Account</SectionTitle>
           <p className="text-ink-soft">
-            Signed in as <span className="break-all font-semibold text-ink">{email ?? "your account"}</span>
+            {isGuestEmail(email) ? (
+              <>
+                Signed in as <span className="font-semibold text-ink">a guest</span>. Guest accounts
+                have no email or password and are for the demo; they may be removed afterwards.
+              </>
+            ) : (
+              <>
+                Signed in as{" "}
+                <span className="break-all font-semibold text-ink">{email ?? "your account"}</span>
+              </>
+            )}
           </p>
           <SignOutButton variant="secondary" />
         </Card>

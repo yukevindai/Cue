@@ -40,6 +40,16 @@ export const routes = {
   deviceClaim: "/api/devices/claim",
   /** GET -> DeviceContext. device */
   deviceMe: "/api/devices/me",
+  /** POST DeviceHypeInput -> HypeLine (404 unless the wearer is in that active match). device */
+  deviceHype: "/api/devices/hype",
+  /** POST -> HypeLine. session */
+  hype: (id: string) => `/api/matches/${id}/hype`,
+  /** POST GuestInput -> GuestResult; signs the new guest in. unauthenticated, rate-limited. Demo only. */
+  guest: "/api/guest",
+  /** POST GuestDeviceInput -> GuestDeviceResult; creates a guest and links the glasses. unauthenticated. Demo only. */
+  guestDevice: "/api/guest/device",
+  /** POST -> GuestHandoff (403 unless the device belongs to a guest). device. Demo only. */
+  guestHandoff: "/api/guest/handoff",
   /** DELETE -> 204, unlinks the caller's device. session */
   deviceUnlink: "/api/devices",
 } as const;

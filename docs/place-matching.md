@@ -195,9 +195,12 @@ headset command comes through the signed-in page, which is open by definition.
 
 - Real phones' GPS accuracy indoors, and the 40 m rule against it.
 - Location and page behaviour on an iPhone in the background or locked.
-- A real Mentra swipe, and a real Meta double tap, pairing two people by
-  location. The Mentra swipe was verified on real hardware on 2026-11-14 under
-  the old session model. It has not been re-verified under this one.
+- A real Mentra swipe, and a real Meta double tap, pairing two people by place.
+  The Mentra swipe was verified on real hardware on 2026-11-14 under the old
+  session model. On 2026-11-15 the owner reported that a real swipe and a real
+  Meta double tap each reached the live site under this model, but the two
+  accounts were already matched, so no new match was created. A new match by
+  place from real hardware has not been verified.
 - The hosted database. The migration is tested on the local stack; applying it
   to the hosted project is a separate step.
 

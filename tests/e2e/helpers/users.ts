@@ -1,5 +1,6 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { GUEST_EMAIL_DOMAIN } from "@cue/contracts";
 import { stackEnv } from "./env";
 
 /** A synthetic test account. Never real personal data. */
@@ -41,4 +42,16 @@ export async function createTestUser(): Promise<TestUser> {
 export async function deleteTestUser(user: TestUser): Promise<void> {
   const { error } = await adminClient().auth.admin.deleteUser(user.id);
   if (error) throw new Error(`deleteUser ${user.id} failed: ${error.message}`);
+}
+
+/** How many guest-domain accounts exist right now (service role; test only). */
+export async function countGuestUsers(): Promise<number> {
+  let count = 0;
+  for (let page = 1; page <= 20; page++) {
+    const { data, error } = await adminClient().auth.admin.listUsers({ page, perPage: 1000 });
+    if (error) throw new Error(`listUsers failed: ${error.message}`);
+    count += data.users.filter((u) => u.email?.endsWith(`@${GUEST_EMAIL_DOMAIN}`)).length;
+    if (data.users.length < 1000) break;
+  }
+  return count;
 }

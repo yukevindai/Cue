@@ -7,6 +7,9 @@ import {
   type CreateVenueInput,
   type DemoResetInput,
   EncounterStatus,
+  type GuestInput,
+  GuestResult,
+  HypeLine,
   InterestAck,
   type InterestEvent,
   type LocationInput,
@@ -207,6 +210,14 @@ export const api = {
   /** Idempotent per `clientId`: retry with the same id after a failure. */
   sendMessage: (id: string, input: SendMessageInput) =>
     request(routes.messages(id), ChatMessage, { method: "POST", body: input }),
+
+  /** Wingman line for a new match. Short timeout: it must never hold up the match moment. */
+  getHype: (id: string, o: Opt = {}) =>
+    request(routes.hype(id), HypeLine, { method: "POST", timeoutMs: 15_000, ...o }),
+
+  /** Creates a guest account and signs this browser into it (cookies). Demo only. */
+  createGuest: (input: GuestInput) =>
+    request(routes.guest, GuestResult, { method: "POST", body: input, timeoutMs: 15_000 }),
 
   createPairingCode: () => request(routes.devicePair, PairingCode, { method: "POST" }),
   unlinkDevice: () => requestEmpty(routes.deviceUnlink, { method: "DELETE" }),

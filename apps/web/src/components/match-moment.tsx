@@ -1,12 +1,62 @@
 "use client";
 
-import { ARCHETYPES, type MatchCard } from "@cue/contracts";
+import { ARCHETYPES, type HypeLine, type MatchCard } from "@cue/contracts";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useLive } from "@/components/live-provider";
 import { api, describeError, isApiError } from "@/lib/api";
 import { formatEncounterTime, matchPlace } from "@/lib/format";
+import { speak } from "@/lib/speech";
+import { markAnnounced, readVoicePref, shouldSpeakHype, wasAnnounced } from "@/lib/wingman-voice";
 import { Avatar, ConfirmDialog } from "@/components/ui";
+
+/**
+ * One wingman request per match per tab, shared across remounts of the
+ * moment (React may mount it twice in development). `null`: no line.
+ */
+const hypeRequests = new Map<string, Promise<HypeLine | null>>();
+const spokenHype = new Set<string>();
+
+/**
+ * Asks for the wingman's line once per match per tab and speaks it, unless
+ * Wingman voice is off or linked Mentra glasses were seen in the last 30 s
+ * (their own app says it). Failures show and say nothing; the moment never
+ * waits for it.
+ */
+function useHype(matchId: string): string | null {
+  const { encounter, clockOffsetMs } = useLive();
+  const [text, setText] = useState<string | null>(null);
+  const deviceRef = useRef({ device: encounter?.device ?? null, clockOffsetMs });
+  useEffect(() => {
+    deviceRef.current = { device: encounter?.device ?? null, clockOffsetMs };
+  }, [encounter, clockOffsetMs]);
+
+  useEffect(() => {
+    let cancelled = false;
+    let req = hypeRequests.get(matchId);
+    if (!req) {
+      if (wasAnnounced(matchId)) return;
+      markAnnounced(matchId);
+      req = api.getHype(matchId).catch(() => null);
+      hypeRequests.set(matchId, req);
+    }
+    void req.then((line) => {
+      if (cancelled || !line || line.matchId !== matchId) return;
+      setText(line.text);
+      if (spokenHype.has(matchId)) return;
+      spokenHype.add(matchId);
+      const { device, clockOffsetMs: offset } = deviceRef.current;
+      if (shouldSpeakHype({ voiceOn: readVoicePref(), device, nowMs: Date.now() + offset })) {
+        void speak(line.text);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [matchId]);
+
+  return text;
+}
 
 /**
  * The one loud moment in Cue. Shown over whatever view the user is on when a
@@ -20,6 +70,7 @@ export function MatchMoment({ match, onDismiss }: { match: MatchCard; onDismiss:
   const [confirmUnmatch, setConfirmUnmatch] = useState(false);
   const [unmatchBusy, setUnmatchBusy] = useState(false);
   const [unmatchError, setUnmatchError] = useState<string | null>(null);
+  const hype = useHype(match.id);
 
   useEffect(() => {
     const el = ref.current;
@@ -97,6 +148,22 @@ export function MatchMoment({ match, onDismiss }: { match: MatchCard; onDismiss:
                 {place.line} · {formatEncounterTime(match.encounterAt)}
               </p>
             </div>
+          </div>
+
+          <div aria-live="polite" className="w-full">
+            {hype ? (
+              <figure
+                data-testid="wingman-line"
+                className="mx-auto mt-6 max-w-sm animate-rise rounded-2xl bg-dusk-soft px-5 py-4 text-left"
+              >
+                <figcaption className="text-xs font-medium uppercase tracking-[0.2em] text-cream/70">
+                  Your wingman
+                </figcaption>
+                <blockquote className="mt-1 font-display text-lg italic leading-snug text-cream">
+                  &ldquo;{hype}&rdquo;
+                </blockquote>
+              </figure>
+            ) : null}
           </div>
 
           <div className="mt-10 flex w-full animate-rise flex-col gap-3 [animation-delay:500ms]">

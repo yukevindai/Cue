@@ -1,13 +1,12 @@
 import { anonymousApi, deviceApi } from "./auth";
-import { apiFor, must } from "./api";
-import type { Person } from "./scenario";
+import { apiFor, must, type Api } from "./api";
 
 /**
  * Links a simulated glasses device for `person` through the real pair/claim
  * flow and returns an API client that carries only the device bearer token.
  * This is the server path only; it is not the physical glasses.
  */
-export async function linkDevice(person: Person) {
+export async function linkDevice(person: { api: Api }) {
   const pairing = must(await person.api.devicePair(), "devicePair");
   const anon = await anonymousApi(); // the pairing code is the credential
   try {

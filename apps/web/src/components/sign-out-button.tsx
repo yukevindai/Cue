@@ -1,9 +1,14 @@
 "use client";
 
+import { isGuestEmail } from "@cue/contracts";
 import { useState, type ComponentProps } from "react";
+import { useMaybeLive } from "@/components/live-provider";
 import { api } from "@/lib/api";
 import { getBrowserSupabase } from "@/lib/supabase/browser";
-import { Button } from "@/components/ui";
+import { Button, ConfirmDialog } from "@/components/ui";
+
+export const GUEST_SIGN_OUT_WARNING =
+  "This is a guest account with no password. If you sign out you won't be able to get back into it.";
 
 export function SignOutButton({
   className,
@@ -16,6 +21,10 @@ export function SignOutButton({
 }) {
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const live = useMaybeLive();
+  // A guest has no password: signing out loses the account, so ask first.
+  const isGuest = Boolean(live?.profile?.isGuest) || isGuestEmail(live?.email);
 
   async function signOut() {
     setBusy(true);
@@ -38,10 +47,31 @@ export function SignOutButton({
 
   return (
     <>
-      <Button variant={variant} className={className} busy={busy} onClick={signOut}>
+      <Button
+        variant={variant}
+        className={className}
+        busy={busy && !confirming}
+        onClick={() => (isGuest ? setConfirming(true) : void signOut())}
+      >
         {children}
       </Button>
-      {failed ? (
+      {confirming ? (
+        <ConfirmDialog
+          title="Sign out of this guest account?"
+          confirmLabel="Sign out anyway"
+          cancelLabel="Stay"
+          danger
+          busy={busy}
+          error={failed ? "Couldn't sign you out. Check your connection and try again." : null}
+          onConfirm={() => void signOut()}
+          onCancel={() => {
+            if (!busy) setConfirming(false);
+          }}
+        >
+          <p>{GUEST_SIGN_OUT_WARNING}</p>
+        </ConfirmDialog>
+      ) : null}
+      {failed && !confirming ? (
         <p role="alert" className="mt-2 text-sm font-medium text-ember-deep">
           Couldn&rsquo;t sign you out. Check your connection and try again.
         </p>

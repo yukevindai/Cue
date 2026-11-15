@@ -33,6 +33,8 @@ export const STORAGE_KEYS = {
   serverUrl: "cue.serverUrl",
   backwardGesture: "cue.backwardGesture",
   calibration: "cue.calibration",
+  guestName: "cue.guestName",
+  lastHypeMatch: "cue.lastHypeMatch",
 } as const;
 
 /** Stored value meaning "submission disabled" for STORAGE_KEYS.backwardGesture. */

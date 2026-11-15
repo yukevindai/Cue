@@ -7,4 +7,6 @@ export * from "./match";
 export * from "./devices";
 export * from "./wingman";
 export * from "./chat";
+export * from "./guest";
+export * from "./hype";
 export * from "./routes";

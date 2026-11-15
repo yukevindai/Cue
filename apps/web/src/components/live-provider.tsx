@@ -13,6 +13,7 @@ import {
 } from "react";
 import { api, ApiRequestError, isApiError } from "@/lib/api";
 import { armChime, playChime } from "@/lib/chime";
+import { primeSpeech } from "@/lib/speech";
 import { getBrowserSupabase } from "@/lib/supabase/browser";
 import { MatchMoment } from "@/components/match-moment";
 import { useLocationReporter } from "@/components/use-location-reporter";
@@ -73,6 +74,11 @@ interface LiveValue {
 }
 
 const LiveContext = createContext<LiveValue | null>(null);
+
+/** Like `useLive`, but `null` outside the signed-in app instead of throwing. */
+export function useMaybeLive(): LiveValue | null {
+  return useContext(LiveContext);
+}
 
 export function useLive(): LiveValue {
   const v = useContext(LiveContext);
@@ -340,9 +346,17 @@ export function LiveProvider({
     onOutOfDate: refreshEncounter,
   });
 
-  // Browsers need one user gesture before they will play the match sound.
+  // Browsers need one user gesture before they will play the match sound or
+  // speak the wingman line. Speech is primed once; the chime on every gesture.
   useEffect(() => {
-    const arm = () => armChime();
+    let speechPrimed = false;
+    const arm = () => {
+      armChime();
+      if (!speechPrimed) {
+        speechPrimed = true;
+        primeSpeech();
+      }
+    };
     window.addEventListener("pointerdown", arm, { passive: true });
     window.addEventListener("keydown", arm);
     return () => {

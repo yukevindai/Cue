@@ -134,3 +134,14 @@ export function deviceApi(deviceToken: string): Promise<APIRequestContext> {
     extraHTTPHeaders: { Authorization: `Bearer ${deviceToken}` },
   });
 }
+
+/** A random client address that no other test uses (for per-address limits). */
+export function freshAddress(): string {
+  const n = () => Math.floor(Math.random() * 256);
+  return `10.${n()}.${n()}.${1 + Math.floor(Math.random() * 254)}`;
+}
+
+/** Request context with no credentials, claiming the client address `address` (x-forwarded-for). It keeps any cookies a response sets. */
+export function addressedApi(address: string = freshAddress()): Promise<APIRequestContext> {
+  return playwrightRequest.newContext({ baseURL: BASE_URL, extraHTTPHeaders: { "x-forwarded-for": address } });
+}

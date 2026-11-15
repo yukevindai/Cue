@@ -12,6 +12,7 @@ import { PlaceCard } from "./place-card";
 import { SignalPanel } from "./signal-panel";
 import { VenueArrival } from "./venue-arrival";
 import { VenueCard } from "./venue-card";
+import { WingmanVoiceCard } from "./wingman-voice-card";
 
 /**
  * Encounter status. Rendered purely from the provider's `encounter`, which
@@ -83,6 +84,7 @@ export function EncounterView({ arrivalCode = null }: { arrivalCode?: string | n
         <ModeCard enabled={encounter.encounterMode} />
         <PlaceCard encounter={encounter} onShowQr={() => setShowQr(true)} />
         <SignalPanel key={runKey} encounter={encounter} />
+        <WingmanVoiceCard />
         <VenueCard
           encounter={encounter}
           showQr={showQr}

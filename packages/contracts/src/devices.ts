@@ -41,6 +41,11 @@ export const DeviceContext = z.object({
   deviceId: Uuid,
   encounterMode: z.boolean(),
   ready: z.boolean(),
+  /**
+   * The wearer's newest active match, or null. When this changes to an id the
+   * bridge has not announced, it fetches the spoken wingman line for it.
+   */
+  latestMatchId: Uuid.nullable().default(null),
   serverTime: IsoDateTime,
 });
 export type DeviceContext = z.infer<typeof DeviceContext>;

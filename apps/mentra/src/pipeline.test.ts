@@ -223,7 +223,7 @@ describe("pipeline: mode gate", () => {
   it("encounter mode off then on does not replay, via a real tracker", async () => {
     let result: ContextFetchResult = {
       ok: true,
-      context: { deviceId: DEVICE_ID, encounterMode: false, ready: false, serverTime: "2026-11-14T10:00:00.000Z" },
+      context: { deviceId: DEVICE_ID, encounterMode: false, ready: false, latestMatchId: null, serverTime: "2026-11-14T10:00:00.000Z" },
     };
     let now = 1_800_000_000_000;
     const tracker = new EncounterContextTracker(async () => result, () => now);
@@ -239,7 +239,7 @@ describe("pipeline: mode gate", () => {
     await tracker.refresh();
     await pipeline.handleRawEvent(swipe());
     now += 2000;
-    result = { ok: true, context: { deviceId: DEVICE_ID, encounterMode: true, ready: true, serverTime: "2026-11-14T10:00:00.000Z" } };
+    result = { ok: true, context: { deviceId: DEVICE_ID, encounterMode: true, ready: true, latestMatchId: null, serverTime: "2026-11-14T10:00:00.000Z" } };
     await tracker.refresh();
     expect(tracker.snapshot()).toEqual({ state: "ready" });
     expect(submit).not.toHaveBeenCalled();
