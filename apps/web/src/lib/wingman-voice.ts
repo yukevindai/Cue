@@ -6,8 +6,8 @@ import type { DeviceStatus } from "@cue/contracts";
  * announced.
  */
 
-export const WINGMAN_VOICE_STORAGE_KEY = "cue.wingman-voice";
-export const ANNOUNCED_HYPE_STORAGE_KEY = "cue.hype-announced";
+export const WINGMAN_VOICE_STORAGE_KEY = "socialeyes.wingman-voice";
+export const ANNOUNCED_HYPE_STORAGE_KEY = "socialeyes.hype-announced";
 /** Mentra glasses seen this recently speak the line themselves. */
 export const GLASSES_RECENT_MS = 30_000;
 

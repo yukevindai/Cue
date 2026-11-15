@@ -19,7 +19,7 @@ import { rejectionCopy } from "./encounter";
  * wearer can read; nothing is dropped silently.
  *
  * PRIVACY: every input here is the wearer's OWN state (listening, own mode,
- * whether Cue knows their own place, own pending signal). Nothing about anyone else.
+ * whether SocialEyes knows their own place, own pending signal). Nothing about anyone else.
  */
 
 /** Media Session actions this page listens for. */
@@ -38,7 +38,7 @@ export const SIGNAL_CHOICES = ["playpause", "nexttrack", "previoustrack"] as con
 export type SignalChoice = (typeof SIGNAL_CHOICES)[number];
 
 export const DEFAULT_SIGNAL_CHOICE: SignalChoice = "nexttrack";
-export const SIGNAL_CHOICE_STORAGE_KEY = "cue.headset-signal-choice";
+export const SIGNAL_CHOICE_STORAGE_KEY = "socialeyes.headset-signal-choice";
 /** How many received commands the card lists. */
 export const RECENT_COMMANDS_MAX = 5;
 
@@ -123,7 +123,7 @@ export interface HeadsetState {
   listening: boolean;
   choice: SignalChoice;
   encounterMode: boolean;
-  /** The server's `ready`: encounter mode is on and Cue knows the wearer's place. */
+  /** The server's `ready`: encounter mode is on and SocialEyes knows the wearer's place. */
   ready: boolean;
   /** Own signal already out, or a send still in flight. */
   pending: boolean;
@@ -168,7 +168,7 @@ export function ignoreReasonText(reason: IgnoreReason, choice: SignalChoice): st
     case "encounter_mode_off":
       return "encounter mode is off. Turn it on to signal.";
     case "no_place":
-      return "Cue doesn't know where you are yet. Allow location, or check in with a venue code.";
+      return "SocialEyes doesn't know where you are yet. Allow location, or check in with a venue code.";
     case "already_pending":
       return "your signal is already out.";
     case "debounced":

@@ -258,8 +258,8 @@ export function HeadsetRemoteCard() {
     const ms = navigator.mediaSession;
     try {
       ms.metadata = new MediaMetadata({
-        title: "Cue is listening for your signal",
-        artist: "Cue",
+        title: "SocialEyes is listening for your signal",
+        artist: "SocialEyes",
       });
     } catch {
       // metadata is cosmetic
@@ -333,7 +333,7 @@ export function HeadsetRemoteCard() {
 
       {!supported ? (
         <p className="mt-3">
-          This browser can&apos;t receive headset commands. On an iPhone, open Cue in Safari.
+          This browser can&apos;t receive headset commands. On an iPhone, open SocialEyes in Safari.
         </p>
       ) : (
         <>

@@ -54,7 +54,7 @@ export function matchPlace(match: { venueLabel: string; venueLabelSource: "manua
       return {
         line: "You were near each other",
         phrase: "near each other",
-        note: "Your phones were close together. Cue doesn't keep where.",
+        note: "Your phones were close together. SocialEyes doesn't keep where.",
       };
     case "venue_checkin":
       return {

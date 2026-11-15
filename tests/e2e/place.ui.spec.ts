@@ -95,7 +95,7 @@ test.describe("UI: matching by place, phone viewport", () => {
       await expect(dialog).toBeVisible({ timeout: 5000 });
       await expect(dialog).toContainText(other.person.displayName);
       await expect(dialog).toContainText("You were near each other");
-      await expect(dialog).toContainText("Cue pairs you with the nearest person who signalled within the same few seconds. In a crowd, that can be the wrong person.");
+      await expect(dialog).toContainText("SocialEyes pairs you with the nearest person who signalled within the same few seconds. In a crowd, that can be the wrong person.");
     }
     const { forA, forB } = await expectExactlyOneSharedMatch(a.api, b.api);
     for (const card of [forA, forB]) expect(card).toMatchObject({ venueLabel: "Nearby", venueLabelSource: "phone_location" });
@@ -140,7 +140,7 @@ test.describe("UI: matching by place, phone viewport", () => {
     await modeSwitch(p.page).click();
     await expect(modeSwitch(p.page)).toHaveAttribute("aria-checked", "false");
     await expect(placeStatus(p.page)).toContainText("Encounter mode is off");
-    await expect(p.page.getByText("Location off. Cue only uses it while Encounter mode is on.")).toBeVisible();
+    await expect(p.page.getByText("Location off. SocialEyes only uses it while Encounter mode is on.")).toBeVisible();
     await expect.poll(async () => must(await a.api.getEncounter()).location.status).toBe("none");
     expect(must(await a.api.getEncounter())).toMatchObject({ encounterMode: false, ready: false });
   });
@@ -151,12 +151,12 @@ test.describe("UI: matching by place, phone viewport", () => {
     const venueName = "Phone Test Hall";
     const pa = await phone(browser, a); // no geolocation permission
     await turnOn(pa.page);
-    await expect(pa.page.getByText(/Location is blocked for Cue in this browser\./)).toBeVisible();
+    await expect(pa.page.getByText(/Location is blocked for SocialEyes in this browser\./)).toBeVisible();
     await expect(pa.page.getByRole("button", { name: "Try location again" })).toBeVisible();
-    await expect(placeStatus(pa.page)).toContainText("Cue doesn't know where you are yet");
+    await expect(placeStatus(pa.page)).toContainText("SocialEyes doesn't know where you are yet");
     await expect(pa.page.getByText("Not ready", { exact: true })).toBeVisible();
     await expect(interested(pa.page)).toBeDisabled();
-    await expect(pa.page.getByText("Cue doesn't know where you are yet. Allow location, or check in with a venue code, then signal.")).toBeVisible();
+    await expect(pa.page.getByText("SocialEyes doesn't know where you are yet. Allow location, or check in with a venue code, then signal.")).toBeVisible();
 
     // Host a place: checked in, QR visible, ready without location.
     await pa.page.getByLabel("Name of the place").fill(venueName);

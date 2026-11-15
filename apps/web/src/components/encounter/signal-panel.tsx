@@ -206,8 +206,8 @@ export function SignalPanel({ encounter }: { encounter: EncounterStatus }) {
           </Button>
           <p id="signal-help" className="mx-auto mt-4 max-w-sm text-ink-soft">
             {view.kind === "no_place"
-              ? "Cue doesn't know where you are yet. Allow location, or check in with a venue code, then signal."
-              : `Sends one signal. If someone near you signals within ${MATCH_WINDOW_SECONDS} seconds, Cue pairs you with the nearest of them. Otherwise nobody is told.`}
+              ? "SocialEyes doesn't know where you are yet. Allow location, or check in with a venue code, then signal."
+              : `Sends one signal. If someone near you signals within ${MATCH_WINDOW_SECONDS} seconds, SocialEyes pairs you with the nearest of them. Otherwise nobody is told.`}
           </p>
           {showFaded ? (
             <p className="mx-auto mt-5 max-w-sm animate-fade font-display text-lg italic text-ink-soft">

@@ -169,7 +169,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
       </form>
 
       <p className="mt-6 text-center text-ink-soft">
-        {isSignIn ? "New to Cue? " : "Already have an account? "}
+        {isSignIn ? "New to SocialEyes? " : "Already have an account? "}
         <Link
           href={isSignIn ? "/sign-up" : "/sign-in"}
           className="font-semibold text-ink underline underline-offset-4"

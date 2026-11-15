@@ -54,7 +54,7 @@ export function describeError(err: unknown): string {
   if (!(err instanceof ApiRequestError)) return "Something went wrong. Please try again.";
   switch (err.code) {
     case "network":
-      return "Can't reach Cue right now. Check your connection and try again.";
+      return "Can't reach SocialEyes right now. Check your connection and try again.";
     case "timeout":
     case "upstream_timeout":
       return "That took too long. Please try again.";

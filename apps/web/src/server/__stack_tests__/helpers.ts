@@ -65,7 +65,7 @@ async function probeStack(): Promise<{ up: boolean; why: string }> {
   const rest = await probe(`${SUPABASE_URL}/rest/v1/matches?select=id&limit=1`, {
     headers: { apikey: SERVICE_KEY, authorization: `Bearer ${SERVICE_KEY}` },
   });
-  if (!rest || !rest.ok) return { up: false, why: "Supabase is up but the Cue schema is not applied" };
+  if (!rest || !rest.ok) return { up: false, why: "Supabase is up but the SocialEyes schema is not applied" };
   return { up: true, why: "" };
 }
 
@@ -179,7 +179,7 @@ export function trackAvatar(objectPath: string): void {
   uploadedObjects.push(objectPath);
 }
 
-/** Deleting an auth user cascades every Cue row that references it. */
+/** Deleting an auth user cascades every SocialEyes row that references it. */
 export async function cleanupUsers(): Promise<void> {
   if (!stackUp) return;
   if (uploadedObjects.length) {

@@ -125,7 +125,7 @@ describe("decideCommand", () => {
     });
   });
 
-  it("ignores while Cue doesn't know where the wearer is", () => {
+  it("ignores while SocialEyes doesn't know where the wearer is", () => {
     expect(decideCommand("nexttrack", state({ ready: false }), T0, newId)).toEqual({
       kind: "ignored",
       reason: "no_place",
@@ -211,7 +211,7 @@ describe("copy and feedback", () => {
     ).toBe("Not sent. Encounter mode is off. Turn it on to signal.");
     expect(
       outcomeText({ kind: "sent", ack: ack({ status: "rejected", reason: "no_place" }) }, "nexttrack"),
-    ).toMatch(/^Not sent\. Cue doesn't know where you are yet/);
+    ).toMatch(/^Not sent\. SocialEyes doesn't know where you are yet/);
     expect(outcomeText({ kind: "failed", detail: "No connection." }, "nexttrack")).toBe(
       "Not sent. No connection.",
     );

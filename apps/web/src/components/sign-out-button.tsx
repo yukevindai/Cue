@@ -30,7 +30,7 @@ export function SignOutButton({
     setBusy(true);
     setFailed(false);
     try {
-      // Signing out turns Encounter mode off, so Cue forgets this phone's
+      // Signing out turns Encounter mode off, so SocialEyes forgets this phone's
       // location and drops a pending signal. Best effort: a failure here must
       // not keep someone signed in.
       await api.setEncounterMode(false).catch(() => undefined);

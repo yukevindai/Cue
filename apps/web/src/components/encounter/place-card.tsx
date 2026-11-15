@@ -13,7 +13,7 @@ function formatUntil(iso: string): string {
 }
 
 /**
- * Where Cue thinks you are: ready or not, the venue you're checked into, and
+ * Where SocialEyes thinks you are: ready or not, the venue you're checked into, and
  * the phone location status. Never shows coordinates; the server never
  * returns them.
  */

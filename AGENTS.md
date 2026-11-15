@@ -1,11 +1,11 @@
-# AGENTS.md — Cue
+# AGENTS.md — SocialEyes
 
 Guide for coding agents (and people) working in this repository. `CLAUDE.md`
 points here.
 
 ## What this is
 
-Cue is a hackathon MVP (Immerse the Bay, 2026-11-14): signal interest with a
+SocialEyes is a hackathon MVP (Immerse the Bay, 2026-11-14): signal interest with a
 backward swipe on Mentra Live smart glasses (or a double tap on Meta glasses,
 or a button). Two people who signal within 15 seconds in the same place become
 a match in the web app, with profiles, in-app chat and an optional Claude
@@ -17,6 +17,22 @@ phone locations close together; there is no pre-joined session any more.
   spec"), `docs/place-matching.md` and `docs/profiles-and-chat.md` win.
 - Technical contract, schema, trust model, ownership: `docs/architecture.md`.
 - Shared types and the API route list: `packages/contracts/src`.
+
+## Naming
+
+The product is **SocialEyes**. It used to be called Cue, and these still say
+"cue" on purpose. Do not rename them as a tidy-up:
+
+- The Mentra mini app (`apps/mentra`): its name in the Mentra app, its screen
+  text and spoken lines, its id `demo.cue.mentra`. The owner chose to leave
+  it; the web install page tells people the mini app is named Cue.
+- The live address `cue-gamma-five.vercel.app` and the Vercel project `cue`.
+- Identifiers that live data or the mini app depend on: the glasses token
+  prefix `cue_dev_`, the guest address domain `guest.cue.invalid`, the demo
+  logins `@cue.demo` and their password, package names `@cue/*`, environment
+  variable names `CUE_*`, SQL error codes `CUE0x`, and the hosted database
+  project "Cue DB".
+- `docs/spec.md`, the original spec, which predates the name.
 
 ## Commands
 
@@ -60,6 +76,12 @@ See "Status log" below. Update it when a milestone lands or a decision changes.
 
 ### Status log
 
+- 2026-11-15 16:30 UTC: Product and repository renamed to **SocialEyes**
+  (`yukevindai/SocialEyes`), on the owner's instruction: everything in the
+  web app, the tests' quoted text and the docs. Not renamed, by the owner's
+  choice or because live data depends on it: see "Naming" above. Also merged
+  since the last entry: PR #11 (guest accounts and spoken wingman); its
+  production deployment was READY and serves mini app 0.3.0.
 - 2026-11-15 15:30 UTC: Demo-only guest accounts and a spoken wingman line
   (PR #11), on the owner's instruction. Guests: `POST /api/guest {intro}`
   reads a name with `parseIntroName` (contracts), creates an ordinary account
@@ -222,7 +244,7 @@ the owning session; update this log.
 Open items needing a human, on the live site: installing the Mentra mini app
 from `/mentra` on a real phone (no laptop); two real
 phones matching by location (outdoors and indoors) and by venue QR; whether an
-iPhone keeps reporting location with Cue in the background (expected not);
+iPhone keeps reporting location with SocialEyes in the background (expected not);
 a real Mentra swipe and a real Meta double tap matching by place; one "Find
 common ground" with the real key; profiles and chat on real phones; the Mentra
 negative checks (media conflict, hair, pocket, audio); the gesture name used
@@ -232,7 +254,7 @@ off if new sign-ups are wanted. Follow-up work: a migration dropping the old
 session tables once the merged code is live.
 
 Hosted Supabase project for the demo: **Cue DB**, ref `ubnwwhpkjazejttdmstf`,
-region us-west-2, organization "Cue" (created by the owner 2026-11-14; the
+region us-west-2, organization "SocialEyes" (created by the owner 2026-11-14; the
 Supabase connector is authorized for that organization only). Schema and seed applied 2026-11-14 (see status log). Development and tests stay on the local stack. An earlier empty project named
-"Cue" in the "Feidy AI" organization (`dwimciiijiebiskocfjx`) is superseded and
+"SocialEyes" in the "Feidy AI" organization (`dwimciiijiebiskocfjx`) is superseded and
 must not be used. Keys are not stored in the repo.

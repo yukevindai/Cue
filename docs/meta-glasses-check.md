@@ -19,7 +19,7 @@ the route works at all. Fill in the table at the end and commit it.
 
 ## What was chosen and why
 
-**Runtime: the Cue web app in Safari on the iPhone, using the browser's Media
+**Runtime: the SocialEyes web app in Safari on the iPhone, using the browser's Media
 Session API.** There is no native app and no pairing code. The wearer signs in,
 opens Encounter, and taps "Listen for my glasses" on the "Meta glasses" card.
 The page plays a very quiet looping track to hold the phone's audio session and
@@ -69,7 +69,7 @@ environment):
 - An iPhone with Safari.
 - The Meta glasses paired to the iPhone and set as its audio output (iOS:
   Control Center or Settings, Bluetooth). Note the Meta AI app version.
-- A Cue account for the wearer, and the live site at `https://<cue-web-origin>`.
+- A SocialEyes account for the wearer, and the live site at `https://<cue-web-origin>`.
 - For step 4: a Mentra Live wearer with the miniapp paired
   (`docs/hardware-check.md`), a second account, and both in the same place
   (checked into the same venue, or phones within 40 m of each other). Each
@@ -148,7 +148,7 @@ double tap. Confirm no signal is sent (the card shows why it ignored it).
   whether the phone's location still updates: the page reports it only while
   visible, so a venue check-in is the safer way to stay "Ready".
 - Another audio app or Meta AI takes over: start music or invoke Meta AI, then
-  double tap. Note whether commands still reach the Cue page, and whether the
+  double tap. Note whether commands still reach the SocialEyes page, and whether the
   quiet track resumes.
 - Tones: the "sent" and "not sent" confirmation tones are audible **in the
   glasses**, and roughly how late.
@@ -173,7 +173,7 @@ Spoken guest sign-up (the glasses' microphone as the phone's input):
    and does the page say "Yo <name>, you're in." and is it heard in the glasses
    or the phone speaker. Typing the name always works as a fallback.
 3. Note that the browser sends the audio to its vendor's service to transcribe
-   it (Cue only receives the text). Record any network failure message.
+   it (SocialEyes only receives the text). Record any network failure message.
 
 Spoken match line:
 
@@ -182,7 +182,7 @@ Spoken match line:
    with one or two sentences, and the phone should say them. Record whether it was
    heard in the glasses, whether it came after the signal tones, and whether
    "Wingman voice" off silences it (the text still shows).
-5. Does the line play when Cue is in the background or the phone is locked? It is
+5. Does the line play when SocialEyes is in the background or the phone is locked? It is
    expected not to: the page speaks only while it runs, and speech after a
    gesture needs the page open. Record what happens.
 6. Does the quiet track from "Listen for my glasses" still play, and do double
@@ -228,7 +228,7 @@ Spoken match line:
 | Real Meta double tap reached the live site under place-based matching? | Reported yes by the owner on 2026-11-15 (accounts already matched, no new match). iPhone, iOS and details not recorded |
 | Voice 1 to 3: "Say hi" shown, name heard, greeting heard in the glasses? | not yet recorded (never tried) |
 | Voice 4: spoken match line heard in the glasses? | not yet recorded (never tried) |
-| Voice 5: line spoken with Cue in the background or locked? | not yet recorded (never tried) |
+| Voice 5: line spoken with SocialEyes in the background or locked? | not yet recorded (never tried) |
 | Voice 6: quiet track and double taps still work afterwards? | not yet recorded (never tried) |
 
 ## Long-term route: native toolkit integration

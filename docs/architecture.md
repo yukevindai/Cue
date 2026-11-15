@@ -1,10 +1,15 @@
-# Cue — architecture and team contract
+# SocialEyes — architecture and team contract
+
+> **Name.** The product is SocialEyes. It was called Cue until 2026-11-15, and
+> `docs/spec.md` (kept unchanged) still uses that name. Some identifiers and
+> the Mentra mini app still say "cue" on purpose; `AGENTS.md` ("Naming") lists
+> them.
 
 `docs/spec.md` is the product spec (v0.4) and wins on product behavior. This file
 fixes the technical decisions every role builds against. Change it (and
 `packages/contracts`) only by agreement, because four roles work in parallel.
 
-Working product name: **Cue** (the spec leaves the name undecided).
+Working product name: **SocialEyes** (the spec leaves the name undecided).
 
 ## Stack
 
@@ -292,14 +297,14 @@ and the client ignores their contents.
 Made on the owner's instruction on 2026-11-15; `docs/spec.md` is left as
 written:
 
-- The spec deferred chat. Cue now has in-app text chat for an active match.
+- The spec deferred chat. SocialEyes now has in-app text chat for an active match.
 - The spec listed shared social links as a way to reconnect. They are removed.
 - The profile gained optional fields (age, gender, location, looking for, work or
   school, education, MBTI, ethnicity, drinking, smoking, drugs), personality
   cards and a derived character, each with its own share toggle.
 - **Matching no longer needs a pre-joined two-person session.** The spec says
   "Never choose a random or nearest account" and describes exactly two people
-  per session. Cue now pairs a signal with the closest other person who signalled
+  per session. SocialEyes now pairs a signal with the closest other person who signalled
   within 15 seconds in the same place (a shared venue check-in, or phone
   locations within 40 m). Phone location is stored, in `user_presence` only and
   only while encounter mode is on. See `docs/place-matching.md`.
@@ -313,7 +318,7 @@ written:
   creates and links the account in one call. To be deleted after the demos:
   `docs/guest-accounts.md` has the switch and the removal checklist.
 - **Spoken coaching.** The spec has the wingman as a card the person asks for.
-  On a match Cue now also says one or two short sentences in a casual friend's
+  On a match SocialEyes now also says one or two short sentences in a casual friend's
   voice, requested automatically and spoken through the phone or the glasses.
   It is built from the existing wingman's verified shared items and opener plus
   the other person's display name and a venue's name, and falls back to a fixed

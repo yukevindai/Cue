@@ -15,13 +15,13 @@ export default function MentraInstallPage() {
       <Wordmark />
       <h1 className="mt-6 font-display text-4xl leading-tight tracking-tight">Install on Mentra Live</h1>
       <p className="mt-3 mb-6 text-lg text-ink-soft">
-        The Cue mini app lets a backward swipe on your glasses send your signal. Install it into the
+        SocialEyes for Mentra Live is a mini app named Cue. It lets a backward swipe on your glasses send your signal. Install it into the
         Mentra app from here.
       </p>
       <MentraInstall />
       <p className="mt-8 text-center">
         <Link href="/encounter" className="font-semibold underline underline-offset-4">
-          Back to Cue
+          Back to SocialEyes
         </Link>
       </p>
     </main>

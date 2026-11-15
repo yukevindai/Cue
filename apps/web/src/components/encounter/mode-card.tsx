@@ -7,7 +7,7 @@ import { api, describeError } from "@/lib/api";
 import { cx } from "@/lib/cx";
 
 export const LOCATION_PRIVACY_TEXT =
-  "Cue uses your phone's location only while Encounter mode is on, to tell who is near you. It is never shown to anyone and never saved with a match.";
+  "SocialEyes uses your phone's location only while Encounter mode is on, to tell who is near you. It is never shown to anyone and never saved with a match.";
 
 /**
  * Encounter mode: the first thing on the page, one switch. Turning it on is
@@ -75,7 +75,7 @@ export function ModeCard({ enabled }: { enabled: boolean }) {
       </p>
       {enabled ? (
         <p className="mt-2 text-sm text-ink-soft">
-          Turning it off cancels a signal you&apos;ve sent and makes Cue forget your location.
+          Turning it off cancels a signal you&apos;ve sent and makes SocialEyes forget your location.
         </p>
       ) : null}
 

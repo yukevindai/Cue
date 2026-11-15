@@ -118,8 +118,8 @@ export function MentraInstall() {
           After it installs
         </h2>
         <ol className="mt-3 list-decimal space-y-1 pl-5 text-ink-soft">
-          <li>In Cue, open Encounter and tap Link glasses to get a pairing code.</li>
-          <li>Enter that code in the Cue mini app.</li>
+          <li>In SocialEyes, open Encounter and tap Link glasses to get a pairing code.</li>
+          <li>Enter that code in the Cue mini app (that is its name in the Mentra app).</li>
           <li>Turn on Encounter mode and check into a venue, then swipe backward on the temple.</li>
         </ol>
         <p className="mt-3 text-sm text-ink-soft">

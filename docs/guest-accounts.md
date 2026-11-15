@@ -7,7 +7,7 @@ after the demos. `docs/spec.md` is unchanged and does not mention guests; see
 
 ## What it is
 
-A guest account is an ordinary Cue account that someone gets by saying or typing
+A guest account is an ordinary SocialEyes account that someone gets by saying or typing
 "Hi, my name is Sam". It has the name Sam and nothing else: no email address
 they know, no password. It exists so that people at a demo can get in within a
 few seconds, with their voice, without a keyboard.
@@ -37,7 +37,7 @@ On Sign in and Sign up (the `(auth)` layout) a card sits above the forms.
    and taps "Continue as guest". The field accepts a full introduction ("I'm
    Sam", "call me Sam") or just a name ("Sam").
 3. Empty field: "Type your name, or 'Hi, my name is ...'." If no name can be
-   read: "Cue couldn't pick a name out of that. Try 'Hi, my name is Sam', or just
+   read: "SocialEyes couldn't pick a name out of that. Try 'Hi, my name is Sam', or just
    your first name."
 4. The browser sends `POST /api/guest` with the text. The server picks the name,
    creates the account and signs this browser in (session cookies on the
@@ -68,7 +68,7 @@ type your name below."
 
 **Meta glasses.** Meta glasses are the phone's Bluetooth headset. When they are
 connected as the phone's audio device, the phone hears the wearer through them
-and speaks the greeting through them. Nothing in Cue knows or checks this: it is
+and speaks the greeting through them. Nothing in SocialEyes knows or checks this: it is
 the phone's normal audio routing.
 
 ### 3. Mentra Live glasses (spoken, no phone browser needed)
@@ -92,7 +92,7 @@ Pairing with a code still works.
 4. The glasses say "Yo Sam, you're in. Open Cue on your phone."
 5. The setup screen now shows a button "Open Cue as Sam". Tapping it asks the
    server for a one-time sign-in link (`POST /api/guest/handoff`) and asks the
-   phone to open it. The screen says "Opening Cue in your browser. If nothing
+   phone to open it. The screen says "Opening SocialEyes in your browser. If nothing
    opens, tap the link below." and shows an "Open Cue" link as a fallback. The
    link signs the phone's browser into the same account and lands on Encounter.
 6. On failure the glasses say "Couldn't set that up. Try again in a bit." At most
@@ -177,11 +177,11 @@ Who hears the audio:
 
 - **Web, spoken route.** The browser's speech recognition decides where audio
   goes. In Chrome and other Chromium browsers it is sent to the browser vendor's
-  servers to be transcribed; Safari on iPhone uses Apple's service. Cue never
+  servers to be transcribed; Safari on iPhone uses Apple's service. SocialEyes never
   receives audio, only the text the browser returns. The speech output is the
   browser's own.
 - **Mentra route.** The glasses' audio is transcribed by Mentra's service
-  (`session.transcription`); Cue receives only the final text of one
+  (`session.transcription`); SocialEyes receives only the final text of one
   introduction.
 
 ## Limits and risks
@@ -293,13 +293,13 @@ tests with fakes only.
 
 - Real speech recognition in phone browsers, iPhone Safari especially (whether
   it is available at all, whether it asks for the microphone, and how it behaves
-  with the Cue page in a normal tab).
+  with the SocialEyes page in a normal tab).
 - Listening and speaking through Meta glasses as the phone's Bluetooth headset.
 - The Mentra `MICROPHONE` permission on a real phone and glasses, and whether
   transcription events actually arrive in a locally installed mini app.
 - `openUrl` on a phone: whether "Open Cue as Sam" opens the browser, and in which
   browser.
-- Speech while the Cue page is in the background or the phone is locked.
+- Speech while the SocialEyes page is in the background or the phone is locked.
 - The real lifetime of a handoff link against the hosted project's "Email OTP
   Expiration" setting.
 - The model's actual wording for the match line with a real Claude key (not

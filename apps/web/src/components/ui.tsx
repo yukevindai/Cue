@@ -38,7 +38,7 @@ export function Wordmark({ className }: { className?: string }) {
   return (
     <span className={cx("inline-flex items-center gap-2", className)}>
       <Mark size={22} />
-      <span className="font-display text-2xl italic leading-none tracking-tight">cue</span>
+      <span className="font-display text-2xl italic leading-none tracking-tight">SocialEyes</span>
     </span>
   );
 }

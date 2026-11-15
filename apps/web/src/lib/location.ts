@@ -124,11 +124,11 @@ export const LOCATION_REFRESH_AFTER_MS = (LOCATION_MAX_AGE_SECONDS * 1000) / 2;
 export function geoProblemText(geo: GeoState): string | null {
   switch (geo.kind) {
     case "unsupported":
-      return "This browser can't share its location with Cue. Check in with a venue code instead.";
+      return "This browser can't share its location with SocialEyes. Check in with a venue code instead.";
     case "locating":
       return "Finding your location…";
     case "denied":
-      return "Location is blocked for Cue in this browser. You can still check in with a venue code, or allow location in your browser's settings and try again.";
+      return "Location is blocked for SocialEyes in this browser. You can still check in with a venue code, or allow location in your browser's settings and try again.";
     case "unavailable":
       return "Your phone couldn't work out where it is. Check in with a venue code, or try again outside or near a window.";
     case "timeout":
@@ -156,18 +156,18 @@ export function locationLine(
   serverText: string | null,
 ): LocationLine {
   if (!encounterMode) {
-    return { text: "Location off. Cue only uses it while Encounter mode is on.", retry: false };
+    return { text: "Location off. SocialEyes only uses it while Encounter mode is on.", retry: false };
   }
   if (geo.kind === "unsupported" || geo.kind === "denied" || geo.kind === "unavailable" || geo.kind === "timeout") {
     return { text: geoProblemText(geo) ?? "", retry: geo.kind !== "unsupported" };
   }
   if (geo.kind === "located" && geo.accuracyM > LOCATION_MAX_ACCURACY_M && !serverText?.startsWith("Location too rough")) {
     return {
-      text: `Location too rough to use: about ${geo.accuracyM} m. Cue needs ${LOCATION_MAX_ACCURACY_M} m or better.`,
+      text: `Location too rough to use: about ${geo.accuracyM} m. SocialEyes needs ${LOCATION_MAX_ACCURACY_M} m or better.`,
       retry: false,
     };
   }
   if (serverText) return { text: serverText, retry: false };
-  if (geo.kind === "located") return { text: "Location found. Sending it to Cue…", retry: false };
+  if (geo.kind === "located") return { text: "Location found. Sending it to SocialEyes…", retry: false };
   return { text: geoProblemText({ kind: "locating" }) ?? "", retry: false };
 }

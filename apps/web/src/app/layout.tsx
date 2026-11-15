@@ -12,7 +12,7 @@ const instrument = Instrument_Sans({ variable: "--font-instrument", subsets: ["l
 const jetbrains = JetBrains_Mono({ variable: "--font-jetbrains", subsets: ["latin"], weight: ["500"] });
 
 export const metadata: Metadata = {
-  title: { default: "Cue", template: "%s · Cue" },
+  title: { default: "SocialEyes", template: "%s · SocialEyes" },
   description:
     "Signal interest in person with a small gesture. If it is mutual, reconnect later.",
 };

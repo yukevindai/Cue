@@ -140,7 +140,7 @@ export function VenueCard({
           Host a place
         </h3>
         <p className="mt-1 text-ink-soft">
-          Name it and Cue makes a QR code for it. Show it on your screen or print it. You&apos;re
+          Name it and SocialEyes makes a QR code for it. Show it on your screen or print it. You&apos;re
           checked in straight away. A check-in lasts {CHECK_IN_HOURS} hours.
         </p>
         <form onSubmit={onHost} noValidate className="mt-4 space-y-4">
