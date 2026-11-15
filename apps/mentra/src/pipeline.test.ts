@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { EncounterContextTracker, type ContextFetchResult, type ContextSnapshot } from "./encounter-context";
 import { cueForAck, recordingFeedback } from "./feedback";
 import { GesturePipeline, type SubmitResult } from "./pipeline";
-import { DEVICE_ID, SESSION_ID, ack } from "./testing";
+import { DEVICE_ID, ack } from "./testing";
 import { CueApiClient } from "./api-client";
 import { fakeFetch, json } from "./testing";
 
@@ -12,7 +12,7 @@ const BACK = "swipe_backward";
 function harness(opts: { context?: ContextSnapshot; backward?: string | null; calibration?: boolean; result?: SubmitResult } = {}) {
   const state = {
     now: 1_800_000_000_000,
-    context: opts.context ?? ({ state: "ready", encounterSessionId: SESSION_ID } as ContextSnapshot),
+    context: opts.context ?? ({ state: "ready" } as ContextSnapshot),
   };
   const submit = vi.fn<(e: InterestEvent) => Promise<SubmitResult>>(async () => opts.result ?? { ok: true, ack: ack() });
   const feedback = recordingFeedback();
@@ -39,11 +39,40 @@ describe("pipeline: accepted swipe", () => {
     expect(event).toMatchObject({
       source: "mentra_touch",
       gesture: "backward_swipe",
-      encounterSessionId: SESSION_ID,
       occurredAt: new Date(h.state.now).toISOString(),
     });
+    expect(Object.keys(event).sort()).toEqual(["eventId", "gesture", "occurredAt", "source"]);
+    expect(event).not.toHaveProperty("encounterSessionId");
     expect(out.kind).toBe("submitted");
     expect(h.feedback.cues).toEqual(["signal_sent"]);
+  });
+
+  it("server no_place rejection plays the no_place cue, not not_sent", async () => {
+    const h = harness({ result: { ok: true, ack: ack({ status: "rejected", reason: "no_place", expiresAt: null }) } });
+    const out = await h.pipeline.handleRawEvent(swipe());
+    expect(out).toMatchObject({ kind: "submitted", cue: "no_place" });
+    expect(h.feedback.cues).toEqual(["no_place"]);
+  });
+
+  it("mode off: not forwarded, encounter_off cue", async () => {
+    const h = harness({ context: { state: "encounter_mode_off" } });
+    expect(await h.pipeline.handleRawEvent(swipe())).toMatchObject({ kind: "ignored", reason: "encounter_mode_off" });
+    expect(h.submit).not.toHaveBeenCalled();
+    expect(h.feedback.cues).toEqual(["encounter_off"]);
+  });
+
+  it("mode on but no place: not forwarded, distinct no_place cue", async () => {
+    const h = harness({ context: { state: "no_place" } });
+    expect(await h.pipeline.handleRawEvent(swipe())).toMatchObject({ kind: "ignored", reason: "no_place" });
+    expect(h.submit).not.toHaveBeenCalled();
+    expect(h.feedback.cues).toEqual(["no_place"]);
+  });
+
+  it("stale context: not forwarded and silent", async () => {
+    const h = harness({ context: { state: "stale" } });
+    expect(await h.pipeline.handleRawEvent(swipe())).toMatchObject({ kind: "ignored", reason: "context_stale" });
+    expect(h.submit).not.toHaveBeenCalled();
+    expect(h.feedback.cues).toEqual([]);
   });
 
   it("matched ack plays match", async () => {
@@ -53,7 +82,7 @@ describe("pipeline: accepted swipe", () => {
   });
 
   it("rejected and duplicate acks give not_sent and signal_sent", async () => {
-    const r = harness({ result: { ok: true, ack: ack({ status: "rejected", reason: "blocked", expiresAt: null }) } });
+    const r = harness({ result: { ok: true, ack: ack({ status: "rejected", reason: "invalid_event", expiresAt: null }) } });
     await r.pipeline.handleRawEvent(swipe());
     expect(r.feedback.cues).toEqual(["not_sent"]);
     const d = harness({ result: { ok: true, ack: ack({ status: "duplicate" }) } });
@@ -99,7 +128,7 @@ describe("pipeline: gesture filtering", () => {
     const pipeline = new GesturePipeline({
       mapping: { backwardSwipeGestureName: BACK },
       calibration: true,
-      context: () => ({ state: "ready", encounterSessionId: SESSION_ID }),
+      context: () => ({ state: "ready" }),
       submit,
       feedback: recordingFeedback(),
       logger: createLogger((_l, line) => lines.push(line)),
@@ -143,7 +172,7 @@ describe("pipeline: debounce and in-flight", () => {
     const pipeline = new GesturePipeline({
       mapping: { backwardSwipeGestureName: BACK },
       calibration: false,
-      context: () => ({ state: "ready", encounterSessionId: SESSION_ID }),
+      context: () => ({ state: "ready" }),
       submit,
       feedback,
       now: () => now,
@@ -160,7 +189,6 @@ describe("pipeline: debounce and in-flight", () => {
 
 describe("pipeline: mode gate", () => {
   it.each<[ContextSnapshot, string]>([
-    [{ state: "encounter_mode_off" }, "encounter_mode_off"],
     [{ state: "unlinked" }, "unlinked"],
     [{ state: "offline" }, "offline"],
     [{ state: "stale" }, "context_stale"],
@@ -174,7 +202,7 @@ describe("pipeline: mode gate", () => {
   it("a rejected-by-gate swipe does not consume the debounce window", async () => {
     const h = harness({ context: { state: "offline" } });
     await h.pipeline.handleRawEvent(swipe());
-    h.state.context = { state: "ready", encounterSessionId: SESSION_ID };
+    h.state.context = { state: "ready" };
     h.state.now += 10;
     await h.pipeline.handleRawEvent(swipe());
     expect(h.submit).toHaveBeenCalledTimes(1);
@@ -185,7 +213,7 @@ describe("pipeline: mode gate", () => {
     await h.pipeline.handleRawEvent(swipe());
     h.state.now += 3000;
     await h.pipeline.handleRawEvent(swipe());
-    h.state.context = { state: "ready", encounterSessionId: SESSION_ID };
+    h.state.context = { state: "ready" };
     h.state.now += 60_000;
     expect(h.submit).not.toHaveBeenCalled();
     await h.pipeline.handleRawEvent(swipe());
@@ -195,7 +223,7 @@ describe("pipeline: mode gate", () => {
   it("encounter mode off then on does not replay, via a real tracker", async () => {
     let result: ContextFetchResult = {
       ok: true,
-      context: { deviceId: DEVICE_ID, encounterMode: false, encounterSessionId: null, serverTime: "2026-11-14T10:00:00.000Z" },
+      context: { deviceId: DEVICE_ID, encounterMode: false, ready: false, serverTime: "2026-11-14T10:00:00.000Z" },
     };
     let now = 1_800_000_000_000;
     const tracker = new EncounterContextTracker(async () => result, () => now);
@@ -211,9 +239,9 @@ describe("pipeline: mode gate", () => {
     await tracker.refresh();
     await pipeline.handleRawEvent(swipe());
     now += 2000;
-    result = { ok: true, context: { deviceId: DEVICE_ID, encounterMode: true, encounterSessionId: SESSION_ID, serverTime: "2026-11-14T10:00:00.000Z" } };
+    result = { ok: true, context: { deviceId: DEVICE_ID, encounterMode: true, ready: true, serverTime: "2026-11-14T10:00:00.000Z" } };
     await tracker.refresh();
-    expect(tracker.snapshot()).toEqual({ state: "ready", encounterSessionId: SESSION_ID });
+    expect(tracker.snapshot()).toEqual({ state: "ready" });
     expect(submit).not.toHaveBeenCalled();
     now += 2000;
     await pipeline.handleRawEvent(swipe());
@@ -228,7 +256,7 @@ describe("pipeline: failed submit", () => {
     expect(out).toMatchObject({ kind: "failed", error: "network", cue: "not_sent" });
     expect(h.feedback.cues).toEqual(["not_sent"]);
     h.state.context = { state: "offline" };
-    h.state.context = { state: "ready", encounterSessionId: SESSION_ID };
+    h.state.context = { state: "ready" };
     h.state.now += 60_000;
     expect(h.submit).toHaveBeenCalledTimes(1);
   });
@@ -238,7 +266,7 @@ describe("pipeline: failed submit", () => {
     const pipeline = new GesturePipeline({
       mapping: { backwardSwipeGestureName: BACK },
       calibration: false,
-      context: () => ({ state: "ready", encounterSessionId: SESSION_ID }),
+      context: () => ({ state: "ready" }),
       submit: async () => {
         throw new Error("boom");
       },
@@ -250,7 +278,7 @@ describe("pipeline: failed submit", () => {
 
   it("end to end with the api client: rejected and duplicate acks produce cues", async () => {
     for (const [a, cue] of [
-      [ack({ status: "rejected", reason: "not_in_session", expiresAt: null }), "not_sent"],
+      [ack({ status: "rejected", reason: "invalid_event", expiresAt: null }), "not_sent"],
       [ack({ status: "duplicate" }), "signal_sent"],
     ] as const) {
       const client = new CueApiClient({ baseUrl: "https://x", getToken: () => "t".repeat(40), fetch: fakeFetch([json(a)]) });
@@ -258,7 +286,7 @@ describe("pipeline: failed submit", () => {
       const pipeline = new GesturePipeline({
         mapping: { backwardSwipeGestureName: BACK },
         calibration: false,
-        context: () => ({ state: "ready", encounterSessionId: SESSION_ID }),
+        context: () => ({ state: "ready" }),
         submit: (e) => client.submitInterest(e),
         feedback,
       });
@@ -274,8 +302,9 @@ describe("cueForAck", () => {
     [{ status: "accepted", matched: true }, "match"],
     [{ status: "duplicate", matched: false }, "signal_sent"],
     [{ status: "duplicate", matched: true }, "match"],
-    [{ status: "rejected", matched: false, reason: "blocked" }, "not_sent"],
-    [{ status: "rejected", matched: true, reason: "already_matched" }, "not_sent"],
+    [{ status: "rejected", matched: false, reason: "invalid_event" }, "not_sent"],
+    [{ status: "rejected", matched: false, reason: "no_place" }, "no_place"],
+    [{ status: "rejected", matched: false, reason: "encounter_mode_off" }, "encounter_off"],
   ];
   it.each(cases)("%j -> %s", (overrides, cue) => {
     expect(cueForAck(ack(overrides))).toBe(cue);

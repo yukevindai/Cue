@@ -7,7 +7,7 @@ unverified on hardware: `docs/hardware-check.md`.
 
 ```
 raw touch event -> touch-events.ts (normalize, classify, debounce)
-                -> encounter-context.ts (encounter mode gate, no replay)
+                -> encounter-context.ts (encounter mode + place gate, no replay)
                 -> pipeline.ts (InterestEvent, one eventId per gesture)
                 -> api-client.ts (device token, bounded retry with the same eventId)
                 -> feedback.ts / tones.ts (audio cue)
